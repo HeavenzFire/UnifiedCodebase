@@ -24,4 +24,4 @@ jobs:
         with:
           node-version: 20
       - name: Run provider router tests
-        run: node --test unified-field/provider-router.test.mjs
+        run: node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs
