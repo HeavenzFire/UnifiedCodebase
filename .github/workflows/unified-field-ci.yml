@@ -1,0 +1,27 @@
+name: Unified Field Core
+on:
+  push:
+    paths:
+      - 'unified-field/**'
+      - 'extensions/**'
+      - 'Enter-UnifiedField.ps1'
+      - '.github/workflows/unified-field-ci.yml'
+  pull_request:
+    paths:
+      - 'unified-field/**'
+      - 'extensions/**'
+      - 'Enter-UnifiedField.ps1'
+      - '.github/workflows/unified-field-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  provider-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run provider router tests
+        run: node --test unified-field/provider-router.test.mjs
