@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "supersedes": "integrations/repository-catalog.json",
+  "generatedAt": "2026-10-20",
+  "scope": "verified starter set; not a complete account-wide inventory",
+  "policy": {"evidenceRequiredForIntegration":true,"defaultStatus":"unassessed","allowDestructiveAutomation":false,"requireHumanApprovalForMerge":true},
+  "repositories": [
+    {"repository":"HeavenzFire/UnifiedCodebase","role":"integration-spine","status":"active-foundation","evidence":["provider router","funding reconciliation","Guardian evidence ledger","Sovereign Node read-only health adapter"],"nextAction":"Verify CI and add further adapters behind tested contracts"},
+    {"repository":"HeavenzFire/Sovereign-Node-","role":"candidate-service","status":"verified-component","defaultBranch":"main","sourceCommit":"ddb9dc5d1e99e695b9fd57d9f973013e4897a769","inspectedFiles":{"package.json":"4b7e187bf3ffdea96a71ed85fea6290c15becb3e","server.ts":"a5a43fed6435f02e7dd4a5ba88c5be0621ae1fe2"},"evidence":["Express and WebSocket service","/api/health returns status ok","/api/mesh/nodes contains hard-coded sample nodes","server binds to 0.0.0.0:3000; no visible auth middleware in inspected routes"],"integration":"Read-only loopback health probe only","nextAction":"Require auth and network controls before mutating or non-loopback integration"},
+    {"repository":"HeavenzFire/The-Pantheon-of-Neural-Intelligence-","role":"candidate-model-adapter","status":"verified-component","defaultBranch":"main","sourceCommit":"99132758d231ca93d56d02154dbc9ceb5fdfe53f","inspectedFiles":{"package.json":"a9ec8d4595ef2965e543575d46549246eed1b377","server.ts":"cb00745175181ba37aa28a30d9a90fc862c03ad2",".github/workflows/verify.yml":"47c7884b5d675bfb88ffd1aa93513aa8a46249b0"},"evidence":["/api/chat supports Ollama, OpenAI-compatible, and Gemini branches","fallback may return simulated output; preserve fallback metadata","CI declares type-check and build"],"nextAction":"Review request validation, network exposure, and fallback semantics before adapter"},
+    {"repository":"HeavenzFire/Syntropic-Kernel-Code-Explore","role":"candidate-research-module","status":"candidate-not-reverified","defaultBranch":"main","sourceCommit":"3df914d39f9811e318c53f6a9f18a1ff48af7416","inspectedFiles":{"package.json":"99c038f15a26c3f8275705c89d075ed83dc780a8","README.md":"1869a298c52d90701a267ccb2b71776584e4dbff"},"evidence":["React/Vite code explorer","no test or lint script declared","prior toroidal_memory.py claim not confirmed in current tree"],"nextAction":"Inspect core source and define tests before integration"},
+    {"repository":"HeavenzFire/Elysium-Gateway","role":"candidate-r-and-d-interface","status":"unassessed","evidence":[],"nextAction":"Resolve exact repository name and inspect source"}
+  ]
+}
