@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const PROVIDERS = Object.freeze({
   ollama: { kind: "ollama", baseUrlEnv: "HEAVENZFIRE_OLLAMA_URL", defaultBaseUrl: "http://127.0.0.1:11434", defaultModel: "heavenzfire-runtime:latest", keyEnv: null },
@@ -85,4 +86,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === new URL("file://" + process.argv[1].replace(/\\/g, "/")).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
