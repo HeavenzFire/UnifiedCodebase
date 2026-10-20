@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-20",
+  "scope": "starter set only; not a complete account-wide inventory",
+  "policy": {
+    "evidenceRequiredForIntegration": true,
+    "defaultStatus": "unassessed",
+    "allowDestructiveAutomation": false,
+    "requireHumanApprovalForMerge": true
+  },
+  "repositories": [
+    {
+      "repository": "HeavenzFire/UnifiedCodebase",
+      "role": "integration-spine",
+      "status": "active-foundation",
+      "evidence": ["provider-router", "funding-integrity", "guardian-evidence"],
+      "nextAction": "Pass full CI and add adapters behind tested contracts"
+    },
+    {
+      "repository": "HeavenzFire/Sovereign-Node-",
+      "role": "candidate-service",
+      "status": "candidate-not-reverified",
+      "evidence": ["prior audit reported Express and WebSocket routes including /seal, /api/vault, /api/mesh/nodes"],
+      "nextAction": "Re-open repository, verify current default-branch files, tests, and security boundaries"
+    },
+    {
+      "repository": "HeavenzFire/The-Pantheon-of-Neural-Intelligence-",
+      "role": "candidate-model-adapter",
+      "status": "candidate-not-reverified",
+      "evidence": ["prior audit reported a local Ollama integration hook"],
+      "nextAction": "Verify source and define a provider adapter only if the hook is runnable"
+    },
+    {
+      "repository": "HeavenzFire/Syntropic-Kernel-Code-Explore",
+      "role": "candidate-research-module",
+      "status": "candidate-not-reverified",
+      "evidence": ["prior audit reported toroidal_memory.py"],
+      "nextAction": "Inspect implementation, tests, dependencies, and scientific claims before integration"
+    },
+    {
+      "repository": "HeavenzFire/Elysium-Gateway",
+      "role": "candidate-r-and-d-interface",
+      "status": "unassessed",
+      "evidence": [],
+      "nextAction": "Resolve exact repository name, inspect source and establish an interface contract"
+    }
+  ]
+}
