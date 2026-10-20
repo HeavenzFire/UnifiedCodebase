@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { reconcileFunding } from "./reconcile.mjs";
 
 const balanced = () => ({
-  appropriations: [{ programId: "P1", fiscalYear: "2026", currency: "USD", amount: 100 }],
+  appropriations: [{ appropriationId: "AP1", programId: "P1", fiscalYear: "2026", currency: "USD", amount: 100 }],
   awards: [{ awardId: "A1", programId: "P1", fiscalYear: "2026", currency: "USD", amount: 100 }],
   disbursements: [{ disbursementId: "D1", awardId: "A1", programId: "P1", fiscalYear: "2026", currency: "USD", amount: 100 }]
 });
@@ -48,7 +48,7 @@ test("duplicate identifiers are excluded to prevent double counting", () => {
 
 test("different currencies remain separate", () => {
   const input = balanced();
-  input.appropriations.push({ programId: "P1", fiscalYear: "2026", currency: "EUR", amount: 100 });
+  input.appropriations.push({ appropriationId: "AP2", programId: "P1", fiscalYear: "2026", currency: "EUR", amount: 100 });
   const result = reconcileFunding(input);
   assert.ok(result.reconciliations.some(row => row.key.endsWith("|EUR") && row.status === "unknown"));
 });
