@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HeavenzFire Guardian Evidence Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "source_url",
+    "retrieved_at_utc",
+    "claim",
+    "confidence",
+    "review_status",
+    "pii_review"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "retrieved_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_excerpt": {
+      "type": "string"
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "confidence_rationale": {
+      "type": "string"
+    },
+    "contradicting_evidence": {
+      "type": "string"
+    },
+    "review_status": {
+      "enum": [
+        "unreviewed",
+        "corroborated",
+        "disputed",
+        "corrected"
+      ]
+    },
+    "pii_review": {
+      "enum": [
+        "passed",
+        "redacted",
+        "blocked"
+      ]
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "correction_of": {
+      "type": "string"
+    }
+  }
+}
