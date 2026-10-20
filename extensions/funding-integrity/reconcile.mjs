@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 
 const KEY_FIELDS = ["programId", "fiscalYear", "currency"];
 const amountOk = value => typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -32,7 +33,7 @@ export function reconcileFunding(input, { tolerance = 0.01 } = {}) {
   const seen = { appropriation: new Set(), award: new Set(), disbursement: new Set() };
 
   for (const [kind, idField, required] of [
-    ["appropriations", "programId", ["programId", "fiscalYear", "currency", "amount"]],
+    ["appropriations", "appropriationId", ["appropriationId", "programId", "fiscalYear", "currency", "amount"]],
     ["awards", "awardId", ["awardId", "programId", "fiscalYear", "currency", "amount"]],
     ["disbursements", "disbursementId", ["disbursementId", "awardId", "programId", "fiscalYear", "currency", "amount"]]
   ]) {
@@ -110,6 +111,6 @@ async function main() {
   const input = JSON.parse(await readFile(path, "utf8"));
   console.log(JSON.stringify(reconcileFunding(input), null, 2));
 }
-if (process.argv[1] && new URL(import.meta.url).pathname === new URL("file://" + process.argv[1].replace(/\\/g, "/")).pathname) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => { console.error("Funding reconciliation error: " + error.message); process.exitCode = 1; });
 }
