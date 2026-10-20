@@ -21,7 +21,8 @@ test("record stores source digest and verifies canonical record hash", () => {
 });
 
 test("requires source, claim and timestamp; rejects insecure HTTP by default", () => {
-  assert.throws(() => createEvidenceRecord({ claim: "x", capturedAt: "2026-01-01" }), /Missing required field: source/);\n  assert.throws(() => createEvidenceRecord(sample({ capturedAt: "not-a-date" })), /valid date/);
+  assert.throws(() => createEvidenceRecord({ claim: "x", capturedAt: "2026-01-01" }), /Missing required field: source/);
+  assert.throws(() => createEvidenceRecord(sample({ capturedAt: "not-a-date" })), /valid date/);
   assert.throws(() => createEvidenceRecord(sample({ source: "http://example.org" })), /HTTP source rejected/);
 });
 
