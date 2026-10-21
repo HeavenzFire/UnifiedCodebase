@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "funding.integrity",
+  "version": "0.1.0",
+  "entrypoint": "extensions/funding-integrity/reconcile.mjs",
+  "capabilities": [
+    "funding.reconcile.read_only"
+  ],
+  "permissions": [
+    "filesystem.read:input-records"
+  ],
+  "data_flows": [
+    "appropriation-award-disbursement-records-to-reconciliation-report"
+  ],
+  "healthcheck": "node --check extensions/funding-integrity/reconcile.mjs",
+  "test_command": "node --test extensions/funding-integrity/reconcile.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
