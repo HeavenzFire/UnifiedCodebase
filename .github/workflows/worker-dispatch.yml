@@ -32,6 +32,8 @@ on:
       - "extensions/shared-task-proposal/proposal-worker.test.mjs"
       - "integrations/shared-task-proposal-adapter.mjs"
       - "integrations/shared-task-proposal-adapter.test.mjs"
+      - "integrations/shared-task-inbox.mjs"
+      - "integrations/shared-task-inbox.test.mjs"
       - "docs/repository-inventory.snapshot.json"
       - "integrations/validate-repository-inventory.mjs"
       - "integrations/sovereign-node-adapter.mjs"
@@ -76,6 +78,8 @@ on:
       - "extensions/shared-task-proposal/proposal-worker.test.mjs"
       - "integrations/shared-task-proposal-adapter.mjs"
       - "integrations/shared-task-proposal-adapter.test.mjs"
+      - "integrations/shared-task-inbox.mjs"
+      - "integrations/shared-task-inbox.test.mjs"
       - "docs/repository-inventory.snapshot.json"
       - "integrations/validate-repository-inventory.mjs"
       - "integrations/sovereign-node-adapter.mjs"
@@ -117,7 +121,9 @@ jobs:
           node --check extensions/shared-task-proposal/proposal-worker.test.mjs
           node --check integrations/worker-host-cli.mjs
           node --check integrations/worker-host-cli.test.mjs
+          node --check integrations/shared-task-inbox.mjs
+          node --check integrations/shared-task-inbox.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
-          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs extensions/sovereign-node-health/health-worker.test.mjs extensions/repository-inventory/inventory-worker.test.mjs extensions/shared-task-proposal/proposal-worker.test.mjs integrations/shared-task-proposal-adapter.test.mjs integrations/worker-host-cli.test.mjs
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs extensions/sovereign-node-health/health-worker.test.mjs extensions/repository-inventory/inventory-worker.test.mjs extensions/shared-task-proposal/proposal-worker.test.mjs integrations/shared-task-proposal-adapter.test.mjs integrations/shared-task-inbox.test.mjs integrations/worker-host-cli.test.mjs
