@@ -113,3 +113,37 @@ test("default host dispatches approved model tasks through local Ollama only", a
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("default host exposes only the read-only loopback Sovereign Node health worker", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-sovereign-health-"));
+  let observed;
+  try {
+    const host = await createDefaultWorkerHost({
+      repositoryRoot: resolve("."),
+      taskFilePath: join(directory, "tasks.jsonl"),
+      approvalFilePath: join(directory, "approvals.jsonl"),
+      resultFilePath: join(directory, "results.jsonl"),
+      evidenceLedgerPath: join(directory, "guardian-evidence.jsonl"),
+      sovereignNodeHealthRunner: async options => {
+        observed = options;
+        return { component: "sovereign-node", status: "healthy", httpStatus: 200, probe: "read_only" };
+      },
+    });
+    host.submit({
+      taskId: "sovereign-health-1",
+      title: "Check local Sovereign Node health",
+      requestedBy: "test-operator",
+      metadata: { capability: "service.health.read_only", baseUrl: "http://127.0.0.1:3000", timeoutMs: 1500 },
+    });
+    host.approve("sovereign-health-1", { actor: "test-operator", reason: "health probe approved" });
+    const result = await host.dispatch("sovereign-health-1", "sovereign-node.health", {
+      actor: "test-operator", reason: "run read-only loopback health check",
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.result.probe, "read_only");
+    assert.equal(observed.baseUrl, "http://127.0.0.1:3000");
+    assert.equal(observed.timeoutMs, 1500);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
