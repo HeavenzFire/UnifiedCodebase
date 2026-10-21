@@ -11,7 +11,9 @@ test("connected GitHub repository snapshot validates and has unique identities",
   assert.equal(result.ok, true, result.errors.join("; "));
   assert.equal(result.count, snapshot.repositories.length);
   assert.ok(result.count > 0);
-  assert.ok(snapshot.repositories.every(repo => repo.integration_status === "unassessed"));
+  assert.ok(snapshot.repositories.every(repo => ["unassessed", "candidate", "verified_component", "integrated", "blocked"].includes(repo.integration_status)));
+  assert.equal(snapshot.repositories.filter(repo => repo.integration_status === "candidate").length, 2);
+  assert.equal(snapshot.repositories.filter(repo => repo.integration_status === "blocked").length, 1);
 });
 
 test("rejects duplicate repositories and inconsistent counts", () => {
