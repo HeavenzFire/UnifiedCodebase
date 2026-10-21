@@ -26,4 +26,4 @@ jobs:
         with:
           node-version: 20
       - name: Run provider, extension registry, and integration contract tests
-        run: node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs extensions/guardian-evidence/evidence-ledger.test.mjs integrations/sovereign-node-adapter.test.mjs integrations/extension-registry.test.mjs
+        run: node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs extensions/guardian-evidence/evidence-ledger.test.mjs integrations/sovereign-node-adapter.test.mjs integrations/extension-registry.test.mjs integrations/load-extension-manifests.test.mjs
