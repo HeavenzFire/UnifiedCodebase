@@ -6,6 +6,7 @@ This repository is the integration spine for connecting the HeavenzFire project 
 - Integration roadmap: docs/UNIFIED-FIELD-ROADMAP.md
 - Provider router: unified-field/provider-router.mjs
 - Windows PowerShell 5.1 entry point: Enter-UnifiedField.ps1
+- Extension registry: integrations/extension-registry.mjs
 - Guardian evidence extension: extensions/guardian-evidence/README.md
 - Funding integrity extension: extensions/funding-integrity/README.md
 
@@ -22,8 +23,10 @@ Explicit remote provider selection requires that provider's own key:
     $env:MISTRAL_API_KEY = 'set-this-in-your-session-only'
     .\Enter-UnifiedField.ps1 -Provider mistral -Prompt "Summarize this report."
 
-Run tests:
-    node --test .\unified-field\provider-router.test.mjs
+Run the full configured Node.js contract suite:
+    node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs extensions/guardian-evidence/evidence-ledger.test.mjs integrations/sovereign-node-adapter.test.mjs integrations/extension-registry.test.mjs
+
+The extension registry validates manifest shape, stable identifiers, versions, and explicit capability/permission allowlists. It is a metadata gate, not a sandbox: registering a manifest does not execute or isolate the extension. Runtime enforcement must remain in the host.
 
 ## Operating principles
 Local-first; explicit provider selection; no silent fallback; no secrets in source control; reproducible tests; human review for consequential decisions; evidence and corrections preserved.
