@@ -18,7 +18,7 @@ This repository is the integration spine for connecting the HeavenzFire project 
 - Registry-backed worker adapter: integrations/registry-worker-adapter.mjs (derives worker capabilities from allowlisted extension manifests)
 - Integrated task-to-worker host API: integrations/worker-host.mjs (task intake, explicit approval, registry-backed dispatch, and task/approval/result audit journals)
 - Default local worker bundle: integrations/default-worker-host.mjs (validated Guardian Evidence append/verify and read-only Funding Integrity reconciliation handlers)
-- Local model worker: extensions/local-model/local-model-worker.mjs (pins approved model tasks to Ollama; task metadata cannot select a remote provider)
+- Local model worker: extensions/local-model/local-model-worker.mjs (pins approved model tasks to loopback Ollama; task metadata cannot select a remote provider and non-loopback endpoints are rejected)
 
 ## Quick start
 Requirements: Node.js 20+ and, for local inference, Ollama with a model installed.
