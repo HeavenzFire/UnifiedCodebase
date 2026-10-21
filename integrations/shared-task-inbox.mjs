@@ -310,6 +310,23 @@ export function createSharedTaskInboxServer({ inbox, host = "127.0.0.1", maxBody
       catch (error) { send(503, { ok: false, error: error.message }); }
       return;
     }
+    if (request.method === "GET" && request.url === "/api/audit") {
+      try {
+        const proposals = inbox.audit();
+        const claims = inbox.auditClaims();
+        send(200, {
+          ok: true,
+          mode: "proposal-only",
+          proposalCount: proposals.length,
+          proposalChainHead: proposals.at(-1)?.hash ?? null,
+          claimEventCount: claims.length,
+          claimChainHead: claims.at(-1)?.hash ?? null,
+        });
+      } catch (error) {
+        send(503, { ok: false, error: error.message });
+      }
+      return;
+    }
     const route = request.url;
     if (request.method !== "POST" || !["/api/tasks", "/api/claims", "/api/claims/release"].includes(route)) {
       send(404, { ok: false, error: "not_found" });
