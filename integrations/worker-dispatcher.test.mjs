@@ -78,21 +78,21 @@ test("capability mismatch fails closed before consuming approval", async () => w
 }));
 
 test("worker failure becomes a durable failed task and frees capacity", async () => withLifecycle(async ({ lifecycle }) => {
-  makeApproved(lifecycle, "failure-1");
-  const dispatcher = createWorkerDispatcher({ lifecycle, workers: [{ id: "throws", run: async () => { throw new Error("fixture failure"); } }] });
+  makeApproved(lifecycle, "failure-1", { capability: "test.fail" });
+  const dispatcher = createWorkerDispatcher({ lifecycle, workers: [{ id: "throws", capabilities: ["test.fail"], run: async () => { throw new Error("fixture failure"); } }] });
   await assert.rejects(dispatcher.dispatch("failure-1", "throws"), /fixture failure/);
   assert.equal(lifecycle.get("failure-1").status, "failed");
   assert.equal(dispatcher.status().activeTasks, 0);
 }));
 
 test("enforces capacity and prevents duplicate concurrent dispatch", async () => withLifecycle(async ({ lifecycle }) => {
-  makeApproved(lifecycle, "slow-1");
-  makeApproved(lifecycle, "slow-2");
+  makeApproved(lifecycle, "slow-1", { capability: "test.slow" });
+  makeApproved(lifecycle, "slow-2", { capability: "test.slow" });
   let release;
   const waiting = new Promise(resolve => { release = resolve; });
   const dispatcher = createWorkerDispatcher({
     lifecycle, maxConcurrent: 1,
-    workers: [{ id: "slow", run: async () => { await waiting; return "done"; } }],
+    workers: [{ id: "slow", capabilities: ["test.slow"], run: async () => { await waiting; return "done"; } }],
   });
   const first = dispatcher.dispatch("slow-1", "slow");
   await new Promise(resolve => setImmediate(resolve));
