@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDefaultWorkerHost } from "./default-worker-host.mjs";
+import { assertLoopbackEndpoint } from "./shared-task-proposal-adapter.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const USAGE = `HeavenzFire Unified Field task host
@@ -38,10 +39,27 @@ function output(value) {
   console.log(JSON.stringify(value, null, 2));
 }
 
+async function fetchInbox(endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "http://127.0.0.1:18796/api/tasks") {
+  const url = assertLoopbackEndpoint(endpoint);
+  const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error("Shared task inbox returned invalid JSON."); }
+  if (!response.ok || !body || body.ok !== true || !Array.isArray(body.tasks)) {
+    throw new Error("Shared task inbox request failed: " + (body?.error || response.status));
+  }
+  return body;
+}
+
 async function main(argv) {
   const [command, ...args] = argv;
   if (!command || command === "--help" || command === "-h" || command === "help") {
     console.log(USAGE);
+    return;
+  }
+  if (command === "inbox-list") {
+    if (args.length > 1) throw new Error("inbox-list accepts at most one endpoint.");
+    output(await fetchInbox(args[0]));
     return;
   }
   const stateDirectory = resolve(process.env.HEAVENZFIRE_STATE_DIR || join(homedir(), ".heavenzfire", "unified-field"));
