@@ -37,6 +37,13 @@ Phase 6: reviewable pull requests and reproducible release artifacts.
 - `integrations/validate-repository-inventory.mjs` validates the snapshot structure, unique repository identities, and safe default status. CI tests this validator.
 - `docs/REPOSITORY-INTEGRATION-INVENTORY.md` defines status transitions and the per-repository review gate. Next work is a source-level audit of high-priority repositories, starting with Sovereign Node, public transparency/audit, and child-safety candidates.
 
+## Source-level integration triage
+- `docs/INITIAL-SOURCE-INTEGRATION-REVIEW.md` records exact commit/blob references for initial review of Sovereign Node, Verifier Mesh, Public Transparency Portal, and Audit of the State.
+- Sovereign Node is restricted to a loopback-only read-only health adapter until unauthenticated routes and WebSocket access are reviewed; its current node list is hard-coded and must not be represented as a live mesh.
+- Verifier Mesh passes caller-provided case text to a remote Gemini API; no case-data integration is enabled pending privacy and authorization review.
+- Public Transparency Portal claims remain unverified until tied to primary sources and reproducible calculations. Audit of the State requires source inspection beyond its starter-level root files.
+- These are static-source findings only; the applications were not installed or executed in this review.
+
 ## Shared task proposal bridge (integration verified)
 - `integrations/task-lifecycle.mjs` defines the lifecycle contract; `integrations/durable-task-lifecycle.mjs` persists snapshots and audit events in an append-only, SHA-256 hash-chained JSONL log and replays state on restart.
 - `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to an explicit HTTP loopback inbox endpoint at `127.0.0.1:<port>/api/tasks`.
