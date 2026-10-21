@@ -31,6 +31,15 @@ Phase 4: funding reconciliation using synthetic fixtures and public records.
 Phase 5: repository inventory and staged adapters, one project at a time.
 Phase 6: reviewable pull requests and reproducible release artifacts.
 
+## Shared task proposal bridge (current integration gate)
+- `integrations/task-lifecycle.mjs` tracks local task state in memory; it is not durable and does not execute work.
+- `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to the explicit loopback inbox endpoint `http://127.0.0.1:18796/api/tasks`.
+- The adapter always sends a `proposed` task with `approvalState: pending`; it does not approve, dispatch, or execute tasks.
+- A repeated identical task ID is expected to be handled idempotently by the inbox; a conflicting payload must be rejected. The adapter checks the inbox acknowledgement but does not itself provide persistence.
+- Automated tests cover lifecycle transitions, defensive snapshots, endpoint restrictions, contract mapping, and response validation.
+- End-to-end acceptance still requires running the actual task inbox with a temporary JSONL store and proving first delivery, duplicate delivery, conflicting duplicate rejection, and persistence across process restart. The cross-repository adapter is not yet wired into the PowerShell launcher or a worker.
+- The inbox must remain bound to loopback, and approval must remain an explicit separate action.
+
 ## Acceptance gates
 - Unit tests pass on a clean Node.js LTS runtime.
 - Provider failures never trigger an unrequested provider switch.
