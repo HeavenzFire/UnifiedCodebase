@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDurableTaskLifecycle } from "./durable-task-lifecycle.mjs";
@@ -8,6 +8,7 @@ import { createDurableTaskLifecycle } from "./durable-task-lifecycle.mjs";
 function withStore(run) {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-task-store-"));
   const filePath = join(directory, "audit", "tasks.jsonl");
+  mkdirSync(join(directory, "audit"), { recursive: true });
   try { run({ directory, filePath }); }
   finally { rmSync(directory, { recursive: true, force: true }); }
 }
