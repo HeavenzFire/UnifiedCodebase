@@ -21,9 +21,9 @@ const DEFAULT_PERMISSIONS = Object.freeze([
 ]);
 
 /**
- * Build a host with the repository's reviewed Guardian Evidence and Funding Integrity
- * adapters. Manifest loading validates metadata and paths; only these statically imported
- * handlers are executable. Funding reconciliation is read-only; evidence append writes
+ * Build a host with reviewed Guardian Evidence, read-only Funding Integrity, local Ollama,
+ * and loopback-only Sovereign Node health handlers. Manifest loading validates metadata
+ * and paths; only these statically imported handlers are executable. Evidence append writes
  * only to the configured local ledger.
  */
 export async function createDefaultWorkerHost({
