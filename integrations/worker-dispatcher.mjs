@@ -66,7 +66,10 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
     if (!["queued", "blocked"].includes(task.status)) throw new Error("Task is not dispatchable from status: " + task.status);
     if (!lifecycle.isApproved(id)) throw new Error("Explicit approval required before worker dispatch.");
     const requestedCapability = task.metadata?.capability;
-    if (requestedCapability && !worker.capabilities.has(requestedCapability)) {
+    if (typeof requestedCapability !== "string" || !requestedCapability.trim()) {
+      throw new Error("Task must declare a required capability before worker dispatch.");
+    }
+    if (!worker.capabilities.has(requestedCapability.trim())) {
       throw new Error("Worker lacks required capability: " + requestedCapability);
     }
 
