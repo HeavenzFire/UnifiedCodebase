@@ -217,12 +217,17 @@ jobs:
             }
             $inboxBody = Invoke-RestMethod -Uri 'http://127.0.0.1:18797/api/tasks' -TimeoutSec 2
             if ($inboxBody.tasks.Count -ne 1 -or $inboxBody.tasks[0].goal -ne "Share only this short proposal summary") { throw "Inbox did not store the minimized proposal." }
+            $env:HEAVENZFIRE_TASK_INBOX_URL = 'http://127.0.0.1:18797/api/tasks'
+            $inboxListRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxList
+            $inboxList = ($inboxListRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($inboxList.tasks.Count -ne 1 -or $inboxList.tasks[0].taskId -ne "windows-ps51-proposal") { throw "PowerShell inbox-list command failed." }
             if ($inboxBody.tasks[0].metadata.prompt -or $inboxBody.tasks[0].metadata.input) { throw "Sensitive task payload leaked into the shared proposal." }
           } catch {
             Write-Host "Windows PowerShell E2E failed: $($_.Exception.Message)"
             if (Test-Path -LiteralPath (Join-Path $state "inbox.stderr.log")) { Write-Host (Get-Content -LiteralPath (Join-Path $state "inbox.stderr.log") -Raw) }
             throw
           } finally {
+            Remove-Item Env:HEAVENZFIRE_TASK_INBOX_URL -ErrorAction SilentlyContinue
             if ($inboxProcess -and -not $inboxProcess.HasExited) { Stop-Process -Id $inboxProcess.Id -Force -ErrorAction SilentlyContinue }
             Remove-Item -LiteralPath $state -Recurse -Force -ErrorAction SilentlyContinue
           }
