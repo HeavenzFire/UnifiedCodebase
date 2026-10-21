@@ -174,12 +174,12 @@ jobs:
             if ($audit.resultRecords -ne 1 -or -not $audit.resultChainHead) { throw "Audit verification failed: $($auditRaw -join '')" }
 
             Write-Host "Windows PowerShell E2E: start proposal inbox"
-            $inboxScript = Join-Path $PWD.Path 'integrations\shared-task-inbox.mjs'
+            $entrypoint = Join-Path $PWD.Path 'Enter-UnifiedField.ps1'
             $inboxFile = Join-Path $state 'shared-task-inbox.jsonl'
             $inboxStdout = Join-Path $state 'inbox.stdout.log'
             $inboxStderr = Join-Path $state 'inbox.stderr.log'
-            $nodePath = (Get-Command node).Source
-            $inboxProcess = Start-Process -FilePath $nodePath -ArgumentList @($inboxScript, '--port', '18797', '--file', $inboxFile) -WorkingDirectory $PWD.Path -PassThru -WindowStyle Hidden -RedirectStandardOutput $inboxStdout -RedirectStandardError $inboxStderr
+            $powerShellPath = (Get-Command powershell.exe).Source
+            $inboxProcess = Start-Process -FilePath $powerShellPath -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $entrypoint, '-TaskAction', 'StartInbox', '-InboxPort', '18797', '-InboxFilePath', $inboxFile) -WorkingDirectory $PWD.Path -PassThru -WindowStyle Hidden -RedirectStandardOutput $inboxStdout -RedirectStandardError $inboxStderr
             $healthy = $false
             for ($attempt = 0; $attempt -lt 20; $attempt++) {
               try {
