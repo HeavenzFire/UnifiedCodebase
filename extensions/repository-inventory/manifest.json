@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "repository.inventory",
+  "version": "0.1.0",
+  "entrypoint": "extensions/repository-inventory/inventory-worker.mjs",
+  "capabilities": [
+    "repository.inventory.read_only"
+  ],
+  "permissions": [
+    "filesystem.read:repository-inventory-snapshot"
+  ],
+  "data_flows": [
+    "checked-in-repository-metadata-to-filtered-inventory-report"
+  ],
+  "healthcheck": "node --check extensions/repository-inventory/inventory-worker.mjs",
+  "test_command": "node --test extensions/repository-inventory/inventory-worker.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
