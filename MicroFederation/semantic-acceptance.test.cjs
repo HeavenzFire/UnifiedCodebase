@@ -15,9 +15,8 @@ function buildTwoSandboxPair(answerFor) {
   ];
   const externalVerifier = async ({ task, result }) => {
     const artifact = result.outputs.builder && result.outputs.builder.artifact;
-    const expected = task.payload.acceptance.expected;
-    const ok = !!artifact && artifact.result === expected;
-    return { ok, resultHash: hash(artifact), check: 'exact-deterministic-result' };
+    // Verifier checks receipt identity only; the root must enforce the task's acceptance contract.
+    return { ok: !!artifact, resultHash: hash(artifact), check: 'artifact-receipt-present' };
   };
   return createRootConductor({ sandboxes, externalVerifier });
 }
@@ -36,6 +35,8 @@ test('accepts two-sandbox task only when both builders satisfy deterministic acc
   assert.equal(result.sandboxResults.length, 2);
   assert.ok(result.sandboxResults.every(s => s.decision.outcome === 'approve'));
   assert.ok(result.independentVerification.every(v => v.ok === true));
+  assert.equal(result.allAcceptancePassed, true);
+  assert.ok(result.acceptanceChecks.every(v => v.ok === true));
   assert.ok(result.traceHeads.every(t => /^[a-f0-9]{64}$/.test(t.traceHead)));
 });
 
@@ -50,7 +51,9 @@ test('quarantines unanimous but semantically incorrect sandbox outputs', async (
   const result = await root.route(task);
   assert.equal(result.sandboxResults.every(s => s.decision.outcome === 'approve'), true);
   assert.equal(result.artifactsAgree, true);
-  assert.equal(result.independentVerification.every(v => v.ok === true), false);
+  assert.equal(result.independentVerification.every(v => v.ok === true), true);
+  assert.equal(result.allAcceptancePassed, false);
+  assert.ok(result.acceptanceChecks.every(v => v.ok === false));
   assert.equal(result.accepted, false);
   assert.equal(result.rootDecision, 'quarantined');
 });
