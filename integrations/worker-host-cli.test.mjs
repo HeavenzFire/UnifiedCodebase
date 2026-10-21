@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { dirname, resolve } from "node:path";
@@ -58,4 +58,15 @@ test("CLI completes a persisted submit-approve-dispatch-audit cycle", () => {
   } finally {
     rmSync(stateDirectory, { recursive: true, force: true });
   }
+});
+
+test("PowerShell 5.1 entry points expose and forward governed task actions", () => {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const entrypoint = readFileSync(resolve(root, "Enter-UnifiedField.ps1"), "utf8");
+  const wrapper = readFileSync(resolve(root, "Invoke-UnifiedFieldTask.ps1"), "utf8");
+  assert.match(entrypoint, /TaskAction/);
+  assert.match(entrypoint, /Invoke-UnifiedFieldTask\.ps1/);
+  assert.match(entrypoint, /& \$TaskHost @TaskHostArguments/);
+  assert.match(wrapper, /ValidateSet\('Workers','Submit','Approve','Dispatch','List','Status','Audit'\)/);
+  assert.match(wrapper, /TaskJson \| & \$Node\.Source \$Cli 'submit' '-'/);
 });
