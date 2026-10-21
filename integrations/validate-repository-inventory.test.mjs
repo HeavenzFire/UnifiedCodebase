@@ -11,6 +11,7 @@ test("connected GitHub repository snapshot validates and has unique identities",
   assert.equal(result.ok, true, result.errors.join("; "));
   assert.equal(result.count, snapshot.repositories.length);
   assert.ok(result.count > 0);
+  assert.ok(snapshot.repositories.every(repo => repo.integration_status === "unassessed"));
 });
 
 test("rejects duplicate repositories and inconsistent counts", () => {
@@ -19,6 +20,14 @@ test("rejects duplicate repositories and inconsistent counts", () => {
   const result = validateRepositoryInventory(snapshot);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(error => error.includes("Duplicate repository")));
+});
+
+test("rejects entries without a documented integration status", () => {
+  const repo = { full_name: "Owner/Repo", name: "Repo", default_branch: "main", visibility: "public", archived: false, size_kb: 0, url: "https://github.com/Owner/Repo" };
+  const snapshot = { schema: "heavenzfire.repository-inventory-snapshot.v1", result_count: 1, integration_status_default: "unassessed", repositories: [repo] };
+  const result = validateRepositoryInventory(snapshot);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(error => error.includes("integration_status")));
 });
 
 test("does not allow inventory entries to imply verified integration by default", () => {
