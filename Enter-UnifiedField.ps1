@@ -4,9 +4,11 @@ param(
     [ValidateSet('ollama','openai','mistral','gemini')][string]$Provider = 'ollama',
     [string]$Model,
     [switch]$HealthOnly,
-    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit","StartInbox","InboxList")][string]$TaskAction,
+    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit","StartInbox","InboxList","Claim","Release")][string]$TaskAction,
     [string]$TaskJson,
     [string]$TaskId,
+    [string]$WorkerId,
+    [ValidateRange(5,3600)][int]$LeaseSeconds = 60,
     [string]$ExtensionId,
     [string]$Actor,
     [string]$Reason,
@@ -26,6 +28,8 @@ if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
     $TaskHostParameters = @{ Action = $TaskAction }
     if (-not [string]::IsNullOrWhiteSpace($TaskJson)) { $TaskHostParameters.TaskJson = $TaskJson }
     if (-not [string]::IsNullOrWhiteSpace($TaskId)) { $TaskHostParameters.TaskId = $TaskId }
+    if (-not [string]::IsNullOrWhiteSpace($WorkerId)) { $TaskHostParameters.WorkerId = $WorkerId }
+    if ($LeaseSeconds -ne 60) { $TaskHostParameters.LeaseSeconds = $LeaseSeconds }
     if (-not [string]::IsNullOrWhiteSpace($ExtensionId)) { $TaskHostParameters.ExtensionId = $ExtensionId }
     if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostParameters.Actor = $Actor }
     if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostParameters.Reason = $Reason }
