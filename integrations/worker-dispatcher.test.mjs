@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
 import { createWorkerDispatcher } from "./worker-dispatcher.mjs";
 import { createWorkerResultJournal } from "./worker-result-journal.mjs";
+import { createExtensionRegistry } from "./extension-registry.mjs";
+import { createRegistryBackedWorkers } from "./registry-worker-adapter.mjs";
 
 async function withLifecycle(run) {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-dispatch-"));
@@ -98,6 +100,38 @@ test("enforces capacity and prevents duplicate concurrent dispatch", async () =>
   release();
   await first;
   assert.equal(dispatcher.status().activeTasks, 0);
+}));
+
+test("end-to-end dispatch uses capabilities from a registered extension manifest", async () => withLifecycle(async ({ lifecycle }) => {
+  makeApproved(lifecycle, "registry-worker-1", { capability: "funding.reconcile.read_only" });
+  const registry = createExtensionRegistry({
+    allowedCapabilities: ["funding.reconcile.read_only"],
+    allowedPermissions: ["filesystem.read:input-records"],
+  });
+  registry.register({
+    manifest_version: "1.0",
+    extension_id: "funding.integrity",
+    version: "1.0.0",
+    entrypoint: "extensions/funding-integrity/reconcile.mjs",
+    capabilities: ["funding.reconcile.read_only"],
+    permissions: ["filesystem.read:input-records"],
+    data_flows: ["public-records-to-reconciliation-report"],
+    healthcheck: "node --check extensions/funding-integrity/reconcile.mjs",
+    test_command: "node --test extensions/funding-integrity/reconcile.test.mjs",
+    rollback: "disable extension and revert pinned revision",
+  });
+  const workers = createRegistryBackedWorkers({
+    registry,
+    handlers: [{
+      extensionId: "funding.integrity",
+      run: async task => ({ taskId: task.taskId, mode: "read-only" }),
+    }],
+  });
+  const dispatcher = createWorkerDispatcher({ lifecycle, workers });
+  const result = await dispatcher.dispatch("registry-worker-1", "funding.integrity");
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(result.result, { taskId: "registry-worker-1", mode: "read-only" });
+  assert.equal(lifecycle.get("registry-worker-1").status, "succeeded");
 }));
 
 test("worker result journal rejects modified output during replay", async () => withLifecycle(async ({ directory }) => {
