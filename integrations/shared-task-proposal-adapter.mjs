@@ -22,7 +22,7 @@ function jsonClone(value) {
   }
 }
 
-function assertLoopbackEndpoint(endpoint) {
+export function assertLoopbackEndpoint(endpoint) {
   let url;
   try { url = new URL(endpoint); } catch { throw new TypeError("endpoint must be a valid URL."); }
   if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.username || url.password ||
