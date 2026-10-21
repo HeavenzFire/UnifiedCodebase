@@ -77,6 +77,19 @@ test("capability mismatch fails closed before consuming approval", async () => w
   assert.equal(lifecycle.isApproved("capability-1"), true);
 }));
 
+test("dispatch rejects tasks without a declared capability before consuming approval", async () => withLifecycle(async ({ lifecycle }) => {
+  makeApproved(lifecycle, "missing-capability-1");
+  let calls = 0;
+  const dispatcher = createWorkerDispatcher({
+    lifecycle,
+    workers: [{ id: "generic", run: async () => { calls += 1; return "should not run"; } }],
+  });
+  await assert.rejects(dispatcher.dispatch("missing-capability-1", "generic"), /must declare a required capability/);
+  assert.equal(calls, 0);
+  assert.equal(lifecycle.get("missing-capability-1").status, "queued");
+  assert.equal(lifecycle.isApproved("missing-capability-1"), true);
+}));
+
 test("worker failure becomes a durable failed task and frees capacity", async () => withLifecycle(async ({ lifecycle }) => {
   makeApproved(lifecycle, "failure-1", { capability: "test.fail" });
   const dispatcher = createWorkerDispatcher({ lifecycle, workers: [{ id: "throws", capabilities: ["test.fail"], run: async () => { throw new Error("fixture failure"); } }] });
