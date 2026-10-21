@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
-import { createWorkerDispatcher } from "./worker-dispatcher.mjs";
+import { createWorkerDispatcher } from "./worker-dispatcher.mjs";\nimport { createWorkerResultJournal } from "./worker-result-journal.mjs";
 
 async function withLifecycle(run) {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-dispatch-"));
@@ -39,7 +39,7 @@ test("dispatch consumes approval, runs only the registered handler, and records 
   const result = await dispatcher.dispatch("success-1", "summarizer", { actor: "operator", reason: "approved test" });
   assert.equal(calls, 1);
   assert.equal(result.status, "succeeded");
-  assert.match(result.resultSha256, /^[a-f0-9]{64}$/);
+  assert.match(result.resultSha256, /^[a-f0-9]{64}$/);\n  assert.equal(resultJournal.list().length, 1);\n  assert.equal(resultJournal.list()[0].entry.resultSha256, result.resultSha256);\n  assert.match(result.resultJournal.hash, /^[a-f0-9]{64}$/);
   assert.equal(lifecycle.get("success-1").status, "succeeded");
   assert.equal(lifecycle.isApproved("success-1"), false);
   const taskAudit = lifecycle.audit();
@@ -55,7 +55,7 @@ test("dispatch consumes approval, runs only the registered handler, and records 
   assert.equal(recovered.get("success-1").status, "succeeded");
   assert.equal(recovered.isApproved("success-1"), false);
   assert.ok(recovered.audit().length >= 3);
-  assert.ok(recovered.approvalAudit().some(record => record.event?.eventType === "task.approval_consumed"));
+  assert.ok(recovered.approvalAudit().some(record => record.event?.eventType === "task.approval_consumed"));\n  const recoveredResults = createWorkerResultJournal({ filePath: join(directory, "results.jsonl") });\n  assert.equal(recoveredResults.list().length, 1);\n  assert.deepEqual(recoveredResults.list()[0].entry.result, { taskId: "success-1", summary: "verified" });\n  assert.ok(recovered.get("success-1").history.at(-1).evidenceRefs.some(ref => ref === "worker-result-journal:sha256:" + result.resultJournal.hash));
 }));
 
 test("capability mismatch fails closed before consuming approval", async () => withLifecycle(async ({ lifecycle }) => {
