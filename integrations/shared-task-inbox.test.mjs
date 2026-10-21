@@ -39,6 +39,37 @@ test("inbox persists proposals, treats exact retries idempotently, and rejects c
   }
 });
 
+test("durable worker leases prevent duplicate claims, renew, expire, and release", () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-inbox-claims-"));
+  const filePath = join(directory, "inbox.jsonl");
+  let clock = new Date("2026-10-21T00:00:00.000Z");
+  const now = () => clock.toISOString();
+  try {
+    const inbox = createSharedTaskInbox({ filePath, now });
+    const record = fixture();
+    inbox.accept(record);
+    const first = inbox.claim(record.taskId, "worker-a", 30);
+    assert.equal(first.workerId, "worker-a");
+    assert.equal(first.renewed, false);
+    assert.throws(() => inbox.claim(record.taskId, "worker-b", 30), error => error.code === "TASK_ALREADY_CLAIMED");
+
+    const renewed = inbox.claim(record.taskId, "worker-a", 60);
+    assert.equal(renewed.renewed, true);
+    assert.throws(() => inbox.release(record.taskId, "worker-b"), error => error.code === "TASK_CLAIMED_BY_OTHER_WORKER");
+
+    clock = new Date("2026-10-21T00:01:01.000Z");
+    const takeover = inbox.claim(record.taskId, "worker-b", 30);
+    assert.equal(takeover.workerId, "worker-b");
+    assert.equal(inbox.release(record.taskId, "worker-b").released, true);
+
+    const recovered = createSharedTaskInbox({ filePath, now });
+    assert.equal(recovered.list()[0].claim, null);
+    assert.equal(recovered.auditClaims().length, 4);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("inbox replay fails closed when the hash-chained journal is modified", () => {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-inbox-tamper-"));
   const filePath = join(directory, "inbox.jsonl");
@@ -78,10 +109,39 @@ test("HTTP inbox binds only to loopback and serves health, list, and proposal-on
     assert.equal(posted.status, 201);
     assert.equal((await posted.json()).approvalState, "pending");
 
+    const claimed = await fetch(base + "/api/claims", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskId: "inbox-task-1", workerId: "worker-a", leaseSeconds: 30 }),
+    });
+    assert.equal(claimed.status, 201);
+    assert.equal((await claimed.json()).workerId, "worker-a");
+    const competingClaim = await fetch(base + "/api/claims", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskId: "inbox-task-1", workerId: "worker-b", leaseSeconds: 30 }),
+    });
+    assert.equal(competingClaim.status, 409);
+    assert.equal((await competingClaim.json()).error, "task_already_claimed");
+
     const listed = await fetch(base + "/api/tasks");
     const listedBody = await listed.json();
     assert.equal(listedBody.tasks.length, 1);
     assert.equal(listedBody.tasks[0].status, "proposed");
+    assert.equal(listedBody.tasks[0].claim.workerId, "worker-a");
+
+    const wrongRelease = await fetch(base + "/api/claims/release", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskId: "inbox-task-1", workerId: "worker-b" }),
+    });
+    assert.equal(wrongRelease.status, 409);
+    const released = await fetch(base + "/api/claims/release", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskId: "inbox-task-1", workerId: "worker-a" }),
+    });
+    assert.equal((await released.json()).released, true);
 
     const duplicate = await fetch(base + "/api/tasks", {
       method: "POST",
