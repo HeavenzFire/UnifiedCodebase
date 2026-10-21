@@ -43,10 +43,13 @@ test("submits a minimal approved proposal and excludes task payloads", async () 
 });
 
 test("proposal worker requires its capability and rejects remote inbox targets", async () => {
+  await assert.rejects(submitSharedTaskProposalTask(task({ metadata: { capability: "task.proposal.submit" } }), {
+    submitter: async () => ({ ok: true }),
+  }), /proposalPurpose is required/);
   await assert.rejects(submitSharedTaskProposalTask(task({ metadata: { capability: "funding.reconcile.read_only" } }), {
     submitter: async () => ({ ok: true }),
   }), /must request task.proposal.submit/);
   await assert.rejects(submitSharedTaskProposalTask(task({
-    metadata: { capability: "task.proposal.submit", endpoint: "http://192.0.2.1:18796/api/tasks" },
+    metadata: { capability: "task.proposal.submit", endpoint: "http://192.0.2.1:18796/api/tasks", proposalPurpose: "test purpose" },
   })), /must be http:\/\/127.0.0.1/);
 });
