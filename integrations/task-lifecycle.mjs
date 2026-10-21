@@ -28,10 +28,26 @@ function validateText(value, field, max = 4000) {
  * Optional onEvent is a host-owned audit hook; event payloads contain task metadata,
  * not secrets or prompt contents unless a caller explicitly puts them in metadata.
  */
-export function createTaskLifecycle({ now = () => new Date().toISOString(), onEvent = null } = {}) {
+export function createTaskLifecycle({ now = () => new Date().toISOString(), onEvent = null, initialTasks = [] } = {}) {
   if (typeof now !== "function") throw new TypeError("now must be a function.");
   if (onEvent !== null && typeof onEvent !== "function") throw new TypeError("onEvent must be a function when provided.");
+  if (!Array.isArray(initialTasks)) throw new TypeError("initialTasks must be an array.");
   const tasks = new Map();
+  for (const item of initialTasks) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new TypeError("Each initial task must be an object.");
+    const id = validateText(item.taskId, "initial taskId", 200);
+    if (tasks.has(id)) throw new Error("Duplicate initial task: " + id);
+    if (!TASK_STATUSES.has(item.status)) throw new TypeError("Unknown initial task status: " + item.status);
+    validateText(item.title, "initial title", 500);
+    validateText(item.requestedBy, "initial requestedBy", 200);
+    if (!Array.isArray(item.history) || item.history.length < 1) throw new TypeError("Initial task history must be a non-empty array.");
+    const copy = safeClone(item);
+    if (copy.history[0]?.status !== "queued") throw new TypeError("Initial task history must begin in queued state.");
+    if (copy.history[copy.history.length - 1]?.status !== copy.status) {
+      throw new TypeError("Initial task history must end at the current status.");
+    }
+    tasks.set(id, copy);
+  }
 
   function emit(task, eventType, extra = {}) {
     if (!onEvent) return;
@@ -42,6 +58,7 @@ export function createTaskLifecycle({ now = () => new Date().toISOString(), onEv
       status: task.status,
       at: now(),
       metadata: safeClone(task.metadata),
+      task: safeClone(task),
       ...extra,
     });
     // The caller controls the event sink; a sink failure is surfaced to the caller.
