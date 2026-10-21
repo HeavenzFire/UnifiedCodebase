@@ -17,7 +17,7 @@ function response(body, status = 201) {
 }
 
 test("maps local lifecycle task to a proposed/pending shared contract without approving it", () => {
-  const record = toSharedTaskRecord(task, { now: () => "2026-10-20T01:00:00.000Z" });
+  const record = toSharedTaskRecord(task);
   assert.equal(SHARED_TASK_SCHEMA, "heavenzfire.shared-task.v1");
   assert.equal(record.taskId, task.taskId);
   assert.equal(record.source, "unified-codebase");
@@ -26,14 +26,13 @@ test("maps local lifecycle task to a proposed/pending shared contract without ap
   assert.deepEqual(record.evidence, []);
   assert.equal(record.metadata.requestedBy, "local-user");
   assert.equal(record.metadata.localLifecycleStatus, "queued");
-  assert.equal(record.updatedAt, "2026-10-20T01:00:00.000Z");
+  assert.equal(record.updatedAt, task.updatedAt);
 });
 
 test("submits only to the explicit loopback task inbox and reports idempotent duplicates", async () => {
   let captured;
   const result = await submitProposal(task, {
     endpoint: "http://127.0.0.1:18796/api/tasks",
-    now: () => "2026-10-20T01:00:00.000Z",
     fetchImpl: async (url, init) => {
       captured = { url, init, body: JSON.parse(init.body) };
       return response({ ok: true, duplicate: true, taskId: task.taskId, status: "proposed" }, 200);
