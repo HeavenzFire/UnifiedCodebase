@@ -98,3 +98,11 @@ test("PowerShell task wrapper exposes loopback inbox startup", () => {
   assert.match(wrapper, /shared-task-inbox\.mjs/);
   assert.match(entrypoint, /StartInbox/);
 });
+
+test("inbox-list rejects non-loopback endpoints before making a request", () => {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const cli = resolve(root, "integrations/worker-host-cli.mjs");
+  const result = spawnSync(process.execPath, [cli, "inbox-list", "http://192.0.2.20:18796/api/tasks"], { encoding: "utf8" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Task inbox endpoint must be http:\/\/127\.0\.0\.1/);
+});
