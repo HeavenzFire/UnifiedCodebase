@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
@@ -52,4 +52,17 @@ test("approval cannot be granted to unknown or running tasks", () => withStores(
   host.approve("approval-4", { actor: "reviewer", reason: "review" });
   host.transition("approval-4", "running", { reason: "execute" });
   assert.throws(() => host.approve("approval-4", { actor: "reviewer", reason: "again" }), /Only queued or blocked tasks/);
+}));
+
+
+test("fails closed after an approval journal write error", () => withStores(paths => {
+  const host = createGovernedTaskLifecycle(paths);
+  host.create({ taskId: "approval-write-fail", title: "Approval journal fault", requestedBy: "test" });
+  mkdirSync(paths.approvalFilePath);
+  assert.throws(() => host.approve("approval-write-fail", { actor: "reviewer", reason: "approve" }));
+  assert.throws(() => host.isApproved("approval-write-fail"), /Approval journal is faulted/);
+  assert.throws(
+    () => host.transition("approval-write-fail", "running", { actor: "reviewer", reason: "try running" }),
+    /Approval journal is faulted/
+  );
 }));
