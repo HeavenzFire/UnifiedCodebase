@@ -35,6 +35,9 @@ export function createWorkerHost({
 
   return Object.freeze({
     submit(task) {
+      if (!task || !task.metadata || typeof task.metadata.capability !== "string" || !task.metadata.capability.trim()) {
+        throw new TypeError("Task metadata.capability is required.");
+      }
       return lifecycle.create(task);
     },
     approve(taskId, approval) {
