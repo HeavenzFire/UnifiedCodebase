@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "github.metadata",
+  "version": "0.1.0",
+  "entrypoint": "extensions/github-metadata/github-metadata-worker.mjs",
+  "capabilities": [
+    "repository.github.metadata.read_only"
+  ],
+  "permissions": [
+    "network.https:api.github.com"
+  ],
+  "data_flows": [
+    "approved-task-to-allowlisted-github-metadata-get-request"
+  ],
+  "healthcheck": "node --check extensions/github-metadata/github-metadata-worker.mjs",
+  "test_command": "node --test extensions/github-metadata/github-metadata-worker.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
