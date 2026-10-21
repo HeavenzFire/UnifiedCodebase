@@ -28,7 +28,6 @@ if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
     if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostArguments += @('-Actor', $Actor) }
     if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostArguments += @('-Reason', $Reason) }
     & $TaskHost @TaskHostArguments
-    if ($LASTEXITCODE -ne 0) { throw "Task host failed with exit code $LASTEXITCODE." }
     return
 }
 if (-not (Test-Path -LiteralPath $Router -PathType Leaf)) { throw "Provider router missing: $Router" }
