@@ -6,13 +6,13 @@ import { join } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
 import { createWorkerDispatcher } from "./worker-dispatcher.mjs";
 
-function withLifecycle(run) {
+async function withLifecycle(run) {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-dispatch-"));
   const lifecycle = createGovernedTaskLifecycle({
     taskFilePath: join(directory, "tasks.jsonl"),
     approvalFilePath: join(directory, "approvals.jsonl"),
   });
-  try { return run({ directory, lifecycle }); }
+  try { return await run({ directory, lifecycle }); }
   finally { rmSync(directory, { recursive: true, force: true }); }
 }
 
