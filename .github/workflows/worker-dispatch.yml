@@ -167,6 +167,50 @@ jobs:
             $auditRaw = & .\Enter-UnifiedField.ps1 -TaskAction Audit
             $audit = ($auditRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($audit.resultRecords -ne 1 -or -not $audit.resultChainHead) { throw "Audit verification failed: $($auditRaw -join '')" }
+
+            $inboxScript = Join-Path $PWD.Path 'integrations\shared-task-inbox.mjs'
+            $inboxFile = Join-Path $state 'shared-task-inbox.jsonl'
+            $inboxStdout = Join-Path $state 'inbox.stdout.log'
+            $inboxStderr = Join-Path $state 'inbox.stderr.log'
+            $nodePath = (Get-Command node).Source
+            $inboxProcess = Start-Process -FilePath $nodePath -ArgumentList @($inboxScript, '--port', '18797', '--file', $inboxFile) -WorkingDirectory $PWD.Path -PassThru -WindowStyle Hidden -RedirectStandardOutput $inboxStdout -RedirectStandardError $inboxStderr
+            $healthy = $false
+            for ($attempt = 0; $attempt -lt 20; $attempt++) {
+              try {
+                $health = Invoke-RestMethod -Uri 'http://127.0.0.1:18797/api/health' -TimeoutSec 1
+                if ($health.status -eq 'ok') { $healthy = $true; break }
+              } catch { Start-Sleep -Milliseconds 250 }
+            }
+            if (-not $healthy) {
+              $detail = if (Test-Path -LiteralPath $inboxStderr) { Get-Content -LiteralPath $inboxStderr -Raw } else { 'no server log' }
+              throw "Shared inbox did not become healthy: $detail"
+            }
+
+            $proposal = @{
+              taskId = "windows-ps51-proposal"
+              title = "Private source task title"
+              requestedBy = "ci-operator"
+              metadata = @{
+                capability = "task.proposal.submit"
+                endpoint = "http://127.0.0.1:18797/api/tasks"
+                proposalPurpose = "Share only this short proposal summary"
+                prompt = "private prompt must not be forwarded"
+                input = @{ privateRecord = "must not be forwarded" }
+              }
+            } | ConvertTo-Json -Depth 20 -Compress
+            $proposalSubmitRaw = & .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $proposal
+            $proposalSubmitted = ($proposalSubmitRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($proposalSubmitted.status -ne "queued") { throw "Proposal task submit failed: $($proposalSubmitRaw -join '')" }
+            & .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId "windows-ps51-proposal" -Actor "ci-operator" -Reason "Approved loopback proposal delivery" | Out-Null
+            $proposalResultRaw = & .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId "windows-ps51-proposal" -ExtensionId "shared-task.proposal" -Actor "ci-operator" -Reason "Deliver approved proposal summary"
+            $proposalResult = ($proposalResultRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($proposalResult.status -ne "succeeded" -or $proposalResult.result.status -ne "proposed" -or $proposalResult.result.approvalState -ne "pending") {
+              throw "Shared proposal dispatch failed: $($proposalResultRaw -join '')"
+            }
+            $inboxBody = Invoke-RestMethod -Uri 'http://127.0.0.1:18797/api/tasks' -TimeoutSec 2
+            if ($inboxBody.tasks.Count -ne 1 -or $inboxBody.tasks[0].goal -ne "Share only this short proposal summary") { throw "Inbox did not store the minimized proposal." }
+            if ($inboxBody.tasks[0].metadata.prompt -or $inboxBody.tasks[0].metadata.input) { throw "Sensitive task payload leaked into the shared proposal." }
           } finally {
+            if ($inboxProcess -and -not $inboxProcess.HasExited) { Stop-Process -Id $inboxProcess.Id -Force -ErrorAction SilentlyContinue }
             Remove-Item -LiteralPath $state -Recurse -Force -ErrorAction SilentlyContinue
           }
