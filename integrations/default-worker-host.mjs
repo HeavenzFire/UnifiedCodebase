@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { appendEvidenceRecord, createEvidenceRecord, readEvidenceRecords } from "../extensions/guardian-evidence/evidence-ledger.mjs";
 import { reconcileFunding } from "../extensions/funding-integrity/reconcile.mjs";
+import { runLocalModelTask } from "../extensions/local-model/local-model-worker.mjs";
 import { loadExtensionManifests } from "./load-extension-manifests.mjs";
 import { createWorkerHost } from "./worker-host.mjs";
 
@@ -8,10 +9,12 @@ const DEFAULT_CAPABILITIES = Object.freeze([
   "evidence.append",
   "evidence.verify",
   "funding.reconcile.read_only",
+  "model.inference.local",
 ]);
 const DEFAULT_PERMISSIONS = Object.freeze([
   "filesystem.write:local-evidence-ledger",
   "filesystem.read:input-records",
+  "network.loopback:ollama",
 ]);
 
 /**
@@ -26,6 +29,7 @@ export async function createDefaultWorkerHost({
   approvalFilePath,
   resultFilePath,
   evidenceLedgerPath,
+  localModelRunner,
   maxConcurrent = 2,
   now = () => new Date().toISOString(),
 } = {}) {
@@ -47,12 +51,17 @@ export async function createDefaultWorkerHost({
     manifestPaths: [
       "extensions/guardian-evidence/manifest.json",
       "extensions/funding-integrity/manifest.json",
+      "extensions/local-model/manifest.json",
     ],
     allowedCapabilities: [...DEFAULT_CAPABILITIES],
     allowedPermissions: [...DEFAULT_PERMISSIONS],
   });
 
   const handlers = [
+    {
+      extensionId: "local.model",
+      run: task => runLocalModelTask(task, localModelRunner ? { routePromptImpl: localModelRunner } : {}),
+    },
     {
       extensionId: "guardian.evidence",
       run: async task => {
