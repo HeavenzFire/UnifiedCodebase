@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
 import { createWorkerDispatcher } from "./worker-dispatcher.mjs";
 import { createWorkerResultJournal } from "./worker-result-journal.mjs";
@@ -19,13 +20,16 @@ export function createWorkerHost({
   if (typeof taskFilePath !== "string" || !taskFilePath.trim()) throw new TypeError("taskFilePath is required.");
   if (typeof approvalFilePath !== "string" || !approvalFilePath.trim()) throw new TypeError("approvalFilePath is required.");
   if (typeof resultFilePath !== "string" || !resultFilePath.trim()) throw new TypeError("resultFilePath is required.");
-  if (new Set([taskFilePath, approvalFilePath, resultFilePath].map(value => value.trim())).size !== 3) {
+  const taskPath = resolve(taskFilePath.trim());
+  const approvalPath = resolve(approvalFilePath.trim());
+  const resultPath = resolve(resultFilePath.trim());
+  if (new Set([taskPath, approvalPath, resultPath]).size !== 3) {
     throw new TypeError("Task, approval, and result journals must use separate paths.");
   }
   if (typeof now !== "function") throw new TypeError("now must be a function.");
 
-  const lifecycle = createGovernedTaskLifecycle({ taskFilePath, approvalFilePath, now });
-  const resultJournal = createWorkerResultJournal({ filePath: resultFilePath, now });
+  const lifecycle = createGovernedTaskLifecycle({ taskFilePath: taskPath, approvalFilePath: approvalPath, now });
+  const resultJournal = createWorkerResultJournal({ filePath: resultPath, now });
   const workers = createRegistryBackedWorkers({ registry, handlers });
   const dispatcher = createWorkerDispatcher({ lifecycle, workers, maxConcurrent, resultJournal, now });
 
@@ -63,7 +67,7 @@ export function createWorkerHost({
     },
     storagePaths: Object.freeze({
       tasks: lifecycle.storagePath,
-      approvals: approvalFilePath,
+      approvals: approvalPath,
       results: resultJournal.storagePath,
     }),
   });
