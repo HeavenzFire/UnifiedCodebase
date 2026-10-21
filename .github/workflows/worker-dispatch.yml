@@ -1,0 +1,44 @@
+name: Worker Dispatch Contract
+
+on:
+  pull_request:
+    paths:
+      - "integrations/worker-dispatcher.mjs"
+      - "integrations/worker-dispatcher.test.mjs"
+      - "integrations/governed-task-lifecycle.mjs"
+      - "integrations/durable-task-lifecycle.mjs"
+      - "integrations/task-lifecycle.mjs"
+      - ".github/workflows/worker-dispatch.yml"
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "integration/**"
+      - "worker/**"
+    paths:
+      - "integrations/worker-dispatcher.mjs"
+      - "integrations/worker-dispatcher.test.mjs"
+      - "integrations/governed-task-lifecycle.mjs"
+      - "integrations/durable-task-lifecycle.mjs"
+      - "integrations/task-lifecycle.mjs"
+      - ".github/workflows/worker-dispatch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  worker-dispatch-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax-check dispatcher and tests
+        run: |
+          node --check integrations/worker-dispatcher.mjs
+          node --check integrations/worker-dispatcher.test.mjs
+      - name: Run governed lifecycle and worker dispatch tests
+        run: |
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs
