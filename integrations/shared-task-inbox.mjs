@@ -153,7 +153,7 @@ export function createSharedTaskInboxServer({ inbox, host = "127.0.0.1", maxBody
     throw new RangeError("maxBodyBytes must be between 1024 and 10485760.");
   }
 
-  return createServer(async (request, response) => {
+  const server = createServer(async (request, response) => {
     const send = (status, body) => {
       response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       response.end(JSON.stringify(body));
@@ -210,6 +210,25 @@ export function createSharedTaskInboxServer({ inbox, host = "127.0.0.1", maxBody
       }
     }
   });
+  const nativeListen = server.listen.bind(server);
+  server.listen = (...args) => {
+    if (typeof args[0] !== "number") throw new TypeError("Shared task inbox requires an explicit numeric port.");
+    let requestedHost;
+    let callback;
+    if (typeof args[1] === "string") {
+      requestedHost = args[1];
+      callback = args[2];
+    } else if (typeof args[1] === "function") {
+      callback = args[1];
+    } else if (args[1] !== undefined) {
+      throw new TypeError("Only listen(port, callback) and listen(port, host, callback) are supported.");
+    }
+    if (requestedHost !== undefined && requestedHost !== "127.0.0.1") {
+      throw new TypeError("Shared task inbox may bind only to 127.0.0.1.");
+    }
+    return callback ? nativeListen(args[0], "127.0.0.1", callback) : nativeListen(args[0], "127.0.0.1");
+  };
+  return server;
 }
 
 function parseArgs(argv) {
