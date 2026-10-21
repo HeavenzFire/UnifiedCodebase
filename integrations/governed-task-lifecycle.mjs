@@ -72,6 +72,14 @@ export function createGovernedTaskLifecycle({ taskFilePath, approvalFilePath, no
   if (taskPath === approvalPath) throw new TypeError("Task and approval journals must be separate files.");
   mkdirSync(dirname(approvalPath), { recursive: true });
   let approvalLog = loadApprovalLog(approvalPath);
+  let approvalFault = null;
+  function assertApprovalHealthy() {
+    if (approvalFault) {
+      const error = new Error("Approval journal is faulted; restart and recover the journal before continuing.");
+      error.cause = approvalFault;
+      throw error;
+    }
+  }
   const lifecycle = createDurableTaskLifecycle({ filePath: taskPath, now });
 
   function appendApprovalEvent(eventType, taskId, actor, reason) {
