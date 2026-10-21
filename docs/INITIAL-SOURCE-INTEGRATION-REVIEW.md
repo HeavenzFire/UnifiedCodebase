@@ -8,8 +8,8 @@
 Repository: https://github.com/HeavenzFire/Sovereign-Node-  
 Default branch commit/tree inspected: `ddb9dc5d1e99e695b9fd57d9f973013e4897a769`  
 Files inspected:
-- [server.ts](https://github.com/HeavenzFire/Sovereign-Node-/blob/main/server.ts) at blob SHA `a5a43fed6435f02e7dd4a5ba88c5be0621ae1fe2`
-- [package.json](https://github.com/HeavenzFire/Sovereign-Node-/blob/main/package.json) at blob SHA `4b7e187bf3ffdea96a71ed85fea6290c15becb3e`
+- [server.ts](https://github.com/HeavenzFire/Sovereign-Node-/blob/ddb9dc5d1e99e695b9fd57d9f973013e4897a769/server.ts) at blob SHA `a5a43fed6435f02e7dd4a5ba88c5be0621ae1fe2`
+- [package.json](https://github.com/HeavenzFire/Sovereign-Node-/blob/ddb9dc5d1e99e695b9fd57d9f973013e4897a769/package.json) at blob SHA `4b7e187bf3ffdea96a71ed85fea6290c15becb3e`
 
 ### Observed facts
 - Express HTTP server listens on `0.0.0.0:3000`, so the app is reachable on network interfaces unless constrained externally.
@@ -27,8 +27,8 @@ Files inspected:
 Repository: https://github.com/HeavenzFire/Verifier-Mesh-Command-Center  
 Default branch tree inspected: `3c97404c0c3542168e047a9892bc1b0299f0a95b`  
 Files inspected:
-- [services/gemini.ts](https://github.com/HeavenzFire/Verifier-Mesh-Command-Center/blob/main/services/gemini.ts) at blob SHA `ea4bc0493d3a24b45cb6abf2d916b745e1cb6619`
-- [package.json](https://github.com/HeavenzFire/Verifier-Mesh-Command-Center/blob/main/package.json) at blob SHA `4ccf8fddb5058e11e44a2667ce6dbb2013d5594d`
+- [services/gemini.ts](https://github.com/HeavenzFire/Verifier-Mesh-Command-Center/blob/3c97404c0c3542168e047a9892bc1b0299f0a95b/services/gemini.ts) at blob SHA `ea4bc0493d3a24b45cb6abf2d916b745e1cb6619`
+- [package.json](https://github.com/HeavenzFire/Verifier-Mesh-Command-Center/blob/3c97404c0c3542168e047a9892bc1b0299f0a95b/package.json) at blob SHA `4ccf8fddb5058e11e44a2667ce6dbb2013d5594d`
 
 ### Observed facts
 - The service initializes a Google GenAI client using `process.env.API_KEY`.
@@ -44,8 +44,8 @@ Files inspected:
 Repository: https://github.com/HeavenzFire/Public-Transparency-Portal  
 Default branch tree inspected: `bfd506e9b81fef45ca689526eaa35e162658fa1d`  
 Files inspected:
-- [package.json](https://github.com/HeavenzFire/Public-Transparency-Portal/blob/main/package.json) at blob SHA `0ccf855b9a83f7de63db5e55808704a51558dac4`
-- [README.md](https://github.com/HeavenzFire/Public-Transparency-Portal/blob/main/README.md) at blob SHA `20a2957a573c98824070cc4d08b98157f4637b39`
+- [package.json](https://github.com/HeavenzFire/Public-Transparency-Portal/blob/bfd506e9b81fef45ca689526eaa35e162658fa1d/package.json) at blob SHA `0ccf855b9a83f7de63db5e55808704a51558dac4`
+- [README.md](https://github.com/HeavenzFire/Public-Transparency-Portal/blob/bfd506e9b81fef45ca689526eaa35e162658fa1d/README.md) at blob SHA `20a2957a573c98824070cc4d08b98157f4637b39`
 
 ### Observed facts and limits
 - This is a TypeScript/Vite application with multiple audit, forensic, policy, and submission-oriented UI components.
@@ -60,8 +60,8 @@ Files inspected:
 Repository: https://github.com/HeavenzFire/Audit-of-the-State-  
 Default branch tree inspected: `c95c10ee9bf79fcce68c673fe87ea01ea34925b0`  
 Files inspected:
-- [package.json](https://github.com/HeavenzFire/Audit-of-the-State-/blob/main/package.json) at blob SHA `3a21a273dba046d85043d69a92bfbbe37e089069`
-- [README.md](https://github.com/HeavenzFire/Audit-of-the-State-/blob/main/README.md) at blob SHA `87233fe1613712a0b67fafdfe12ca9b30b9215f1`
+- [package.json](https://github.com/HeavenzFire/Audit-of-the-State-/blob/c95c10ee9bf79fcce68c673fe87ea01ea34925b0/package.json) at blob SHA `3a21a273dba046d85043d69a92bfbbe37e089069`
+- [README.md](https://github.com/HeavenzFire/Audit-of-the-State-/blob/c95c10ee9bf79fcce68c673fe87ea01ea34925b0/README.md) at blob SHA `87233fe1613712a0b67fafdfe12ca9b30b9215f1`
 
 ### Observed facts and limits
 - The repository currently appears to be a small TypeScript/Vite application based on its root file list and package scripts.
