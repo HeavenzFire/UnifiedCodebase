@@ -55,6 +55,12 @@ List proposals from another local worker or instance:
 
 For a non-default loopback port, set `HEAVENZFIRE_TASK_INBOX_URL` to `http://127.0.0.1:PORT/api/tasks`; non-loopback endpoints are rejected.
 
+Cooperative worker leases prevent simultaneous local workers from claiming the same proposal:
+    .\\Enter-UnifiedField.ps1 -TaskAction Claim -TaskId proposal-123 -WorkerId worker-a -LeaseSeconds 300
+    .\\Enter-UnifiedField.ps1 -TaskAction Release -TaskId proposal-123 -WorkerId worker-a
+
+Claims expire automatically; another worker can claim after expiry or release. Worker IDs are cooperative labels, not authenticated identities, and claims never approve or execute a task.
+
 List registered workers through the unified entry point:
     .\Enter-UnifiedField.ps1 -TaskAction Workers
 
