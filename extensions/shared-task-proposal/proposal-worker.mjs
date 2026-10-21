@@ -11,12 +11,12 @@ export async function submitSharedTaskProposalTask(task, { submitter = submitPro
   if (task.status !== "running") throw new Error("Only a running, approved task snapshot may submit a shared proposal.");
   if (typeof submitter !== "function") throw new TypeError("submitter must be a function.");
   const purpose = task.metadata.proposalPurpose;
-  if (purpose !== undefined && (typeof purpose !== "string" || !purpose.trim() || purpose.length > 200)) {
-    throw new TypeError("proposalPurpose must be a non-empty string up to 200 characters when provided.");
+  if (typeof purpose !== "string" || !purpose.trim() || purpose.length > 200) {
+    throw new TypeError("proposalPurpose is required and must be a non-empty string up to 200 characters.");
   }
   const safeTask = {
     taskId: task.taskId,
-    title: task.title,
+    title: purpose.trim(),
     requestedBy: task.requestedBy,
     status: task.status,
     createdAt: task.createdAt,
@@ -24,7 +24,7 @@ export async function submitSharedTaskProposalTask(task, { submitter = submitPro
     metadata: {
       capability: "task.proposal.submit",
       sourceTaskId: task.taskId,
-      ...(purpose === undefined ? {} : { proposalPurpose: purpose.trim() }),
+      proposalPurpose: purpose.trim(),
     },
   };
   const options = task.metadata.endpoint === undefined ? {} : { endpoint: task.metadata.endpoint };
