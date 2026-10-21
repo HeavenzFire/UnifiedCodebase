@@ -221,6 +221,23 @@ jobs:
             $inboxListRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxList
             $inboxList = ($inboxListRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($inboxList.tasks.Count -ne 1 -or $inboxList.tasks[0].taskId -ne "windows-ps51-proposal") { throw "PowerShell inbox-list command failed." }
+            $claimRaw = & .\Enter-UnifiedField.ps1 -TaskAction Claim -TaskId "windows-ps51-proposal" -WorkerId "worker-a" -LeaseSeconds 30
+            $claim = ($claimRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($claim.workerId -ne "worker-a" -or -not $claim.expiresAt) { throw "PowerShell claim action failed." }
+            $claimedListRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxList
+            $claimedList = ($claimedListRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($claimedList.tasks[0].claim.workerId -ne "worker-a") { throw "Inbox list did not show the active lease." }
+            $competingClaimRejected = $false
+            try {
+              & .\Enter-UnifiedField.ps1 -TaskAction Claim -TaskId "windows-ps51-proposal" -WorkerId "worker-b" -LeaseSeconds 30 | Out-Null
+            } catch { $competingClaimRejected = $true }
+            if (-not $competingClaimRejected) { throw "Inbox allowed two active worker claims." }
+            $releaseRaw = & .\Enter-UnifiedField.ps1 -TaskAction Release -TaskId "windows-ps51-proposal" -WorkerId "worker-a"
+            $releasedClaim = ($releaseRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if (-not $releasedClaim.released) { throw "PowerShell release action failed." }
+            $releasedListRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxList
+            $releasedList = ($releasedListRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($releasedList.tasks[0].claim) { throw "Released lease remains visible as active." }
             if ($inboxBody.tasks[0].metadata.prompt -or $inboxBody.tasks[0].metadata.input) { throw "Sensitive task payload leaked into the shared proposal." }
           } catch {
             Write-Host "Windows PowerShell E2E failed: $($_.Exception.Message)"
