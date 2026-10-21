@@ -5,6 +5,7 @@ import { runLocalModelTask } from "../extensions/local-model/local-model-worker.
 import { runSovereignNodeHealthTask } from "../extensions/sovereign-node-health/health-worker.mjs";
 import { summarizeRepositoryInventory } from "../extensions/repository-inventory/inventory-worker.mjs";
 import { submitSharedTaskProposalTask } from "../extensions/shared-task-proposal/proposal-worker.mjs";
+import { readGitHubMetadataTask } from "../extensions/github-metadata/github-metadata-worker.mjs";
 import { loadExtensionManifests } from "./load-extension-manifests.mjs";
 import { createWorkerHost } from "./worker-host.mjs";
 
@@ -16,6 +17,7 @@ const DEFAULT_CAPABILITIES = Object.freeze([
   "service.health.read_only",
   "repository.inventory.read_only",
   "task.proposal.submit",
+  "repository.github.metadata.read_only",
 ]);
 const DEFAULT_PERMISSIONS = Object.freeze([
   "filesystem.write:local-evidence-ledger",
@@ -24,6 +26,7 @@ const DEFAULT_PERMISSIONS = Object.freeze([
   "network.loopback:sovereign-node",
   "filesystem.read:repository-inventory-snapshot",
   "network.loopback:shared-task-inbox",
+  "network.https:api.github.com",
 ]);
 
 /**
@@ -41,6 +44,7 @@ export async function createDefaultWorkerHost({
   localModelRunner,
   sovereignNodeHealthRunner,
   sharedTaskProposalSubmitter,
+  githubMetadataFetcher,
   maxConcurrent = 2,
   now = () => new Date().toISOString(),
 } = {}) {
@@ -66,12 +70,17 @@ export async function createDefaultWorkerHost({
       "extensions/sovereign-node-health/manifest.json",
       "extensions/repository-inventory/manifest.json",
       "extensions/shared-task-proposal/manifest.json",
+      "extensions/github-metadata/manifest.json",
     ],
     allowedCapabilities: [...DEFAULT_CAPABILITIES],
     allowedPermissions: [...DEFAULT_PERMISSIONS],
   });
 
   const handlers = [
+    {
+      extensionId: "github.metadata",
+      run: task => readGitHubMetadataTask(task, githubMetadataFetcher ? { fetchImpl: githubMetadataFetcher } : {}),
+    },
     {
       extensionId: "shared-task.proposal",
       run: task => submitSharedTaskProposalTask(task, sharedTaskProposalSubmitter ? { submitter: sharedTaskProposalSubmitter } : {}),
