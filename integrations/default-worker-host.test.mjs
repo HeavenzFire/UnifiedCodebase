@@ -177,3 +177,46 @@ test("default host exposes repository inventory as a bounded read-only task", as
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("default host submits only minimal shared-task proposals after explicit approval", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-shared-proposal-"));
+  let captured;
+  try {
+    const host = await createDefaultWorkerHost({
+      repositoryRoot: resolve("."),
+      taskFilePath: join(directory, "tasks.jsonl"),
+      approvalFilePath: join(directory, "approvals.jsonl"),
+      resultFilePath: join(directory, "results.jsonl"),
+      evidenceLedgerPath: join(directory, "guardian-evidence.jsonl"),
+      sharedTaskProposalSubmitter: async (safeTask, options) => {
+        captured = { safeTask, options };
+        return { ok: true, duplicate: false, taskId: safeTask.taskId, status: "proposed", approvalState: "pending" };
+      },
+    });
+    host.submit({
+      taskId: "shared-proposal-1",
+      title: "Coordinate follow-up repository review",
+      requestedBy: "test-operator",
+      metadata: {
+        capability: "task.proposal.submit",
+        endpoint: "http://127.0.0.1:18796/api/tasks",
+        proposalPurpose: "coordinate independent review",
+        prompt: "sensitive prompt that must not be forwarded",
+        input: { privateRecord: "must not be forwarded" },
+      },
+    });
+    host.approve("shared-proposal-1", { actor: "test-operator", reason: "proposal delivery approved" });
+    const result = await host.dispatch("shared-proposal-1", "shared-task.proposal", {
+      actor: "test-operator", reason: "submit approved proposal to local inbox",
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.result.status, "proposed");
+    assert.equal(result.result.approvalState, "pending");
+    assert.equal(captured.safeTask.status, "running");
+    assert.deepEqual(captured.options, { endpoint: "http://127.0.0.1:18796/api/tasks" });
+    assert.equal("prompt" in captured.safeTask.metadata, false);
+    assert.equal("input" in captured.safeTask.metadata, false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
