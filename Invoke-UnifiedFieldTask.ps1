@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox')]
+    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox','InboxList')]
     [string]$Action,
     [string]$TaskJson,
     [string]$TaskId,
@@ -26,6 +26,10 @@ switch ($Action) {
     'List'    { & $Node.Source $Cli 'list' }
     'Status'  { & $Node.Source $Cli 'status' }
     'Audit'   { & $Node.Source $Cli 'audit' }
+    'InboxList' {
+        if ([string]::IsNullOrWhiteSpace($env:HEAVENZFIRE_TASK_INBOX_URL)) { & $Node.Source $Cli 'inbox-list' }
+        else { & $Node.Source $Cli 'inbox-list' $env:HEAVENZFIRE_TASK_INBOX_URL }
+    }
     'StartInbox' {
         if (-not (Test-Path -LiteralPath $InboxCli -PathType Leaf)) { throw "Shared task inbox server missing: $InboxCli" }
         if ([string]::IsNullOrWhiteSpace($InboxFilePath)) {
