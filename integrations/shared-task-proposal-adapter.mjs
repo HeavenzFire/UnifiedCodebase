@@ -35,14 +35,13 @@ function assertLoopbackEndpoint(endpoint) {
   return url;
 }
 
-export function toSharedTaskRecord(task, { source = "unified-codebase", now = () => new Date().toISOString() } = {}) {
+export function toSharedTaskRecord(task, { source = "unified-codebase" } = {}) {
   if (!task || typeof task !== "object" || Array.isArray(task)) throw new TypeError("task must be an object.");
-  if (typeof now !== "function") throw new TypeError("now must be a function.");
   const taskId = boundedText(task.taskId, "taskId", 128);
   const goal = boundedText(task.title, "title", 12000);
   const requestedBy = boundedText(task.requestedBy, "requestedBy", 128);
   const createdAt = boundedText(task.createdAt, "createdAt", 100);
-  const timestamp = boundedText(now(), "now()", 100);
+  const timestamp = boundedText(task.updatedAt ?? task.createdAt, "updatedAt", 100);
   return {
     schema: SCHEMA,
     taskId,
