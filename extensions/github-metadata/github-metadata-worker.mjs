@@ -78,6 +78,9 @@ export async function readGitHubMetadataTask(task, {
     throw new TypeError("now must return a valid date string.");
   }
   if (operation === "get") {
+    if (payload?.private === true || payload?.visibility === "private") {
+      throw new Error("Private repository metadata is not exposed by this worker.");
+    }
     return {
       schema: "heavenzfire.github-metadata-report.v1",
       operation,
@@ -86,6 +89,9 @@ export async function readGitHubMetadataTask(task, {
     };
   }
   if (!Array.isArray(payload)) throw new TypeError("GitHub repository list response must be an array.");
+  const publicRepositories = payload.filter(repository =>
+    repository && repository.private !== true && repository.visibility !== "private"
+  );
   return {
     schema: "heavenzfire.github-metadata-report.v1",
     operation,
@@ -93,8 +99,8 @@ export async function readGitHubMetadataTask(task, {
     page: metadata.page ?? 1,
     perPage: metadata.perPage ?? 30,
     fetchedAt,
-    count: payload.length,
+    count: publicRepositories.length,
     hasMore: String(response.headers?.get?.("link") ?? "").includes('rel="next"'),
-    repositories: payload.map(projectRepository),
+    repositories: publicRepositories.map(projectRepository),
   };
 }
