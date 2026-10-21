@@ -23,6 +23,7 @@ test("lists bounded GitHub metadata through fixed HTTPS API and projects safe fi
       return response([
         { full_name: "HeavenzFire/Repo-A", name: "Repo-A", visibility: "public", archived: false, default_branch: "main", updated_at: "2026-10-20T00:00:00Z", html_url: "https://github.com/HeavenzFire/Repo-A", stargazers_count: 2, forks_count: 1, open_issues_count: 3, language: "JavaScript", secret: "must not escape" },
         { full_name: "HeavenzFire/Repo-B", name: "Repo-B", private: false },
+        { full_name: "HeavenzFire/Private-Repo", name: "Private-Repo", private: true, visibility: "private" },
       ], { link: '<https://api.github.com/users/HeavenzFire/repos?page=3>; rel="next"' });
     },
   });
@@ -34,6 +35,7 @@ test("lists bounded GitHub metadata through fixed HTTPS API and projects safe fi
   assert.equal(request.init.method, "GET");
   assert.equal(request.init.headers.authorization, "Bearer read-only-test-token");
   assert.equal(report.count, 2);
+  assert.equal(report.repositories.some(repository => repository.visibility === "private"), false);
   assert.equal(report.hasMore, true);
   assert.equal(report.repositories[0].full_name, "HeavenzFire/Repo-A");
   assert.equal("secret" in report.repositories[0], false);
@@ -62,5 +64,6 @@ test("rejects arbitrary operations, invalid names, invalid paging, and API error
   await assert.rejects(readGitHubMetadataTask({ metadata: { owner: "../attacker" } }, { fetchImpl: unused }), /valid GitHub owner/);
   await assert.rejects(readGitHubMetadataTask({ metadata: { page: 11 } }, { fetchImpl: unused }), /page must be an integer/);
   await assert.rejects(readGitHubMetadataTask({ metadata: { operation: "get", repo: "../secret" } }, { fetchImpl: unused }), /valid GitHub owner or repository/);
+  await assert.rejects(readGitHubMetadataTask({ metadata: { operation: "get", repo: "Private-Repo" } }, { fetchImpl: async () => response({ full_name: "HeavenzFire/Private-Repo", private: true, visibility: "private" }) }), /Private repository metadata is not exposed/);
   await assert.rejects(readGitHubMetadataTask({ metadata: {} }, { fetchImpl: async () => response({}, { ok: false, status: 403 }) }), /status 403/);
 });
