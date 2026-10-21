@@ -13,6 +13,8 @@ on:
     paths:
       - 'unified-field/**'
       - 'extensions/**'
+      - 'docs/**'
+      - 'README.md'
       - 'integrations/**'
       - 'Enter-UnifiedField.ps1'
       - '.github/workflows/unified-field-ci.yml'
