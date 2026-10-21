@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HeavenzFire Public Record Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "source_url",
+    "source_type",
+    "retrieved_at_utc",
+    "source_sha256",
+    "reporting_period",
+    "accounting_basis",
+    "claim",
+    "review_status",
+    "pii_review",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "heavenzfire.public-record.v1"
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "source_type": {
+      "enum": [
+        "official_record",
+        "official_dataset",
+        "court_filing",
+        "audit_report",
+        "secondary_reporting",
+        "testimony",
+        "other"
+      ]
+    },
+    "retrieved_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "source_publisher": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "source_document_id": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "source_archive_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "reporting_period": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "accounting_basis": {
+      "enum": [
+        "cash",
+        "accrual",
+        "obligation",
+        "disbursement",
+        "not_applicable",
+        "unknown"
+      ]
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "calculation_method": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "review_status": {
+      "enum": [
+        "unreviewed",
+        "corroborated",
+        "disputed",
+        "corrected",
+        "retracted"
+      ]
+    },
+    "pii_review": {
+      "enum": [
+        "passed",
+        "redacted",
+        "blocked"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "reviewer_role": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "correction_of": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}
