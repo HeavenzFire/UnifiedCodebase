@@ -1,0 +1,20 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "guardian.evidence",
+  "version": "0.1.0",
+  "entrypoint": "extensions/guardian-evidence/evidence-ledger.mjs",
+  "capabilities": [
+    "evidence.append",
+    "evidence.verify"
+  ],
+  "permissions": [
+    "filesystem.write:local-evidence-ledger"
+  ],
+  "data_flows": [
+    "task-metadata-to-local-ledger",
+    "artifact-digest-to-local-ledger"
+  ],
+  "healthcheck": "node --check extensions/guardian-evidence/evidence-ledger.mjs",
+  "test_command": "node --test extensions/guardian-evidence/evidence-ledger.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
