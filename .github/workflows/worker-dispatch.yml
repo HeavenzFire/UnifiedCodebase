@@ -9,7 +9,11 @@ on:
       - "integrations/registry-worker-adapter.mjs"
       - "integrations/registry-worker-adapter.test.mjs"
       - "integrations/worker-host.mjs"
-      - "integrations/worker-host.test.mjs"
+      - "integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs"
+      - "integrations/default-worker-host.mjs"
+      - "integrations/default-worker-host.test.mjs"
+      - "extensions/guardian-evidence/evidence-ledger.mjs"
+      - "extensions/funding-integrity/reconcile.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -29,6 +33,10 @@ on:
       - "integrations/registry-worker-adapter.test.mjs"
       - "integrations/worker-host.mjs"
       - "integrations/worker-host.test.mjs"
+      - "integrations/default-worker-host.mjs"
+      - "integrations/default-worker-host.test.mjs"
+      - "extensions/guardian-evidence/evidence-ledger.mjs"
+      - "extensions/funding-integrity/reconcile.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -55,6 +63,8 @@ jobs:
           node --check integrations/registry-worker-adapter.test.mjs
           node --check integrations/worker-host.mjs
           node --check integrations/worker-host.test.mjs
+          node --check integrations/default-worker-host.mjs
+          node --check integrations/default-worker-host.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
