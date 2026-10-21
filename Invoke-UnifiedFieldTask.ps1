@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox','InboxList','Claim','Release')]
+    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox','InboxList','Claim','Release','InboxAudit')]
     [string]$Action,
     [string]$TaskJson,
     [string]$TaskId,
@@ -35,6 +35,10 @@ switch ($Action) {
     'Release' {
         if ([string]::IsNullOrWhiteSpace($TaskId) -or [string]::IsNullOrWhiteSpace($WorkerId)) { throw 'Release requires -TaskId and -WorkerId.' }
         & $Node.Source $Cli 'release' $TaskId $WorkerId
+    }
+    'InboxAudit' {
+        if ([string]::IsNullOrWhiteSpace($env:HEAVENZFIRE_TASK_INBOX_URL)) { & $Node.Source $Cli 'inbox-audit' }
+        else { & $Node.Source $Cli 'inbox-audit' $env:HEAVENZFIRE_TASK_INBOX_URL }
     }
     'InboxList' {
         if ([string]::IsNullOrWhiteSpace($env:HEAVENZFIRE_TASK_INBOX_URL)) { & $Node.Source $Cli 'inbox-list' }
