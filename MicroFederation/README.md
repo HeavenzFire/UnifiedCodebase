@@ -1,13 +1,13 @@
 # HeavenzFire MicroFederation
 
-**Status:** implementation and tests published on the `centropic-age/micro-sandbox-foundation` branch for review; not merged or deployed.
+**Status:** local working-tree prototype with live execution evidence. Not committed, merged, published, or deployed.
 
 ## Architecture
 
 - One root conductor routes a bounded task to configured micro-sandboxes.
 - Each sandbox dispatches four logical roles concurrently: conductor, builder, verifier, reviewer.
 - Ternary role decisions: `+1` approve, `0` abstain, `-1` reject. Any rejection vetoes acceptance; approval requires quorum; otherwise defer.
-- Root acceptance requires every sandbox to approve, stable builder-artifact hashes to agree, and independent code verification to validate the artifacts. A mismatch quarantines the task.
+- Root acceptance requires every sandbox to approve, stable builder-artifact hashes to agree, independent receipt verification, and any declared supported task acceptance contract to pass. Incorrect or unsupported declared contracts quarantine the task.
 - Task envelopes support HMAC-SHA256 signatures, expiry, issuer allowlists, and replay rejection.
 - Shared service prototypes cover capability scoping, expiry/revocation, high-impact human approval, append-only JSONL evidence, hash-chained audit events, content-addressed artifacts, bounded scheduling, and health reporting.
 
@@ -17,6 +17,7 @@
 Set-Location C:\Users\rucke\HeavenzFire\UnifiedField\MicroFederation
 node .\test-micro-federation.cjs
 node .\test-federation-services.cjs
+node --test .\semantic-acceptance.test.cjs
 ```
 
 ## Run a live two-sandbox acceptance
