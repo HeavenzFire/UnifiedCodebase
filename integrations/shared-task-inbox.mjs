@@ -310,7 +310,8 @@ export function createSharedTaskInboxServer({ inbox, host = "127.0.0.1", maxBody
       catch (error) { send(503, { ok: false, error: error.message }); }
       return;
     }
-    if (request.method !== "POST" || request.url !== "/api/tasks") {
+    const route = request.url;
+    if (request.method !== "POST" || !["/api/tasks", "/api/claims", "/api/claims/release"].includes(route)) {
       send(404, { ok: false, error: "not_found" });
       return;
     }
@@ -338,15 +339,41 @@ export function createSharedTaskInboxServer({ inbox, host = "127.0.0.1", maxBody
       let payload;
       try { payload = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
       catch { send(400, { ok: false, error: "invalid_json" }); return; }
-      if (!payload || typeof payload !== "object" || Array.isArray(payload) || !payload.taskRecord) {
-        send(400, { ok: false, error: "taskRecord_required" });
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        send(400, { ok: false, error: "invalid_request_object" });
         return;
       }
-      send(201, inbox.accept(payload.taskRecord));
+      if (route === "/api/tasks") {
+        if (!payload.taskRecord) {
+          send(400, { ok: false, error: "taskRecord_required" });
+          return;
+        }
+        send(201, inbox.accept(payload.taskRecord));
+        return;
+      }
+      if (route === "/api/claims") {
+        if (!payload.taskId || !payload.workerId) {
+          send(400, { ok: false, error: "taskId_and_workerId_required" });
+          return;
+        }
+        send(201, inbox.claim(payload.taskId, payload.workerId, payload.leaseSeconds === undefined ? 60 : payload.leaseSeconds));
+        return;
+      }
+      if (!payload.taskId || !payload.workerId) {
+        send(400, { ok: false, error: "taskId_and_workerId_required" });
+        return;
+      }
+      send(200, inbox.release(payload.taskId, payload.workerId));
     } catch (error) {
       if (error.code === "TASK_ID_CONFLICT") {
         send(409, { ok: false, error: "task_id_conflict" });
-      } else if (error instanceof TypeError) {
+      } else if (error.code === "TASK_ALREADY_CLAIMED") {
+        send(409, { ok: false, error: "task_already_claimed", workerId: error.workerId, leaseExpiresAt: error.leaseExpiresAt });
+      } else if (error.code === "TASK_CLAIMED_BY_OTHER_WORKER") {
+        send(409, { ok: false, error: "task_claimed_by_other_worker", workerId: error.workerId, leaseExpiresAt: error.leaseExpiresAt });
+      } else if (error.code === "TASK_NOT_FOUND") {
+        send(404, { ok: false, error: "task_not_found" });
+      } else if (error instanceof TypeError || error instanceof RangeError) {
         send(400, { ok: false, error: error.message });
       } else {
         send(503, { ok: false, error: error.message });
