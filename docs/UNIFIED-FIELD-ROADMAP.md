@@ -31,14 +31,15 @@ Phase 4: funding reconciliation using synthetic fixtures and public records.
 Phase 5: repository inventory and staged adapters, one project at a time.
 Phase 6: reviewable pull requests and reproducible release artifacts.
 
-## Shared task proposal bridge (current integration gate)
+## Shared task proposal bridge (integration verified)
 - `integrations/task-lifecycle.mjs` tracks local task state in memory; it is not durable and does not execute work.
-- `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to the explicit loopback inbox endpoint `http://127.0.0.1:18796/api/tasks`.
-- The adapter always sends a `proposed` task with `approvalState: pending`; it does not approve, dispatch, or execute tasks.
-- A repeated identical task ID is expected to be handled idempotently by the inbox; a conflicting payload must be rejected. The adapter checks the inbox acknowledgement but does not itself provide persistence.
+- `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to an explicit HTTP loopback inbox endpoint at `127.0.0.1:<port>/api/tasks`.
+- The adapter sends only `status: proposed` and `approvalState: pending`; it does not approve, dispatch, or execute tasks.
+- Proposal serialization uses the task's stable timestamps so retries of an unchanged task are idempotent; a conflicting payload reusing the same ID is rejected by the inbox.
 - Automated tests cover lifecycle transitions, defensive snapshots, endpoint restrictions, contract mapping, and response validation.
-- End-to-end acceptance still requires running the actual task inbox with a temporary JSONL store and proving first delivery, duplicate delivery, conflicting duplicate rejection, and persistence across process restart. The cross-repository adapter is not yet wired into the PowerShell launcher or a worker.
-- The inbox must remain bound to loopback, and approval must remain an explicit separate action.
+- Cross-repository GitHub Actions run 39522915367 passed 21 tests, including live HTTP delivery to the actual inbox server, duplicate delivery, conflicting duplicate rejection, and persistence across an inbox process restart. The integration test checks out the adapter from the UnifiedCodebase feature branch.
+- UnifiedCodebase GitHub Actions run 39522874490 passed 50 tests, including the task lifecycle and adapter test suites.
+- Remaining work: the adapter is not wired into the PowerShell launcher or a worker, lifecycle state is not durable, and no task execution is enabled through this bridge. The inbox remains loopback-only, with explicit approval as a separate action.
 
 ## Acceptance gates
 - Unit tests pass on a clean Node.js LTS runtime.
