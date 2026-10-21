@@ -158,17 +158,22 @@ jobs:
                 }
               }
             } | ConvertTo-Json -Depth 20 -Compress
+            Write-Host "Windows PowerShell E2E: submit funding task"
             $submittedRaw = & .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $task
             $submitted = ($submittedRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($submitted.status -ne "queued") { throw "Submit failed: $($submittedRaw -join '')" }
+            Write-Host "Windows PowerShell E2E: approve funding task"
             & .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId "windows-ps51-e2e" -Actor "ci-operator" -Reason "Approved Windows PowerShell fixture" | Out-Null
+            Write-Host "Windows PowerShell E2E: dispatch funding task"
             $resultRaw = & .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId "windows-ps51-e2e" -ExtensionId "funding.integrity" -Actor "ci-operator" -Reason "Run read-only fixture"
             $result = ($resultRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($result.status -ne "succeeded" -or $result.result.mode -ne "read_only") { throw "Dispatch failed: $($resultRaw -join '')" }
+            Write-Host "Windows PowerShell E2E: verify audit"
             $auditRaw = & .\Enter-UnifiedField.ps1 -TaskAction Audit
             $audit = ($auditRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($audit.resultRecords -ne 1 -or -not $audit.resultChainHead) { throw "Audit verification failed: $($auditRaw -join '')" }
 
+            Write-Host "Windows PowerShell E2E: start proposal inbox"
             $inboxScript = Join-Path $PWD.Path 'integrations\shared-task-inbox.mjs'
             $inboxFile = Join-Path $state 'shared-task-inbox.jsonl'
             $inboxStdout = Join-Path $state 'inbox.stdout.log'
@@ -199,10 +204,12 @@ jobs:
                 input = @{ privateRecord = "must not be forwarded" }
               }
             } | ConvertTo-Json -Depth 20 -Compress
+            Write-Host "Windows PowerShell E2E: submit proposal task"
             $proposalSubmitRaw = & .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $proposal
             $proposalSubmitted = ($proposalSubmitRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($proposalSubmitted.status -ne "queued") { throw "Proposal task submit failed: $($proposalSubmitRaw -join '')" }
             & .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId "windows-ps51-proposal" -Actor "ci-operator" -Reason "Approved loopback proposal delivery" | Out-Null
+            Write-Host "Windows PowerShell E2E: dispatch proposal task"
             $proposalResultRaw = & .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId "windows-ps51-proposal" -ExtensionId "shared-task.proposal" -Actor "ci-operator" -Reason "Deliver approved proposal summary"
             $proposalResult = ($proposalResultRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($proposalResult.status -ne "succeeded" -or $proposalResult.result.status -ne "proposed" -or $proposalResult.result.approvalState -ne "pending") {
@@ -211,6 +218,10 @@ jobs:
             $inboxBody = Invoke-RestMethod -Uri 'http://127.0.0.1:18797/api/tasks' -TimeoutSec 2
             if ($inboxBody.tasks.Count -ne 1 -or $inboxBody.tasks[0].goal -ne "Share only this short proposal summary") { throw "Inbox did not store the minimized proposal." }
             if ($inboxBody.tasks[0].metadata.prompt -or $inboxBody.tasks[0].metadata.input) { throw "Sensitive task payload leaked into the shared proposal." }
+          } catch {
+            Write-Host "Windows PowerShell E2E failed: $($_.Exception.Message)"
+            if (Test-Path -LiteralPath (Join-Path $state "inbox.stderr.log")) { Write-Host (Get-Content -LiteralPath (Join-Path $state "inbox.stderr.log") -Raw) }
+            throw
           } finally {
             if ($inboxProcess -and -not $inboxProcess.HasExited) { Stop-Process -Id $inboxProcess.Id -Force -ErrorAction SilentlyContinue }
             Remove-Item -LiteralPath $state -Recurse -Force -ErrorAction SilentlyContinue
