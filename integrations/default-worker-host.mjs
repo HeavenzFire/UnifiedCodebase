@@ -3,6 +3,7 @@ import { appendEvidenceRecord, createEvidenceRecord, readEvidenceRecords } from 
 import { reconcileFunding } from "../extensions/funding-integrity/reconcile.mjs";
 import { runLocalModelTask } from "../extensions/local-model/local-model-worker.mjs";
 import { runSovereignNodeHealthTask } from "../extensions/sovereign-node-health/health-worker.mjs";
+import { summarizeRepositoryInventory } from "../extensions/repository-inventory/inventory-worker.mjs";
 import { loadExtensionManifests } from "./load-extension-manifests.mjs";
 import { createWorkerHost } from "./worker-host.mjs";
 
@@ -12,12 +13,14 @@ const DEFAULT_CAPABILITIES = Object.freeze([
   "funding.reconcile.read_only",
   "model.inference.local",
   "service.health.read_only",
+  "repository.inventory.read_only",
 ]);
 const DEFAULT_PERMISSIONS = Object.freeze([
   "filesystem.write:local-evidence-ledger",
   "filesystem.read:input-records",
   "network.loopback:ollama",
   "network.loopback:sovereign-node",
+  "filesystem.read:repository-inventory-snapshot",
 ]);
 
 /**
@@ -57,12 +60,21 @@ export async function createDefaultWorkerHost({
       "extensions/funding-integrity/manifest.json",
       "extensions/local-model/manifest.json",
       "extensions/sovereign-node-health/manifest.json",
+      "extensions/repository-inventory/manifest.json",
     ],
     allowedCapabilities: [...DEFAULT_CAPABILITIES],
     allowedPermissions: [...DEFAULT_PERMISSIONS],
   });
 
   const handlers = [
+    {
+      extensionId: "repository.inventory",
+      run: task => summarizeRepositoryInventory({
+        query: task.metadata?.query,
+        integrationStatus: task.metadata?.integrationStatus,
+        limit: task.metadata?.limit,
+      }),
+    },
     {
       extensionId: "sovereign-node.health",
       run: task => runSovereignNodeHealthTask(task, sovereignNodeHealthRunner ? { checkHealthImpl: sovereignNodeHealthRunner } : {}),
