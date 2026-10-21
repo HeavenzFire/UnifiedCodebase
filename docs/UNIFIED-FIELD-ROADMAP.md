@@ -31,6 +31,12 @@ Phase 4: funding reconciliation using synthetic fixtures and public records.
 Phase 5: repository inventory and staged adapters, one project at a time.
 Phase 6: reviewable pull requests and reproducible release artifacts.
 
+## Repository inventory (metadata snapshot, not code audit)
+- `docs/repository-inventory.snapshot.json` records 276 repositories surfaced by the connected GitHub installation search for `user:HeavenzFire` on 2026-10-20.
+- This is the visible search result set, not a guarantee that every owned repository is accessible through the connection. Entries default to `unassessed`; source code and integration are not inferred from names.
+- `integrations/validate-repository-inventory.mjs` validates the snapshot structure, unique repository identities, and safe default status. CI tests this validator.
+- `docs/REPOSITORY-INTEGRATION-INVENTORY.md` defines status transitions and the per-repository review gate. Next work is a source-level audit of high-priority repositories, starting with Sovereign Node, public transparency/audit, and child-safety candidates.
+
 ## Shared task proposal bridge (integration verified)
 - `integrations/task-lifecycle.mjs` defines the lifecycle contract; `integrations/durable-task-lifecycle.mjs` persists snapshots and audit events in an append-only, SHA-256 hash-chained JSONL log and replays state on restart.
 - `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to an explicit HTTP loopback inbox endpoint at `127.0.0.1:<port>/api/tasks`.
