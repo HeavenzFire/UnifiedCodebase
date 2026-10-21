@@ -212,15 +212,77 @@ export function createSharedTaskInbox({ filePath, claimsFilePath, now = () => ne
       byId.set(taskRecord.taskId, taskRecord);
       return { ok: true, duplicate: false, taskId: taskRecord.taskId, status: "proposed", approvalState: "pending" };
     },
+    claim(taskId, workerId, leaseSeconds = 60) {
+      assertHealthy();
+      const id = requiredText(taskId, "taskId", 128);
+      const worker = requiredText(workerId, "workerId", 128);
+      if (!byId.has(id)) {
+        const error = new Error("Task proposal was not found.");
+        error.code = "TASK_NOT_FOUND";
+        throw error;
+      }
+      if (!Number.isInteger(leaseSeconds) || leaseSeconds < 5 || leaseSeconds > 3600) {
+        throw new RangeError("leaseSeconds must be an integer from 5 through 3600.");
+      }
+      const at = currentTime();
+      const current = claimsByTask.get(id);
+      const active = current && Date.parse(current.expiresAt) > Date.parse(at);
+      if (active && current.workerId !== worker) {
+        const error = new Error("Task proposal is already claimed by another worker.");
+        error.code = "TASK_ALREADY_CLAIMED";
+        error.workerId = current.workerId;
+        error.leaseExpiresAt = current.expiresAt;
+        throw error;
+      }
+      const expiresAt = new Date(Date.parse(at) + leaseSeconds * 1000).toISOString();
+      appendClaimEvent({ action: "claim", taskId: id, workerId: worker, at, expiresAt });
+      const claim = { taskId: id, workerId: worker, claimedAt: at, expiresAt };
+      claimsByTask.set(id, claim);
+      return { ok: true, ...claim, renewed: Boolean(active && current.workerId === worker) };
+    },
+    release(taskId, workerId) {
+      assertHealthy();
+      const id = requiredText(taskId, "taskId", 128);
+      const worker = requiredText(workerId, "workerId", 128);
+      if (!byId.has(id)) {
+        const error = new Error("Task proposal was not found.");
+        error.code = "TASK_NOT_FOUND";
+        throw error;
+      }
+      const at = currentTime();
+      const current = claimsByTask.get(id);
+      if (!current || Date.parse(current.expiresAt) <= Date.parse(at)) {
+        return { ok: true, released: false, taskId: id, workerId: worker };
+      }
+      if (current.workerId !== worker) {
+        const error = new Error("Task proposal is claimed by another worker.");
+        error.code = "TASK_CLAIMED_BY_OTHER_WORKER";
+        error.workerId = current.workerId;
+        error.leaseExpiresAt = current.expiresAt;
+        throw error;
+      }
+      appendClaimEvent({ action: "release", taskId: id, workerId: worker, at, expiresAt: null });
+      claimsByTask.delete(id);
+      return { ok: true, released: true, taskId: id, workerId: worker };
+    },
     list() {
       assertHealthy();
-      return [...byId.values()].map(clone);
+      const at = Date.parse(currentTime());
+      return [...byId.values()].map(taskRecord => {
+        const claim = claimsByTask.get(taskRecord.taskId);
+        return { ...clone(taskRecord), claim: claim && Date.parse(claim.expiresAt) > at ? clone(claim) : null };
+      });
     },
     audit() {
       assertHealthy();
       return readAndVerify(absolutePath).records.map(record => clone(record));
     },
+    auditClaims() {
+      assertHealthy();
+      return readAndVerifyClaims(claimsPath, new Set(byId.keys())).records.map(record => clone(record));
+    },
     storagePath: absolutePath,
+    claimsStoragePath: claimsPath,
   });
 }
 
