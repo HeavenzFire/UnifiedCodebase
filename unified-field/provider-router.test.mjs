@@ -24,11 +24,12 @@ test("Ollama request is local and returns provider identity", async () => {
 test("Mistral failure does not retry against local Ollama", async () => {
   let calls = 0; let captured;
   const result = await routePrompt({ providerName: "mistral", prompt: "test", env: { MISTRAL_API_KEY: "test-only-secret" },
-    fetchImpl: async (url, options) => { calls++; captured = { url, authorization: options.headers.authorization }; return { ok: false, status: 429, json: async () => ({ error: { message: "quota" } }) }; }
+    fetchImpl: async (url, options) => { calls++; captured = { url, authorization: options.headers.authorization, redirect: options.redirect }; return { ok: false, status: 429, json: async () => ({ error: { message: "quota" } }) }; }
   }).catch(error => error);
   assert.equal(calls, 1);
   assert.equal(captured.url, "https://api.mistral.ai/v1/chat/completions");
   assert.equal(captured.authorization, "Bearer test-only-secret");
+  assert.equal(captured.redirect, "error");
   assert.match(result.message, /HTTP 429/);
 });
 test("empty prompts are rejected before any network request", async () => {
