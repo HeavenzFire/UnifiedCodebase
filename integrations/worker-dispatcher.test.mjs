@@ -34,7 +34,7 @@ test("dispatch consumes approval, runs only the registered handler, and records 
   let calls = 0;
   const dispatcher = createWorkerDispatcher({
     lifecycle,
-    workers: [{ id: "summarizer", capabilities: ["summarize"], run: async task => { calls += 1; return { taskId: task.taskId, summary: "verified" }; } }],
+    workers: [{ id: "summarizer", capabilities: ["summarize"], run: async task => { calls += 1; assert.equal(task.status, "running"); return { taskId: task.taskId, summary: "verified" }; } }],
   });
   const result = await dispatcher.dispatch("success-1", "summarizer", { actor: "operator", reason: "approved test" });
   assert.equal(calls, 1);
@@ -42,6 +42,11 @@ test("dispatch consumes approval, runs only the registered handler, and records 
   assert.match(result.resultSha256, /^[a-f0-9]{64}$/);
   assert.equal(lifecycle.get("success-1").status, "succeeded");
   assert.equal(lifecycle.isApproved("success-1"), false);
+  const taskAudit = lifecycle.audit();
+  assert.ok(taskAudit.some(record => record.event?.task?.taskId === "success-1" && record.event.status === "succeeded"));
+  const approvalAudit = lifecycle.approvalAudit();
+  assert.ok(approvalAudit.some(record => record.event?.taskId === "success-1" && record.event.eventType === "task.approval_consumed"));
+  assert.ok(taskAudit.some(record => record.event?.taskId === "success-1" && record.event?.evidenceRefs?.some(ref => ref === "worker-result:sha256:" + result.resultSha256)));
   assert.equal(dispatcher.status().activeTasks, 0);
 }));
 
