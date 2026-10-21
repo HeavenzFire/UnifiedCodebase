@@ -36,3 +36,24 @@ test("empty prompts are rejected before any network request", async () => {
   await assert.rejects(routePrompt({ prompt: "  ", fetchImpl: async () => { calls++; } }), /non-empty prompt/);
   assert.equal(calls, 0);
 });
+
+test("credentialed remote providers reject plaintext HTTP endpoints before fetch", async () => {
+  let calls = 0;
+  await assert.rejects(
+    routePrompt({
+      providerName: "mistral",
+      prompt: "must not leak",
+      env: { MISTRAL_API_KEY: "test-only-secret", HEAVENZFIRE_MISTRAL_BASE_URL: "http://example.invalid/v1" },
+      fetchImpl: async () => { calls++; throw new Error("fetch must not be called"); }
+    }),
+    /must use HTTPS/
+  );
+  assert.equal(calls, 0);
+});
+
+test("credentialed remote providers reject URLs containing embedded credentials", () => {
+  assert.throws(
+    () => providerConfig("openai", { OPENAI_API_KEY: "test-only-secret", HEAVENZFIRE_OPENAI_BASE_URL: "https://user:pass@example.invalid/v1" }),
+    /must use HTTPS and must not include credentials/
+  );
+});
