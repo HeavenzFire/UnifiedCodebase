@@ -97,6 +97,19 @@ test("HTTP inbox binds only to loopback and serves health, list, and proposal-on
     });
     assert.equal(conflict.status, 409);
 
+    const approvedState = await fetch(base + "/api/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskRecord: { ...fixture(), status: "approved", approvalState: "approved" } }),
+    });
+    assert.equal(approvedState.status, 400);
+    const prefilledEvidence = await fetch(base + "/api/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ taskRecord: { ...fixture(), taskId: "inbox-task-with-evidence", evidence: [{ claim: "unverified" }] } }),
+    });
+    assert.equal(prefilledEvidence.status, 400);
+
     const wrongType = await fetch(base + "/api/tasks", { method: "POST", body: "{}" });
     assert.equal(wrongType.status, 415);
     const notFound = await fetch(base + "/api/execute", { method: "POST", body: "{}" });
