@@ -8,6 +8,7 @@ export async function submitSharedTaskProposalTask(task, { submitter = submitPro
   if (!task || typeof task !== "object" || !task.metadata || task.metadata.capability !== "task.proposal.submit") {
     throw new TypeError("Task must request task.proposal.submit.");
   }
+  if (task.status !== "running") throw new Error("Only a running, approved task snapshot may submit a shared proposal.");
   if (typeof submitter !== "function") throw new TypeError("submitter must be a function.");
   const purpose = task.metadata.proposalPurpose;
   if (purpose !== undefined && (typeof purpose !== "string" || !purpose.trim() || purpose.length > 200)) {
