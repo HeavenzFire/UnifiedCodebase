@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HeavenzFire/UnifiedCodebase/blob/main/schemas/quota-observation.schema.json",
+  "title": "Unified Field Quota Observation",
+  "description": "Records visible quota/reset observations without inferring cause or motive.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "claim_id",
+    "product",
+    "observed_at_utc",
+    "observed_timezone",
+    "reset_display",
+    "evidence_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "claim_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,100}$"
+    },
+    "product": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "plan": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "observed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "observed_timezone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "usage_percent": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "reset_display": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "evidence_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "client_version": {
+      "type": ["string", "null"],
+      "maxLength": 200
+    },
+    "official_incident_checked": {
+      "type": "boolean",
+      "default": false
+    },
+    "independently_repeated": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  }
+}
