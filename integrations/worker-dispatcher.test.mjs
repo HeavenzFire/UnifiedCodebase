@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createGovernedTaskLifecycle } from "./governed-task-lifecycle.mjs";
@@ -98,6 +98,18 @@ test("enforces capacity and prevents duplicate concurrent dispatch", async () =>
   release();
   await first;
   assert.equal(dispatcher.status().activeTasks, 0);
+}));
+
+test("worker result journal rejects modified output during replay", async () => withLifecycle(async ({ directory }) => {
+  const filePath = join(directory, "tampered-results.jsonl");
+  const journal = createWorkerResultJournal({ filePath });
+  journal.append({
+    taskId: "tamper-1", workerId: "writer", startedAt: "2026-10-21T00:00:00.000Z",
+    finishedAt: "2026-10-21T00:00:01.000Z", result: { value: "original" },
+  });
+  const original = readFileSync(filePath, "utf8");
+  writeFileSync(filePath, original.replace("original", "modified"), "utf8");
+  assert.throws(() => createWorkerResultJournal({ filePath }), /Worker result digest mismatch|Worker result journal hash mismatch/);
 }));
 
 test("validates worker registry and concurrency bounds", () => withLifecycle(({ lifecycle }) => {
