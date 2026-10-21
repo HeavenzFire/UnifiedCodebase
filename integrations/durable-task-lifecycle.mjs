@@ -113,9 +113,15 @@ export function createDurableTaskLifecycle({ filePath, now = () => new Date().to
     now,
     initialTasks: replay.latestTasks,
     onEvent(event) {
+      assertHealthy();
       const body = { sequence: sequence + 1, previousHash, event };
       const record = { ...body, hash: digest(body) };
-      appendFileSync(absolutePath, JSON.stringify(record) + "\n", { encoding: "utf8", flag: "a" });
+      try {
+        appendFileSync(absolutePath, JSON.stringify(record) + "\n", { encoding: "utf8", flag: "a" });
+      } catch (error) {
+        storageFault = error;
+        throw error;
+      }
       sequence = record.sequence;
       previousHash = record.hash;
     },
