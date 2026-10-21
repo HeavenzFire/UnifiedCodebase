@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('Workers','Submit','Approve','Dispatch','List','Status','Audit')]
+    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit')]
     [string]$Action,
     [string]$TaskJson,
     [string]$TaskId,
@@ -32,6 +32,12 @@ switch ($Action) {
             throw 'Approve requires -TaskId, -Actor, and -Reason.'
         }
         & $Node.Source $Cli 'approve' $TaskId $Actor $Reason
+    }
+    'Revoke' {
+        if ([string]::IsNullOrWhiteSpace($TaskId) -or [string]::IsNullOrWhiteSpace($Actor) -or [string]::IsNullOrWhiteSpace($Reason)) {
+            throw 'Revoke requires -TaskId, -Actor, and -Reason.'
+        }
+        & $Node.Source $Cli 'revoke' $TaskId $Actor $Reason
     }
     'Dispatch' {
         if ([string]::IsNullOrWhiteSpace($TaskId) -or [string]::IsNullOrWhiteSpace($ExtensionId) -or
