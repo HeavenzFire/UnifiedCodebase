@@ -19,6 +19,7 @@ Commands:
   status
   audit
   inbox-list [http://127.0.0.1:PORT/api/tasks]
+  inbox-audit [http://127.0.0.1:PORT/api/tasks]
   claim <task-id> <worker-id> [lease-seconds]
   release <task-id> <worker-id>
 
@@ -54,6 +55,19 @@ async function fetchInbox(endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "
   return body;
 }
 
+async function fetchInboxAudit(endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "http://127.0.0.1:18796/api/tasks") {
+  const url = assertLoopbackEndpoint(endpoint);
+  url.pathname = "/api/audit";
+  const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error("Shared task inbox returned invalid JSON."); }
+  if (!response.ok || !body || body.ok !== true || !Number.isInteger(body.proposalCount) || !Number.isInteger(body.claimEventCount)) {
+    throw new Error("Shared task inbox audit failed: " + (body?.error || response.status));
+  }
+  return body;
+}
+
 async function postInbox(pathname, payload, endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "http://127.0.0.1:18796/api/tasks") {
   const url = assertLoopbackEndpoint(endpoint);
   url.pathname = pathname;
@@ -81,6 +95,11 @@ async function main(argv) {
   if (command === "inbox-list") {
     if (args.length > 1) throw new Error("inbox-list accepts at most one endpoint.");
     output(await fetchInbox(args[0]));
+    return;
+  }
+  if (command === "inbox-audit") {
+    if (args.length > 1) throw new Error("inbox-audit accepts at most one endpoint.");
+    output(await fetchInboxAudit(args[0]));
     return;
   }
   if (command === "claim") {
