@@ -100,6 +100,14 @@ export function createDurableTaskLifecycle({ filePath, now = () => new Date().to
   const replay = readAndVerifyLog(absolutePath);
   let sequence = replay.sequence;
   let previousHash = replay.previousHash;
+  let storageFault = null;
+  function assertHealthy() {
+    if (storageFault) {
+      const error = new Error("Task lifecycle storage is faulted; restart and recover the journal before continuing.");
+      error.cause = storageFault;
+      throw error;
+    }
+  }
 
   const lifecycle = createTaskLifecycle({
     now,
@@ -114,8 +122,13 @@ export function createDurableTaskLifecycle({ filePath, now = () => new Date().to
   });
 
   return Object.freeze({
-    ...lifecycle,
+    create(...args) { assertHealthy(); return lifecycle.create(...args); },
+    transition(...args) { assertHealthy(); return lifecycle.transition(...args); },
+    get(...args) { assertHealthy(); return lifecycle.get(...args); },
+    list(...args) { assertHealthy(); return lifecycle.list(...args); },
+    isTerminal(...args) { assertHealthy(); return lifecycle.isTerminal(...args); },
     audit() {
+      assertHealthy();
       return readAndVerifyLog(absolutePath).records.map(record => JSON.parse(JSON.stringify(record)));
     },
     storagePath: absolutePath,
