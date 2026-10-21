@@ -75,27 +75,33 @@ export function createGovernedTaskLifecycle({ taskFilePath, approvalFilePath, no
   const lifecycle = createDurableTaskLifecycle({ filePath: taskPath, now });
 
   function appendApprovalEvent(eventType, taskId, actor, reason) {
+    assertApprovalHealthy();
     const event = { eventId: randomUUID(), eventType, taskId, actor, reason, at: now() };
     const body = { sequence: approvalLog.sequence + 1, previousHash: approvalLog.previousHash, event };
     const record = { ...body, hash: digest(body) };
-    appendFileSync(approvalPath, JSON.stringify(record) + "\n", { encoding: "utf8", flag: "a" });
+    try {
+      appendFileSync(approvalPath, JSON.stringify(record) + "\n", { encoding: "utf8", flag: "a" });
+    } catch (error) {
+      approvalFault = error;
+      throw error;
+    }
     approvalLog.sequence = record.sequence;
     approvalLog.previousHash = record.hash;
     approvalLog.records.push(record);
     approvalLog.states.set(taskId, eventType === "task.approved");
     return Object.freeze({ ...event });
   }
-
   function isApproved(taskId) {
+    assertApprovalHealthy();
     return approvalLog.states.get(String(taskId)) === true;
   }
 
   return Object.freeze({
-    create: lifecycle.create,
-    get: lifecycle.get,
-    list: lifecycle.list,
-    isTerminal: lifecycle.isTerminal,
-    audit: lifecycle.audit,
+    create(...args) { assertApprovalHealthy(); return lifecycle.create(...args); },
+    get(...args) { assertApprovalHealthy(); return lifecycle.get(...args); },
+    list(...args) { assertApprovalHealthy(); return lifecycle.list(...args); },
+    isTerminal(...args) { assertApprovalHealthy(); return lifecycle.isTerminal(...args); },
+    audit() { assertApprovalHealthy(); return lifecycle.audit(); },
     storagePath: lifecycle.storagePath,
 
     approve(taskId, { actor, reason } = {}) {
@@ -117,6 +123,7 @@ export function createGovernedTaskLifecycle({ taskFilePath, approvalFilePath, no
     isApproved,
 
     transition(taskId, nextStatus, options = {}) {
+      assertApprovalHealthy();
       if (nextStatus === "running") {
         const id = requiredText(taskId, "taskId", 200);
         const task = lifecycle.get(id);
@@ -135,6 +142,7 @@ export function createGovernedTaskLifecycle({ taskFilePath, approvalFilePath, no
     },
 
     approvalAudit() {
+      assertApprovalHealthy();
       return loadApprovalLog(approvalPath).records.map(record => JSON.parse(JSON.stringify(record)));
     },
   });
