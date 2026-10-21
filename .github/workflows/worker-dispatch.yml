@@ -49,7 +49,7 @@ jobs:
           node --check integrations/worker-result-journal.mjs
           node --check integrations/registry-worker-adapter.mjs
           node --check integrations/registry-worker-adapter.test.mjs
-          node --check integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs
+          node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
-          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs
