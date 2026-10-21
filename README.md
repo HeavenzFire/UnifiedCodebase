@@ -43,7 +43,12 @@ The extension registry validates manifest shape, stable identifiers, versions, a
 
 ## Governed task host (PowerShell 5.1)
 
-The task host is separate from the provider-routing prompt command. It runs only the statically registered Guardian Evidence and Funding Integrity handlers; it does not execute arbitrary shell commands.
+The task host is separate from the provider-routing prompt command. It runs only statically registered, reviewed handlers; it does not execute arbitrary shell commands.
+
+Start the proposal inbox in a separate PowerShell window before dispatching `task.proposal.submit` tasks:
+    .\\Enter-UnifiedField.ps1 -TaskAction StartInbox
+
+The inbox binds only to `127.0.0.1:18796`, stores proposals in a hash-chained local journal, and accepts proposed/pending records only. It has no approval or execution endpoint.
 
 List registered workers through the unified entry point:
     .\Enter-UnifiedField.ps1 -TaskAction Workers
