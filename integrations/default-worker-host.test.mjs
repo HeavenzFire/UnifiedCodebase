@@ -147,3 +147,33 @@ test("default host exposes only the read-only loopback Sovereign Node health wor
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("default host exposes repository inventory as a bounded read-only task", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-inventory-host-"));
+  try {
+    const host = await createDefaultWorkerHost({
+      repositoryRoot: resolve("."),
+      taskFilePath: join(directory, "tasks.jsonl"),
+      approvalFilePath: join(directory, "approvals.jsonl"),
+      resultFilePath: join(directory, "results.jsonl"),
+      evidenceLedgerPath: join(directory, "guardian-evidence.jsonl"),
+    });
+    host.submit({
+      taskId: "inventory-read-1",
+      title: "Inspect checked-in repository inventory",
+      requestedBy: "test-operator",
+      metadata: { capability: "repository.inventory.read_only", query: "heavenzfire", limit: 2 },
+    });
+    host.approve("inventory-read-1", { actor: "test-operator", reason: "inventory query approved" });
+    const result = await host.dispatch("inventory-read-1", "repository.inventory", {
+      actor: "test-operator", reason: "read checked-in metadata snapshot",
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.result.totalVisible, 276);
+    assert.equal(result.result.filteredCount, 276);
+    assert.equal(result.result.repositories.length, 2);
+    assert.match(result.result.scopeNote, /not proof|not a guarantee/i);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
