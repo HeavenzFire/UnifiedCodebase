@@ -32,7 +32,7 @@ test("dispatch requires explicit approval and a registered worker", async () => 
   assert.equal(lifecycle.get("no-approval").status, "queued");
 }));
 
-test("dispatch consumes approval, runs only the registered handler, and records a result digest", async () => withLifecycle(async ({ lifecycle }) => {
+test("dispatch consumes approval, runs only the registered handler, and records a result digest", async () => withLifecycle(async ({ directory, lifecycle }) => {
   makeApproved(lifecycle, "success-1", { capability: "summarize" });
   let calls = 0;
   const resultJournal = createWorkerResultJournal({ filePath: join(directory, "results.jsonl") });
