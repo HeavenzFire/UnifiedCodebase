@@ -58,6 +58,7 @@ test("HTTP inbox binds only to loopback and serves health, list, and proposal-on
   const inbox = createSharedTaskInbox({ filePath: join(directory, "inbox.jsonl") });
   assert.throws(() => createSharedTaskInboxServer({ inbox, host: "0.0.0.0" }), /only to 127.0.0.1/);
   const server = createSharedTaskInboxServer({ inbox, maxBodyBytes: 1024 });
+  assert.throws(() => server.listen(0, "0.0.0.0"), /may bind only to 127.0.0.1/);
   try {
     await new Promise((resolve, reject) => {
       server.once("error", reject);
