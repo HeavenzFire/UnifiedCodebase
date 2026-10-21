@@ -86,4 +86,4 @@ jobs:
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
-          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs integrations/worker-host-cli.test.mjs
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs integrations/worker-host-cli.test.mjs
