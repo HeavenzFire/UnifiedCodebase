@@ -79,3 +79,37 @@ test("default host runs read-only funding reconciliation and Guardian evidence a
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("default host dispatches approved model tasks through local Ollama only", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-local-model-"));
+  let observedProvider;
+  try {
+    const host = await createDefaultWorkerHost({
+      repositoryRoot: resolve("."),
+      taskFilePath: join(directory, "tasks.jsonl"),
+      approvalFilePath: join(directory, "approvals.jsonl"),
+      resultFilePath: join(directory, "results.jsonl"),
+      evidenceLedgerPath: join(directory, "guardian-evidence.jsonl"),
+      localModelRunner: async input => {
+        observedProvider = input.providerName;
+        return { provider: "ollama", model: input.model || "fixture-model", remote: false, text: "synthetic local answer" };
+      },
+    });
+    host.submit({
+      taskId: "local-model-1",
+      title: "Summarize a local fixture",
+      requestedBy: "test-operator",
+      metadata: { capability: "model.inference.local", prompt: "Summarize this synthetic fixture.", provider: "openai" },
+    });
+    host.approve("local-model-1", { actor: "test-operator", reason: "local model fixture approved" });
+    const result = await host.dispatch("local-model-1", "local.model", {
+      actor: "test-operator", reason: "run approved local inference",
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(observedProvider, "ollama");
+    assert.equal(result.result.remote, false);
+    assert.equal(result.result.text, "synthetic local answer");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
