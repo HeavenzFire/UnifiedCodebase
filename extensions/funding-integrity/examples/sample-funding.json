@@ -1,0 +1,31 @@
+{
+  "$comment": "Synthetic demonstration data only; not a claim about any real program, recipient, or transaction.",
+  "appropriations": [
+    {
+      "appropriationId": "SYN-APP-001",
+      "programId": "SYN-CHILD-SERVICES",
+      "fiscalYear": "2026",
+      "currency": "USD",
+      "amount": 100000
+    }
+  ],
+  "awards": [
+    {
+      "awardId": "SYN-AWARD-001",
+      "programId": "SYN-CHILD-SERVICES",
+      "fiscalYear": "2026",
+      "currency": "USD",
+      "amount": 100000
+    }
+  ],
+  "disbursements": [
+    {
+      "disbursementId": "SYN-DISB-001",
+      "awardId": "SYN-AWARD-001",
+      "programId": "SYN-CHILD-SERVICES",
+      "fiscalYear": "2026",
+      "currency": "USD",
+      "amount": 72500
+    }
+  ]
+}
