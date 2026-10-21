@@ -19,6 +19,8 @@ Commands:
   status
   audit
   inbox-list [http://127.0.0.1:PORT/api/tasks]
+  claim <task-id> <worker-id> [lease-seconds]
+  release <task-id> <worker-id>
 
 submit reads JSON from an argument or stdin when the argument is "-".
 Task metadata must include a capability and the corresponding input/evidence fields.
@@ -52,6 +54,24 @@ async function fetchInbox(endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "
   return body;
 }
 
+async function postInbox(pathname, payload, endpoint = process.env.HEAVENZFIRE_TASK_INBOX_URL || "http://127.0.0.1:18796/api/tasks") {
+  const url = assertLoopbackEndpoint(endpoint);
+  url.pathname = pathname;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(3000),
+  });
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error("Shared task inbox returned invalid JSON."); }
+  if (!response.ok || !body || body.ok !== true) {
+    throw new Error("Shared task inbox request failed: " + (body?.error || response.status));
+  }
+  return body;
+}
+
 async function main(argv) {
   const [command, ...args] = argv;
   if (!command || command === "--help" || command === "-h" || command === "help") {
@@ -61,6 +81,22 @@ async function main(argv) {
   if (command === "inbox-list") {
     if (args.length > 1) throw new Error("inbox-list accepts at most one endpoint.");
     output(await fetchInbox(args[0]));
+    return;
+  }
+  if (command === "claim") {
+    requireArgs(args, 2, command);
+    if (args.length > 3) throw new Error("claim accepts task-id, worker-id, and optional lease-seconds.");
+    const leaseSeconds = args[2] === undefined ? 60 : Number(args[2]);
+    if (!Number.isInteger(leaseSeconds) || leaseSeconds < 5 || leaseSeconds > 3600) {
+      throw new RangeError("lease-seconds must be an integer from 5 through 3600.");
+    }
+    output(await postInbox("/api/claims", { taskId: args[0], workerId: args[1], leaseSeconds }));
+    return;
+  }
+  if (command === "release") {
+    requireArgs(args, 2, command);
+    if (args.length !== 2) throw new Error("release accepts exactly task-id and worker-id.");
+    output(await postInbox("/api/claims/release", { taskId: args[0], workerId: args[1] }));
     return;
   }
   const stateDirectory = resolve(process.env.HEAVENZFIRE_STATE_DIR || join(homedir(), ".heavenzfire", "unified-field"));
