@@ -4,7 +4,7 @@ param(
     [ValidateSet('ollama','openai','mistral','gemini')][string]$Provider = 'ollama',
     [string]$Model,
     [switch]$HealthOnly,
-    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit","StartInbox","InboxList","Claim","Release")][string]$TaskAction,
+    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit","StartInbox","InboxList","Claim","Release","InboxAudit")][string]$TaskAction,
     [string]$TaskJson,
     [string]$TaskId,
     [string]$WorkerId,
