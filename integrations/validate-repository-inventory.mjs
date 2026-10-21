@@ -36,6 +36,9 @@ export function validateRepositoryInventory(input) {
       seen.add(repo.full_name.toLowerCase());
     }
     if (typeof repo.name !== "string" || !repo.name.trim()) errors.push(at + ".name is required.");
+    if (!["unassessed", "candidate", "verified_component", "integrated", "blocked"].includes(repo.integration_status)) {
+      errors.push(at + ".integration_status must use a documented inventory state.");
+    }
     if (repo.default_branch !== null && (typeof repo.default_branch !== "string" || !repo.default_branch.trim())) {
       errors.push(at + ".default_branch must be a non-empty string or null.");
     }
