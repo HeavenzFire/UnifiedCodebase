@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Syntax-check manifest validation command
-        run: node --check integrations/validate-extension-manifests.mjs && node --check integrations/extension-runtime.mjs
+      - name: Syntax-check manifest validation and runtime modules
+        run: node --check integrations/validate-extension-manifests.mjs && node --check integrations/extension-runtime.mjs && node --check integrations/task-lifecycle.mjs && node --check integrations/shared-task-proposal-adapter.mjs
       - name: Run provider, extension registry, and integration contract tests
-        run: node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs extensions/guardian-evidence/evidence-ledger.test.mjs integrations/sovereign-node-adapter.test.mjs integrations/extension-registry.test.mjs integrations/load-extension-manifests.test.mjs integrations/extension-runtime.test.mjs
+        run: node --test unified-field/provider-router.test.mjs extensions/funding-integrity/reconcile.test.mjs extensions/guardian-evidence/evidence-ledger.test.mjs integrations/sovereign-node-adapter.test.mjs integrations/extension-registry.test.mjs integrations/load-extension-manifests.test.mjs integrations/extension-runtime.test.mjs integrations/shared-task-proposal-adapter.test.mjs
