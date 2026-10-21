@@ -48,7 +48,7 @@ The task host is separate from the provider-routing prompt command. It runs only
 Start the proposal inbox in a separate PowerShell window before dispatching `task.proposal.submit` tasks:
     .\\Enter-UnifiedField.ps1 -TaskAction StartInbox
 
-The inbox binds only to `127.0.0.1:18796`, stores proposals in a hash-chained local journal, and accepts proposed/pending records only. It has no approval or execution endpoint.
+The inbox binds only to `127.0.0.1:18796`, stores proposals in a hash-chained local journal, and accepts proposed/pending records only. It has no approval or execution endpoint. Loopback binding is not authentication: any local process able to reach the port can read or submit proposals, so do not put secrets in proposal titles or purposes.
 
 List proposals from another local worker or instance:
     .\\Enter-UnifiedField.ps1 -TaskAction InboxList
