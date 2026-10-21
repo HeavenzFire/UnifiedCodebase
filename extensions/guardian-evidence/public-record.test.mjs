@@ -29,6 +29,10 @@ test("rejects insecure URLs and embedded credentials", () => {
   assert.throws(() => validatePublicRecord({ ...valid(), source_url: "https://user:pass@example.gov/file" }), /credentials/);
 });
 
+test("rejects credential-like URL query parameters", () => {
+  assert.throws(() => validatePublicRecord({ ...valid(), source_url: "https://example.gov/report?access_token=secret" }), /credential-like query parameters/);
+});
+
 test("rejects invalid hashes, reporting period, and accounting basis", () => {
   assert.throws(() => validatePublicRecord({ ...valid(), source_sha256: "not-a-hash" }), /SHA-256/);
   assert.throws(() => validatePublicRecord({ ...valid(), reporting_period: " " }), /reporting_period/);
