@@ -1,10 +1,12 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox','InboxList')]
+    [ValidateSet('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox','InboxList','Claim','Release')]
     [string]$Action,
     [string]$TaskJson,
     [string]$TaskId,
+    [string]$WorkerId,
+    [ValidateRange(5,3600)][int]$LeaseSeconds = 60,
     [string]$ExtensionId,
     [string]$Actor,
     [string]$Reason,
@@ -26,6 +28,14 @@ switch ($Action) {
     'List'    { & $Node.Source $Cli 'list' }
     'Status'  { & $Node.Source $Cli 'status' }
     'Audit'   { & $Node.Source $Cli 'audit' }
+    'Claim' {
+        if ([string]::IsNullOrWhiteSpace($TaskId) -or [string]::IsNullOrWhiteSpace($WorkerId)) { throw 'Claim requires -TaskId and -WorkerId.' }
+        & $Node.Source $Cli 'claim' $TaskId $WorkerId $LeaseSeconds
+    }
+    'Release' {
+        if ([string]::IsNullOrWhiteSpace($TaskId) -or [string]::IsNullOrWhiteSpace($WorkerId)) { throw 'Release requires -TaskId and -WorkerId.' }
+        & $Node.Source $Cli 'release' $TaskId $WorkerId
+    }
     'InboxList' {
         if ([string]::IsNullOrWhiteSpace($env:HEAVENZFIRE_TASK_INBOX_URL)) { & $Node.Source $Cli 'inbox-list' }
         else { & $Node.Source $Cli 'inbox-list' $env:HEAVENZFIRE_TASK_INBOX_URL }
