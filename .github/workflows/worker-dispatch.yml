@@ -127,3 +127,46 @@ jobs:
       - name: Run governed lifecycle and worker dispatch tests
         run: |
           node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs extensions/sovereign-node-health/health-worker.test.mjs extensions/repository-inventory/inventory-worker.test.mjs extensions/shared-task-proposal/proposal-worker.test.mjs integrations/shared-task-proposal-adapter.test.mjs integrations/shared-task-inbox.test.mjs integrations/worker-host-cli.test.mjs
+
+  windows-powershell-51:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Exercise the unified entry point under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5) { throw "Expected Windows PowerShell 5.1; found $($PSVersionTable.PSVersion)." }
+          $state = Join-Path $env:TEMP ("heavenzfire-unified-field-" + [guid]::NewGuid().ToString("N"))
+          New-Item -ItemType Directory -Path $state | Out-Null
+          $env:HEAVENZFIRE_STATE_DIR = $state
+          try {
+            $task = @{
+              taskId = "windows-ps51-e2e"
+              title = "Windows PowerShell task host fixture"
+              requestedBy = "ci-operator"
+              metadata = @{
+                capability = "funding.reconcile.read_only"
+                input = @{
+                  appropriations = @()
+                  awards = @()
+                  disbursements = @()
+                }
+              }
+            } | ConvertTo-Json -Depth 20 -Compress
+            $submittedRaw = & .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $task
+            $submitted = ($submittedRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($submitted.status -ne "queued") { throw "Submit failed: $($submittedRaw -join '')" }
+            & .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId "windows-ps51-e2e" -Actor "ci-operator" -Reason "Approved Windows PowerShell fixture" | Out-Null
+            $resultRaw = & .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId "windows-ps51-e2e" -ExtensionId "funding.integrity" -Actor "ci-operator" -Reason "Run read-only fixture"
+            $result = ($resultRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($result.status -ne "succeeded" -or $result.result.mode -ne "read_only") { throw "Dispatch failed: $($resultRaw -join '')" }
+            $auditRaw = & .\Enter-UnifiedField.ps1 -TaskAction Audit
+            $audit = ($auditRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($audit.resultRecords -ne 1 -or -not $audit.resultChainHead) { throw "Audit verification failed: $($auditRaw -join '')" }
+          } finally {
+            Remove-Item -LiteralPath $state -Recurse -Force -ErrorAction SilentlyContinue
+          }
