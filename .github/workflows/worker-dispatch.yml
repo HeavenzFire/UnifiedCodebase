@@ -228,6 +228,12 @@ jobs:
             throw
           } finally {
             Remove-Item Env:HEAVENZFIRE_TASK_INBOX_URL -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath $inboxStdout) {
+              try {
+                $serverInfo = Get-Content -LiteralPath $inboxStdout -Raw | ConvertFrom-Json
+                if ($serverInfo.pid) { Stop-Process -Id $serverInfo.pid -Force -ErrorAction SilentlyContinue }
+              } catch {}
+            }
             if ($inboxProcess -and -not $inboxProcess.HasExited) { Stop-Process -Id $inboxProcess.Id -Force -ErrorAction SilentlyContinue }
             Remove-Item -LiteralPath $state -Recurse -Force -ErrorAction SilentlyContinue
           }
