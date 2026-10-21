@@ -18,7 +18,7 @@ Purpose: support auditable investigations into public spending, grants, contract
 - Structural validator: `public-record.mjs` (`validatePublicRecord(input)`).
 - The public-record contract requires an HTTPS source, UTC retrieval timestamp, SHA-256 digest of the retrieved source bytes, reporting period, accounting basis, review state, PII-review state, and explicit limitations.
 - Optional source publisher/document ID, archive URL, calculation method, reviewer role, and correction target improve reproducibility.
-- Structural validity does not prove source authenticity or that a claim is true. `corroborated` is a human review state, not an automatic model score.
+- The validator checks the digest format; the ingestion host must compute SHA-256 from the exact retrieved source bytes and compare it before submitting the record. Structural validity does not prove source authenticity or that a claim is true. `corroborated` is a human review state, not an automatic model score.
 - A PII-blocked record cannot be marked corroborated by this validator.
 
 ## Safety and integrity gates
