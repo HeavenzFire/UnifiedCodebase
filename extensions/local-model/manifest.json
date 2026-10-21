@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "local.model",
+  "version": "0.1.0",
+  "entrypoint": "extensions/local-model/local-model-worker.mjs",
+  "capabilities": [
+    "model.inference.local"
+  ],
+  "permissions": [
+    "network.loopback:ollama"
+  ],
+  "data_flows": [
+    "approved-task-prompt-to-loopback-ollama"
+  ],
+  "healthcheck": "node --check extensions/local-model/local-model-worker.mjs",
+  "test_command": "node --test extensions/local-model/local-model-worker.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
