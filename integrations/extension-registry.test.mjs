@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { createExtensionRegistry, validateExtensionManifest } from "./extension-registry.mjs";
 
 const manifest = (overrides = {}) => ({
@@ -15,6 +16,10 @@ const manifest = (overrides = {}) => ({
   rollback: "disable extension and revert pinned revision",
   ...overrides
 });
+
+async function readManifest(relativePath) {
+  return JSON.parse(await readFile(new URL(relativePath, import.meta.url), "utf8"));
+}
 
 test("validates and freezes a normalized manifest", () => {
   const normalized = validateExtensionManifest(manifest());
@@ -80,4 +85,17 @@ test("manifest cannot mutate registry policy or registered data after registrati
     capabilities: ["system.admin"]
   })), /Capability not allowlisted/);
   assert.throws(() => { registered.capabilities.push("system.admin"); }, TypeError);
+});
+
+test("real Guardian and funding manifests pass the explicit registry policy", async () => {
+  const guardian = await readManifest("../extensions/guardian-evidence/manifest.json");
+  const funding = await readManifest("../extensions/funding-integrity/manifest.json");
+  const registry = createExtensionRegistry({
+    allowedCapabilities: ["evidence.append", "evidence.verify", "funding.reconcile.read_only"],
+    allowedPermissions: ["filesystem.write:local-evidence-ledger", "filesystem.read:input-records"]
+  });
+  registry.register(guardian);
+  registry.register(funding);
+  assert.deepEqual(registry.list().map(item => item.extension_id), ["funding.integrity", "guardian.evidence"]);
+  assert.equal(registry.get("funding.integrity").capabilities.includes("funding.reconcile.read_only"), true);
 });
