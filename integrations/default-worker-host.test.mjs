@@ -220,3 +220,57 @@ test("default host submits only minimal shared-task proposals after explicit app
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("default host exposes allowlisted read-only GitHub metadata after approval", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-github-metadata-"));
+  let request;
+  try {
+    const host = await createDefaultWorkerHost({
+      repositoryRoot: resolve("."),
+      taskFilePath: join(directory, "tasks.jsonl"),
+      approvalFilePath: join(directory, "approvals.jsonl"),
+      resultFilePath: join(directory, "results.jsonl"),
+      evidenceLedgerPath: join(directory, "guardian-evidence.jsonl"),
+      githubMetadataFetcher: async (url, init) => {
+        request = { url, init };
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          json: async () => [{
+            full_name: "HeavenzFire/UnifiedCodebase",
+            name: "UnifiedCodebase",
+            visibility: "public",
+            archived: false,
+            default_branch: "main",
+            stargazers_count: 7,
+          }],
+        };
+      },
+    });
+    host.submit({
+      taskId: "github-metadata-1",
+      title: "Inspect public repository metadata",
+      requestedBy: "test-operator",
+      metadata: {
+        capability: "repository.github.metadata.read_only",
+        operation: "list",
+        owner: "HeavenzFire",
+        page: 1,
+        perPage: 2,
+        url: "http://attacker.invalid",
+      },
+    });
+    host.approve("github-metadata-1", { actor: "test-operator", reason: "public metadata query approved" });
+    const result = await host.dispatch("github-metadata-1", "github.metadata", {
+      actor: "test-operator", reason: "read allowlisted GitHub metadata",
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.result.count, 1);
+    assert.equal(result.result.repositories[0].full_name, "HeavenzFire/UnifiedCodebase");
+    assert.equal(new URL(request.url).origin, "https://api.github.com");
+    assert.equal(request.init.method, "GET");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
