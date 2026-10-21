@@ -13,9 +13,13 @@ function boundedText(value, field, max) {
 }
 
 function jsonClone(value) {
-  const encoded = JSON.stringify(value);
-  if (encoded === undefined) throw new TypeError("metadata must be JSON-serializable.");
-  return JSON.parse(encoded);
+  try {
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined) throw new TypeError("metadata must be JSON-serializable.");
+    return JSON.parse(encoded);
+  } catch (error) {
+    throw new TypeError("metadata must be JSON-serializable.", { cause: error });
+  }
 }
 
 function assertLoopbackEndpoint(endpoint) {
