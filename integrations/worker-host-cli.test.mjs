@@ -95,6 +95,6 @@ test("PowerShell task wrapper exposes loopback inbox startup", () => {
   const entrypoint = readFileSync(resolve(root, "Enter-UnifiedField.ps1"), "utf8");
   const wrapper = readFileSync(resolve(root, "Invoke-UnifiedFieldTask.ps1"), "utf8");
   assert.match(wrapper, /StartInbox/);
-  assert.match(wrapper, /shared-task-inbox\\.mjs/);
+  assert.match(wrapper, /shared-task-inbox\.mjs/);
   assert.match(entrypoint, /StartInbox/);
 });
