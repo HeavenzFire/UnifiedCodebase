@@ -9,7 +9,7 @@ on:
       - "integrations/registry-worker-adapter.mjs"
       - "integrations/registry-worker-adapter.test.mjs"
       - "integrations/worker-host.mjs"
-      - "integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs integrations/worker-host-cli.test.mjs"
+      - "integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs integrations/worker-host-cli.test.mjs"
       - "integrations/default-worker-host.mjs"
       - "integrations/default-worker-host.test.mjs"
       - "integrations/worker-host-cli.mjs"
@@ -18,6 +18,9 @@ on:
       - "Enter-UnifiedField.ps1"
       - "extensions/guardian-evidence/evidence-ledger.mjs"
       - "extensions/funding-integrity/reconcile.mjs"
+      - "extensions/local-model/manifest.json"
+      - "extensions/local-model/local-model-worker.mjs"
+      - "extensions/local-model/local-model-worker.test.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -45,6 +48,9 @@ on:
       - "Enter-UnifiedField.ps1"
       - "extensions/guardian-evidence/evidence-ledger.mjs"
       - "extensions/funding-integrity/reconcile.mjs"
+      - "extensions/local-model/manifest.json"
+      - "extensions/local-model/local-model-worker.mjs"
+      - "extensions/local-model/local-model-worker.test.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -73,6 +79,8 @@ jobs:
           node --check integrations/worker-host.test.mjs
           node --check integrations/default-worker-host.mjs
           node --check integrations/default-worker-host.test.mjs
+          node --check extensions/local-model/local-model-worker.mjs
+          node --check extensions/local-model/local-model-worker.test.mjs
           node --check integrations/worker-host-cli.mjs
           node --check integrations/worker-host-cli.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
