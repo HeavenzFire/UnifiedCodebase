@@ -48,12 +48,31 @@ test("CLI completes a persisted submit-approve-dispatch-audit cycle", () => {
     assert.equal(JSON.parse(dispatched.stdout).status, "succeeded");
     assert.equal(JSON.parse(dispatched.stdout).result.mode, "read_only");
 
+    const revocationTask = {
+      taskId: "cli-revoke-1",
+      title: "Task with revoked approval",
+      requestedBy: "test-operator",
+      metadata: {
+        capability: "funding.reconcile.read_only",
+        input: { appropriations: [], awards: [], disbursements: [] },
+      },
+    };
+    const submittedForRevocation = run(["submit", "-"], JSON.stringify(revocationTask));
+    assert.equal(submittedForRevocation.status, 0, submittedForRevocation.stderr);
+    const secondApproval = run(["approve", "cli-revoke-1", "test-operator", "temporary approval"]);
+    assert.equal(secondApproval.status, 0, secondApproval.stderr);
+    const revoked = run(["revoke", "cli-revoke-1", "test-operator", "approval withdrawn"]);
+    assert.equal(revoked.status, 0, revoked.stderr);
+    const blockedDispatch = run(["dispatch", "cli-revoke-1", "funding.integrity", "test-operator", "must not run"]);
+    assert.notEqual(blockedDispatch.status, 0);
+    assert.match(blockedDispatch.stderr, /Explicit approval required/);
+
     const audit = run(["audit"]);
     assert.equal(audit.status, 0, audit.stderr);
     const summary = JSON.parse(audit.stdout);
     assert.equal(summary.resultRecords, 1);
     assert.ok(summary.taskEvents >= 3);
-    assert.ok(summary.approvalEvents >= 2);
+    assert.ok(summary.approvalEvents >= 4);
     assert.match(summary.resultChainHead, /^[a-f0-9]{64}$/);
   } finally {
     rmSync(stateDirectory, { recursive: true, force: true });
