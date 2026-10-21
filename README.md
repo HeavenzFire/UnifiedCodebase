@@ -52,8 +52,9 @@ The inbox binds only to `127.0.0.1:18796`, stores proposals in a hash-chained lo
 
 List proposals from another local worker or instance:
     .\\Enter-UnifiedField.ps1 -TaskAction InboxList
+    .\\Enter-UnifiedField.ps1 -TaskAction InboxAudit
 
-For a non-default loopback port, set `HEAVENZFIRE_TASK_INBOX_URL` to `http://127.0.0.1:PORT/api/tasks`; non-loopback endpoints are rejected.
+`InboxAudit` reports proposal/claim event counts and both hash-chain heads after verifying the journals. For a non-default loopback port, set `HEAVENZFIRE_TASK_INBOX_URL` to `http://127.0.0.1:PORT/api/tasks`; non-loopback endpoints are rejected.
 
 Cooperative worker leases prevent simultaneous local workers from claiming the same proposal:
     .\\Enter-UnifiedField.ps1 -TaskAction Claim -TaskId proposal-123 -WorkerId worker-a -LeaseSeconds 300
