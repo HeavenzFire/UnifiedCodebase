@@ -143,6 +143,14 @@ test("HTTP inbox binds only to loopback and serves health, list, and proposal-on
     });
     assert.equal((await released.json()).released, true);
 
+    const auditResponse = await fetch(base + "/api/audit");
+    const audit = await auditResponse.json();
+    assert.equal(auditResponse.status, 200);
+    assert.equal(audit.proposalCount, 1);
+    assert.equal(audit.claimEventCount, 2);
+    assert.match(audit.proposalChainHead, /^[a-f0-9]{64}$/);
+    assert.match(audit.claimChainHead, /^[a-f0-9]{64}$/);
+
     const duplicate = await fetch(base + "/api/tasks", {
       method: "POST",
       headers: { "content-type": "application/json" },
