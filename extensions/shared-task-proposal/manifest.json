@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "shared-task.proposal",
+  "version": "0.1.0",
+  "entrypoint": "extensions/shared-task-proposal/proposal-worker.mjs",
+  "capabilities": [
+    "task.proposal.submit"
+  ],
+  "permissions": [
+    "network.loopback:shared-task-inbox"
+  ],
+  "data_flows": [
+    "approved-task-summary-to-loopback-shared-task-inbox"
+  ],
+  "healthcheck": "node --check extensions/shared-task-proposal/proposal-worker.mjs",
+  "test_command": "node --test extensions/shared-task-proposal/proposal-worker.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
