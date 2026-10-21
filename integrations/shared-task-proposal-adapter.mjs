@@ -29,6 +29,7 @@ function assertLoopbackEndpoint(endpoint) {
       url.search || url.hash || url.pathname !== "/api/tasks") {
     throw new Error("Task inbox endpoint must be http://127.0.0.1:<port>/api/tasks.");
   }
+  if (!url.port) throw new RangeError("endpoint must specify an explicit non-default port.");
   if (url.port && (!/^\d+$/.test(url.port) || Number(url.port) < 1 || Number(url.port) > 65535)) {
     throw new RangeError("endpoint port must be between 1 and 65535.");
   }
