@@ -7,7 +7,13 @@ function requiredText(value, field, max = 200) {
   return value.trim();
 }
 
-function canonicalJson(value) {\n  if (value === null || typeof value !== "object") return JSON.stringify(value);\n  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";\n  return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";\n}\n\nfunction safeClone(value) {
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+  return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";
+}
+
+function safeClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -25,7 +31,10 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
   if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 32) {
     throw new RangeError("maxConcurrent must be an integer from 1 through 32.");
   }
-  if (typeof now !== "function") throw new TypeError("now must be a function.");\n  if (resultJournal !== null && typeof resultJournal.append !== "function") {\n    throw new TypeError("resultJournal.append must be a function when a result journal is provided.");\n  }
+  if (typeof now !== "function") throw new TypeError("now must be a function.");
+  if (resultJournal !== null && typeof resultJournal.append !== "function") {
+    throw new TypeError("resultJournal.append must be a function when a result journal is provided.");
+  }
 
   const registry = new Map();
   const active = new Set();
@@ -83,7 +92,8 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
       });
       return Object.freeze({
         taskId: id, workerId: selectedWorkerId, status: "succeeded",
-        startedAt, finishedAt, result: normalizedOutput, resultSha256: resultDigest,\n        resultJournal: journalReceipt,
+        startedAt, finishedAt, result: normalizedOutput, resultSha256: resultDigest,
+        resultJournal: journalReceipt,
       });
     } catch (error) {
       if (running) {
