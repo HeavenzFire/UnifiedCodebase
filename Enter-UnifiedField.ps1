@@ -4,12 +4,14 @@ param(
     [ValidateSet('ollama','openai','mistral','gemini')][string]$Provider = 'ollama',
     [string]$Model,
     [switch]$HealthOnly,
-    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit")][string]$TaskAction,
+    [ValidateSet("Workers","Submit","Approve","Revoke","Dispatch","List","Status","Audit","StartInbox")][string]$TaskAction,
     [string]$TaskJson,
     [string]$TaskId,
     [string]$ExtensionId,
     [string]$Actor,
-    [string]$Reason
+    [string]$Reason,
+    [ValidateRange(1,65535)][int]$InboxPort = 18796,
+    [string]$InboxFilePath
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -27,6 +29,8 @@ if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
     if (-not [string]::IsNullOrWhiteSpace($ExtensionId)) { $TaskHostArguments += @('-ExtensionId', $ExtensionId) }
     if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostArguments += @('-Actor', $Actor) }
     if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostArguments += @('-Reason', $Reason) }
+    if ($InboxPort -ne 18796) { $TaskHostArguments += @('-InboxPort', [string]$InboxPort) }
+    if (-not [string]::IsNullOrWhiteSpace($InboxFilePath)) { $TaskHostArguments += @('-InboxFilePath', $InboxFilePath) }
     & $TaskHost @TaskHostArguments
     return
 }
