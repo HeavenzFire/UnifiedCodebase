@@ -12,6 +12,7 @@ Commands:
   workers
   submit <task-json | ->
   approve <task-id> <actor> <reason>
+  revoke <task-id> <actor> <reason>
   dispatch <task-id> <extension-id> <actor> <reason>
   list
   status
@@ -66,6 +67,10 @@ async function main(argv) {
     case "approve":
       requireArgs(args, 3, command);
       output(host.approve(args[0], { actor: args[1], reason: args.slice(2).join(" ") }));
+      return;
+    case "revoke":
+      requireArgs(args, 3, command);
+      output(host.revokeApproval(args[0], { actor: args[1], reason: args.slice(2).join(" ") }));
       return;
     case "dispatch":
       requireArgs(args, 4, command);
