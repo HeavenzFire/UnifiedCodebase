@@ -85,7 +85,7 @@ test("PowerShell 5.1 entry points expose and forward governed task actions", () 
   const wrapper = readFileSync(resolve(root, "Invoke-UnifiedFieldTask.ps1"), "utf8");
   assert.match(entrypoint, /TaskAction/);
   assert.match(entrypoint, /Invoke-UnifiedFieldTask\.ps1/);
-  assert.match(entrypoint, /& \$TaskHost @TaskHostArguments/);
+  assert.match(entrypoint, /& \$TaskHost @TaskHostParameters/);
   assert.match(wrapper, /ValidateSet\('Workers','Submit','Approve','Revoke','Dispatch','List','Status','Audit','StartInbox'\)/);
   assert.match(wrapper, /TaskJson \| & \$Node\.Source \$Cli 'submit' '-'/);
 });
