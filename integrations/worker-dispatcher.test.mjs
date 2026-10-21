@@ -35,8 +35,9 @@ test("dispatch requires explicit approval and a registered worker", async () => 
 test("dispatch consumes approval, runs only the registered handler, and records a result digest", async () => withLifecycle(async ({ lifecycle }) => {
   makeApproved(lifecycle, "success-1", { capability: "summarize" });
   let calls = 0;
+  const resultJournal = createWorkerResultJournal({ filePath: join(directory, "results.jsonl") });
   const dispatcher = createWorkerDispatcher({
-    lifecycle,
+    lifecycle, resultJournal,
     workers: [{ id: "summarizer", capabilities: ["summarize"], run: async task => { calls += 1; assert.equal(task.status, "running"); return { taskId: task.taskId, summary: "verified" }; } }],
   });
   const result = await dispatcher.dispatch("success-1", "summarizer", { actor: "operator", reason: "approved test" });
