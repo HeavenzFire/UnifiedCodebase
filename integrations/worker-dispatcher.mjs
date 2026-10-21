@@ -68,7 +68,12 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
       lifecycle.transition(id, "running", { actor, reason, evidenceRefs: ["worker:" + selectedWorkerId] });
       running = true;
       const startedAt = now();
-      const output = await worker.run(Object.freeze(safeClone(task)));
+      // Pass the post-transition snapshot so the worker sees the authoritative running state.
+      const runningTask = lifecycle.get(id);
+      if (!runningTask || runningTask.status !== "running") {
+        throw new Error("Lifecycle did not persist the running state; worker execution was not started.");
+      }
+      const output = await worker.run(Object.freeze(safeClone(runningTask)));
       const finishedAt = now();
       const resultDigest = createHash("sha256").update(JSON.stringify(output ?? null), "utf8").digest("hex");
       lifecycle.transition(id, "succeeded", {
