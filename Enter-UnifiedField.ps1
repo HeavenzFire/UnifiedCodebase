@@ -3,7 +3,13 @@ param(
     [Parameter(Position=0)][string]$Prompt,
     [ValidateSet('ollama','openai','mistral','gemini')][string]$Provider = 'ollama',
     [string]$Model,
-    [switch]$HealthOnly
+    [switch]$HealthOnly,
+    [ValidateSet("Workers","Submit","Approve","Dispatch","List","Status","Audit")][string]$TaskAction,
+    [string]$TaskJson,
+    [string]$TaskId,
+    [string]$ExtensionId,
+    [string]$Actor,
+    [string]$Reason
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -12,6 +18,23 @@ $Router = Join-Path $Root 'unified-field\provider-router.mjs'
 $RegistryValidator = Join-Path $Root 'integrations\validate-extension-manifests.mjs'
 $Node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $Node) { throw 'Node.js is not installed or is not on PATH.' }
+if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
+    $TaskHost = Join-Path $Root 'Invoke-UnifiedFieldTask.ps1'
+    if (-not (Test-Path -LiteralPath $TaskHost -PathType Leaf)) { throw "Task host entry point missing: $TaskHost" }
+    $TaskHostArguments = @('-Action', $TaskAction)
+    foreach ($pair in @(
+        @('-TaskJson', $TaskJson),
+        @('-TaskId', $TaskId),
+        @('-ExtensionId', $ExtensionId),
+        @('-Actor', $Actor),
+        @('-Reason', $Reason)
+    )) {
+        if (-not [string]::IsNullOrWhiteSpace($pair[1])) { $TaskHostArguments += @($pair[0], $pair[1]) }
+    }
+    & $TaskHost @TaskHostArguments
+    if ($LASTEXITCODE -ne 0) { throw "Task host failed with exit code $LASTEXITCODE." }
+    return
+}
 if (-not (Test-Path -LiteralPath $Router -PathType Leaf)) { throw "Provider router missing: $Router" }
 if (-not (Test-Path -LiteralPath $RegistryValidator -PathType Leaf)) { throw "Extension registry validator missing: $RegistryValidator" }
 & $Node.Source $RegistryValidator
