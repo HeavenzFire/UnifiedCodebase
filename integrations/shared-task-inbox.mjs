@@ -254,7 +254,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const inbox = createSharedTaskInbox({ filePath: args.filePath });
       const server = createSharedTaskInboxServer({ inbox });
       server.listen(args.port, "127.0.0.1", () => {
-        console.log(JSON.stringify({ ok: true, host: "127.0.0.1", port: args.port, storagePath: inbox.storagePath, mode: "proposal-only" }));
+        console.log(JSON.stringify({ ok: true, host: "127.0.0.1", port: args.port, pid: process.pid, storagePath: inbox.storagePath, mode: "proposal-only" }));
       });
       server.on("error", error => {
         console.error(JSON.stringify({ ok: false, error: error.message }));
