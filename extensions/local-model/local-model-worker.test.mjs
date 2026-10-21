@@ -23,4 +23,8 @@ test("local model worker rejects missing prompts and remote provider results", a
   await assert.rejects(runLocalModelTask({ metadata: { prompt: "test" } }, {
     routePromptImpl: async () => ({ provider: "openai", model: "remote", remote: true, text: "no" }),
   }), /non-local/);
+  await assert.rejects(runLocalModelTask({ metadata: { prompt: "test" } }, {
+    env: { HEAVENZFIRE_OLLAMA_URL: "http://192.168.1.10:11434" },
+    routePromptImpl: async () => ({ provider: "ollama", model: "local", remote: false, text: "should not run" }),
+  }), /loopback/);
 });
