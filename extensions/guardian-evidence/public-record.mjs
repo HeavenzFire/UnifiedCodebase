@@ -55,7 +55,7 @@ export function validatePublicRecord(input) {
   const claim = requiredText(input.claim, "claim");
   if (!REVIEW_STATES.has(input.review_status)) throw new TypeError("review_status is not supported.");
   if (!PII_STATES.has(input.pii_review)) throw new TypeError("pii_review is not supported.");
-  if (!Array.isArray(input.limitations) || input.limitations.some(x => typeof x !== "string" || !x.trim())) {
+  if (!Array.isArray(input.limitations) || input.limitations.length < 1 || input.limitations.some(x => typeof x !== "string" || !x.trim())) {
     throw new TypeError("limitations must be an array of non-empty strings.");
   }
   if (input.pii_review === "blocked" && input.review_status === "corroborated") {
