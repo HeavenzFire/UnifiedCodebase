@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createAuditLog,createCapabilityRegistry,createPolicyEngine,createArtifactStore,createResourceScheduler,createHealthMonitor}=require('./federation-services.cjs');
+(async()=>{
+ const audit=createAuditLog();audit.append('task.created',{id:'t1'});audit.append('task.routed',{id:'t1',sandbox:'A'});assert.equal(audit.verify().ok,true);assert.equal(audit.verify().count,2);
+ const caps=createCapabilityRegistry();caps.grant({grantId:'g1',agentId:'builder-1',capabilities:['artifact.write','repo.merge'],expiresAt:Date.now()+60000,taskId:'t1'});assert.equal(caps.authorize({grantId:'g1',agentId:'builder-1',capability:'artifact.write',taskId:'t1'}).ok,true);assert.equal(caps.authorize({grantId:'g1',agentId:'other',capability:'artifact.write',taskId:'t1'}).reason,'agent_mismatch');assert.equal(caps.authorize({grantId:'g1',agentId:'builder-1',capability:'artifact.write',taskId:'t2'}).reason,'task_scope_mismatch');
+ const policy=createPolicyEngine({capabilityRegistry:caps});assert.equal(policy.evaluate({action:'authorize',grantId:'g1',agentId:'builder-1',capability:'repo.merge',taskId:'t1'}).reason,'human_approval_required');assert.equal(policy.evaluate({action:'authorize',grantId:'g1',agentId:'builder-1',capability:'repo.merge',taskId:'t1',humanApproval:true}).allow,true);
+ assert.equal(caps.revoke('g1').ok,true);assert.equal(policy.evaluate({action:'authorize',grantId:'g1',agentId:'builder-1',capability:'artifact.write',taskId:'t1'}).reason,'revoked');
+ const store=createArtifactStore();const a=store.put('artifact');assert.equal(store.get(a.digest).content,'artifact');assert.equal(store.put('artifact').digest,a.digest);assert.equal(store.count(),1);
+ const scheduler=createResourceScheduler({maxConcurrent:3});let active=0,max=0;await Promise.all(Array.from({length:12},(_,i)=>scheduler.run(async()=>{active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,5));active--;return i;})));assert.equal(max,3);assert.equal(scheduler.stats().active,0);
+ const hm=createHealthMonitor();hm.report('sandbox-A',{healthy:true});hm.report('sandbox-B',{healthy:false,reason:'test'});assert.equal(hm.snapshot().length,2);assert.equal(hm.get('sandbox-B').healthy,false);
+ console.log(JSON.stringify({ok:true,assertions:14,services:['append-only hash-chain audit','scoped capability registry','policy engine with high-impact human approval','content-addressed artifact store','bounded resource scheduler','health monitor'],schedulerMaxConcurrent:max,revocationEnforced:true,artifactDeduplication:true,auditChainVerified:audit.verify().ok},null,2));
+})().catch(e=>{console.error(e.stack||e);process.exitCode=1;});
