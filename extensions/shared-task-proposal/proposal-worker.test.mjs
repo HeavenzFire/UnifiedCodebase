@@ -32,6 +32,7 @@ test("submits a minimal approved proposal and excludes task payloads", async () 
   });
   assert.deepEqual(captured.options, { endpoint: "http://127.0.0.1:18796/api/tasks" });
   assert.equal(captured.safeTask.taskId, "proposal-1");
+  assert.equal(captured.safeTask.title, "coordinate a follow-up review");
   assert.equal(captured.safeTask.metadata.sourceTaskId, "proposal-1");
   assert.equal(captured.safeTask.status, "running");
   assert.equal(captured.safeTask.metadata.proposalPurpose, "coordinate a follow-up review");
