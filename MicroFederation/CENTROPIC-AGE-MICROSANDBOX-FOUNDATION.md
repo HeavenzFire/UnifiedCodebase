@@ -31,7 +31,7 @@ The semantic acceptance test is a deterministic software test using test workers
 ## Next implementation sequence
 
 1. **Task contracts:** carry machine-checkable acceptance criteria, input/output schemas, deadline, idempotency key, capability set, and retry budget with every task.
-2. **Semantic gate integration:** make root acceptance invoke task-specific validators; default unknown or missing acceptance criteria to defer/quarantine, never implicit success.
+2. **Expand semantic contracts:** the root now enforces the declared number-equals contract and quarantines unsupported declared contract types. Add schema-validated validators for more task types; decide whether contract-free legacy tasks should default to defer before changing compatibility behavior.
 3. **Sandbox isolation:** separate per-task workspace, environment, resource budget, filesystem scope, network policy, and cleanup lifecycle.
 4. **Durable ledger:** persist task state transitions and idempotency in SQLite or another durable store; make retry and lease expiry explicit.
 5. **Authorization repair:** fix the existing mesh unauthorized failure by aligning service identity/configuration without disabling authentication or extracting credentials.
@@ -55,3 +55,4 @@ The semantic acceptance test is a deterministic software test using test workers
 - Live roles share one model and one serialized inference adapter.
 - The micro-federation services are prototypes; application-level append-only logging is not tamper-proof against a host administrator.
 - No GitHub commit, pull request, merge, or deployment has been performed as part of this increment.
+
