@@ -15,6 +15,7 @@ This repository is the integration spine for connecting the HeavenzFire project 
 - Durable task journal and approval gate: integrations/durable-task-lifecycle.mjs and integrations/governed-task-lifecycle.mjs
 - Bounded, approval-gated in-process worker dispatch: integrations/worker-dispatcher.mjs (registered handlers only; no arbitrary command execution)
 - Hash-chained durable worker output journal: integrations/worker-result-journal.mjs (JSON-compatible outputs, result digests, and tamper-evident replay validation)
+- Registry-backed worker adapter: integrations/registry-worker-adapter.mjs (derives worker capabilities from allowlisted extension manifests)
 
 ## Quick start
 Requirements: Node.js 20+ and, for local inference, Ollama with a model installed.
