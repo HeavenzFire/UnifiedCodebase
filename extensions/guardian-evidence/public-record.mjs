@@ -58,7 +58,7 @@ export function validatePublicRecord(input) {
   const url = validatePublicHttpsUrl(input.source_url, "source_url");
   if (!SOURCE_TYPES.has(input.source_type)) throw new TypeError("source_type is not supported.");
   const retrievedAt = requiredText(input.retrieved_at_utc, "retrieved_at_utc", 64);
-  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(retrievedAt) || Number.isNaN(Date.parse(retrievedAt))) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(retrievedAt) || Number.isNaN(Date.parse(retrievedAt))) {
     throw new TypeError("retrieved_at_utc must be a valid UTC timestamp ending in Z.");
   }
   if (typeof input.source_sha256 !== "string" || !SHA256.test(input.source_sha256)) {
