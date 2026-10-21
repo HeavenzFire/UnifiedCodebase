@@ -7,7 +7,7 @@ function requiredText(value, field, max = 200) {
   return value.trim();
 }
 
-function safeClone(value) {
+function canonicalJson(value) {\n  if (value === null || typeof value !== "object") return JSON.stringify(value);\n  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";\n  return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";\n}\n\nfunction safeClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -17,7 +17,7 @@ function safeClone(value) {
  * handlers can run, and the governed lifecycle must consume an approval before
  * a task enters running. Callers remain responsible for authenticating approvers.
  */
-export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent = 2, now = () => new Date().toISOString() } = {}) {
+export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent = 2, resultJournal = null, now = () => new Date().toISOString() } = {}) {
   if (!lifecycle || typeof lifecycle.get !== "function" ||
       typeof lifecycle.transition !== "function" || typeof lifecycle.isApproved !== "function") {
     throw new TypeError("A governed task lifecycle is required.");
@@ -25,7 +25,7 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
   if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 32) {
     throw new RangeError("maxConcurrent must be an integer from 1 through 32.");
   }
-  if (typeof now !== "function") throw new TypeError("now must be a function.");
+  if (typeof now !== "function") throw new TypeError("now must be a function.");\n  if (resultJournal !== null && typeof resultJournal.append !== "function") {\n    throw new TypeError("resultJournal.append must be a function when a result journal is provided.");\n  }
 
   const registry = new Map();
   const active = new Set();
@@ -83,7 +83,7 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
       });
       return Object.freeze({
         taskId: id, workerId: selectedWorkerId, status: "succeeded",
-        startedAt, finishedAt, result: output ?? null, resultSha256: resultDigest,
+        startedAt, finishedAt, result: normalizedOutput, resultSha256: resultDigest,\n        resultJournal: journalReceipt,
       });
     } catch (error) {
       if (running) {
