@@ -41,16 +41,16 @@ The extension registry validates manifest shape, stable identifiers, versions, a
 
 The task host is separate from the provider-routing prompt command. It runs only the statically registered Guardian Evidence and Funding Integrity handlers; it does not execute arbitrary shell commands.
 
-List registered workers:
-    .\Invoke-UnifiedFieldTask.ps1 -Action Workers
+List registered workers through the unified entry point:
+    .\Enter-UnifiedField.ps1 -TaskAction Workers
 
 Submit a JSON task object (the metadata must include a capability and the corresponding input):
     $taskJson = '{ "taskId":"funding-demo-1", "title":"Reconcile supplied records", "requestedBy":"local-operator", "metadata": { "capability":"funding.reconcile.read_only", "input": { "appropriations":[], "awards":[], "disbursements":[] } } }'
-    .\Invoke-UnifiedFieldTask.ps1 -Action Submit -TaskJson $taskJson
+    .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $taskJson
 
 Approve and dispatch are separate, explicit operations:
-    .\Invoke-UnifiedFieldTask.ps1 -Action Approve -TaskId funding-demo-1 -Actor local-operator -Reason "Reviewed input and approved"
-    .\Invoke-UnifiedFieldTask.ps1 -Action Dispatch -TaskId funding-demo-1 -ExtensionId funding.integrity -Actor local-operator -Reason "Run approved read-only reconciliation"
+    .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId funding-demo-1 -Actor local-operator -Reason "Reviewed input and approved"
+    .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId funding-demo-1 -ExtensionId funding.integrity -Actor local-operator -Reason "Run approved read-only reconciliation"
 
 State is stored under `~/.heavenzfire/unified-field` by default; set `HEAVENZFIRE_STATE_DIR` to choose another local directory. The audit command reports journal counts and the result-chain head. Actor labels are recorded but not authenticated by this local host.
 
