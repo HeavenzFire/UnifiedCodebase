@@ -67,6 +67,21 @@ test("host completes task intake through approval, worker execution, and durable
   }
 });
 
+test("host requires an explicit capability at task intake", () => {
+  const directory = mkdtempSync(join(tmpdir(), "heavenzfire-host-capability-"));
+  try {
+    const host = hostAt(directory);
+    assert.throws(() => host.submit({
+      taskId: "missing-capability",
+      title: "Task without capability",
+      requestedBy: "test-operator",
+      metadata: {},
+    }), /metadata.capability is required/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("host rejects path aliasing between task, approval, and result journals", () => {
   const directory = mkdtempSync(join(tmpdir(), "heavenzfire-host-paths-"));
   try {
