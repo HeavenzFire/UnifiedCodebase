@@ -1929,7 +1929,8 @@
       "size_kb": 243,
       "code_search_indexed": null,
       "url": "https://github.com/HeavenzFire/Public-Transparency-Portal",
-      "integration_status": "unassessed"
+      "integration_status": "candidate",
+      "integration_note": "Static source review completed; public claims require primary-source and calculation verification before evidence ingestion."
     },
     {
       "full_name": "HeavenzFire/puter",
@@ -2292,7 +2293,8 @@
       "size_kb": 217,
       "code_search_indexed": null,
       "url": "https://github.com/HeavenzFire/Sovereign-Node-",
-      "integration_status": "unassessed"
+      "integration_status": "candidate",
+      "integration_note": "Static source review completed; only loopback read-only health adapter is allowed pending auth and WebSocket review."
     },
     {
       "full_name": "HeavenzFire/Sovereign-Reality-v1.2",
@@ -2941,7 +2943,8 @@
       "size_kb": 12,
       "code_search_indexed": null,
       "url": "https://github.com/HeavenzFire/Verifier-Mesh-Command-Center",
-      "integration_status": "unassessed"
+      "integration_status": "blocked",
+      "integration_note": "Case text is sent to remote Gemini; privacy, authorization, and data-minimization review required before any case-data adapter."
     },
     {
       "full_name": "HeavenzFire/Veritas-Maxima-Ontological-Alchemy---Meta-Core-Synthesis-Engine",
