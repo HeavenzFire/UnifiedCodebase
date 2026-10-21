@@ -17,6 +17,14 @@ export function providerConfig(name, env = process.env) {
   if (provider.keyEnv && !env[provider.keyEnv]) {
     throw new Error('Provider "' + name + '" requires ' + provider.keyEnv + '; no remote fallback was attempted.');
   }
+  if (provider.keyEnv) {
+    let endpoint;
+    try { endpoint = new URL(baseUrl); }
+    catch { throw new Error('Provider "' + name + '" base URL must be a valid HTTPS URL.'); }
+    if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
+      throw new Error('Provider "' + name + '" base URL must use HTTPS and must not include credentials, query parameters, or a fragment.');
+    }
+  }
   return { name, ...provider, baseUrl, model, apiKey: provider.keyEnv ? env[provider.keyEnv] : null };
 }
 
