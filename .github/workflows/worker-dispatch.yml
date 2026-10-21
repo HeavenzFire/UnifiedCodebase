@@ -143,6 +143,7 @@ jobs:
           $state = Join-Path $env:TEMP ("heavenzfire-unified-field-" + [guid]::NewGuid().ToString("N"))
           New-Item -ItemType Directory -Path $state | Out-Null
           $env:HEAVENZFIRE_STATE_DIR = $state
+          $inboxProcess = $null
           try {
             $task = @{
               taskId = "windows-ps51-e2e"
