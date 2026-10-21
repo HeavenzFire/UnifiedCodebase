@@ -60,3 +60,12 @@ test("rejects duplicate task creation after restart", () => withStore(({ filePat
   const restarted = createDurableTaskLifecycle({ filePath });
   assert.throws(() => restarted.create({ taskId: "dup-1", title: "No duplicate", requestedBy: "test" }), /already exists/);
 }));
+
+
+test("fails closed after a durable write error", () => withStore(({ filePath }) => {
+  const lifecycle = createDurableTaskLifecycle({ filePath });
+  mkdirSync(filePath);
+  assert.throws(() => lifecycle.create({ taskId: "write-fail", title: "Fail closed", requestedBy: "test" }));
+  assert.throws(() => lifecycle.get("write-fail"), /storage is faulted/);
+  assert.throws(() => lifecycle.list(), /storage is faulted/);
+}));
