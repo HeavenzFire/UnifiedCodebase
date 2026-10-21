@@ -9,9 +9,12 @@ on:
       - "integrations/registry-worker-adapter.mjs"
       - "integrations/registry-worker-adapter.test.mjs"
       - "integrations/worker-host.mjs"
-      - "integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs"
+      - "integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs integrations/worker-host-cli.test.mjs"
       - "integrations/default-worker-host.mjs"
       - "integrations/default-worker-host.test.mjs"
+      - "integrations/worker-host-cli.mjs"
+      - "integrations/worker-host-cli.test.mjs"
+      - "Invoke-UnifiedFieldTask.ps1"
       - "extensions/guardian-evidence/evidence-ledger.mjs"
       - "extensions/funding-integrity/reconcile.mjs"
       - "integrations/extension-registry.mjs"
@@ -35,6 +38,9 @@ on:
       - "integrations/worker-host.test.mjs"
       - "integrations/default-worker-host.mjs"
       - "integrations/default-worker-host.test.mjs"
+      - "integrations/worker-host-cli.mjs"
+      - "integrations/worker-host-cli.test.mjs"
+      - "Invoke-UnifiedFieldTask.ps1"
       - "extensions/guardian-evidence/evidence-ledger.mjs"
       - "extensions/funding-integrity/reconcile.mjs"
       - "integrations/extension-registry.mjs"
@@ -65,6 +71,8 @@ jobs:
           node --check integrations/worker-host.test.mjs
           node --check integrations/default-worker-host.mjs
           node --check integrations/default-worker-host.test.mjs
+          node --check integrations/worker-host-cli.mjs
+          node --check integrations/worker-host-cli.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
