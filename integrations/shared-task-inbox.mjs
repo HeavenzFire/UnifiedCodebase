@@ -135,16 +135,24 @@ function readAndVerifyClaims(filePath, taskIds) {
   return { records, previousHash, claims };
 }
 
-export function createSharedTaskInbox({ filePath, now = () => new Date().toISOString() } = {}) {
+export function createSharedTaskInbox({ filePath, claimsFilePath, now = () => new Date().toISOString() } = {}) {
   if (typeof filePath !== "string" || !filePath.trim()) throw new TypeError("filePath is required.");
   if (typeof now !== "function") throw new TypeError("now must be a function.");
   const absolutePath = resolve(filePath);
+  const claimsPath = resolve(claimsFilePath || absolutePath + ".claims.jsonl");
+  if (absolutePath === claimsPath) throw new TypeError("Proposal and claim journals must use separate paths.");
   mkdirSync(dirname(absolutePath), { recursive: true });
+  mkdirSync(dirname(claimsPath), { recursive: true });
   const replay = readAndVerify(absolutePath);
   let sequence = replay.records.length;
   let previousHash = replay.previousHash;
   let records = replay.records;
   let byId = new Map(records.map(record => [record.entry.taskId, record.entry.taskRecord]));
+  const claimReplay = readAndVerifyClaims(claimsPath, new Set(byId.keys()));
+  let claimSequence = claimReplay.records.length;
+  let claimPreviousHash = claimReplay.previousHash;
+  let claimRecords = claimReplay.records;
+  let claimsByTask = claimReplay.claims;
   let fault = null;
 
   function assertHealthy() {
@@ -153,6 +161,27 @@ export function createSharedTaskInbox({ filePath, now = () => new Date().toISOSt
       error.cause = fault;
       throw error;
     }
+  }
+
+  function currentTime() {
+    const value = now();
+    if (typeof value !== "string" || Number.isNaN(Date.parse(value))) throw new TypeError("now must return a valid date string.");
+    return value;
+  }
+
+  function appendClaimEvent(event) {
+    const body = { sequence: claimSequence + 1, previousHash: claimPreviousHash, event };
+    const record = { ...body, hash: sha256(canonicalJson(body)) };
+    try {
+      appendFileSync(claimsPath, JSON.stringify(record) + "\n", { encoding: "utf8", flag: "a" });
+    } catch (error) {
+      fault = error;
+      throw error;
+    }
+    claimSequence = record.sequence;
+    claimPreviousHash = record.hash;
+    claimRecords = [...claimRecords, record];
+    return record;
   }
 
   return Object.freeze({
