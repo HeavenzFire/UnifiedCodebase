@@ -24,6 +24,11 @@ on:
       - "extensions/sovereign-node-health/manifest.json"
       - "extensions/sovereign-node-health/health-worker.mjs"
       - "extensions/sovereign-node-health/health-worker.test.mjs"
+      - "extensions/repository-inventory/manifest.json"
+      - "extensions/repository-inventory/inventory-worker.mjs"
+      - "extensions/repository-inventory/inventory-worker.test.mjs"
+      - "docs/repository-inventory.snapshot.json"
+      - "integrations/validate-repository-inventory.mjs"
       - "integrations/sovereign-node-adapter.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
@@ -58,6 +63,11 @@ on:
       - "extensions/sovereign-node-health/manifest.json"
       - "extensions/sovereign-node-health/health-worker.mjs"
       - "extensions/sovereign-node-health/health-worker.test.mjs"
+      - "extensions/repository-inventory/manifest.json"
+      - "extensions/repository-inventory/inventory-worker.mjs"
+      - "extensions/repository-inventory/inventory-worker.test.mjs"
+      - "docs/repository-inventory.snapshot.json"
+      - "integrations/validate-repository-inventory.mjs"
       - "integrations/sovereign-node-adapter.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
@@ -91,9 +101,11 @@ jobs:
           node --check extensions/local-model/local-model-worker.test.mjs
           node --check extensions/sovereign-node-health/health-worker.mjs
           node --check extensions/sovereign-node-health/health-worker.test.mjs
+          node --check extensions/repository-inventory/inventory-worker.mjs
+          node --check extensions/repository-inventory/inventory-worker.test.mjs
           node --check integrations/worker-host-cli.mjs
           node --check integrations/worker-host-cli.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
-          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs extensions/sovereign-node-health/health-worker.test.mjs integrations/worker-host-cli.test.mjs
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs integrations/default-worker-host.test.mjs extensions/local-model/local-model-worker.test.mjs extensions/sovereign-node-health/health-worker.test.mjs extensions/repository-inventory/inventory-worker.test.mjs integrations/worker-host-cli.test.mjs
