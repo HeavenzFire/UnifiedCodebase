@@ -22,15 +22,11 @@ if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
     $TaskHost = Join-Path $Root 'Invoke-UnifiedFieldTask.ps1'
     if (-not (Test-Path -LiteralPath $TaskHost -PathType Leaf)) { throw "Task host entry point missing: $TaskHost" }
     $TaskHostArguments = @('-Action', $TaskAction)
-    foreach ($pair in @(
-        @('-TaskJson', $TaskJson),
-        @('-TaskId', $TaskId),
-        @('-ExtensionId', $ExtensionId),
-        @('-Actor', $Actor),
-        @('-Reason', $Reason)
-    )) {
-        if (-not [string]::IsNullOrWhiteSpace($pair[1])) { $TaskHostArguments += @($pair[0], $pair[1]) }
-    }
+    if (-not [string]::IsNullOrWhiteSpace($TaskJson)) { $TaskHostArguments += @('-TaskJson', $TaskJson) }
+    if (-not [string]::IsNullOrWhiteSpace($TaskId)) { $TaskHostArguments += @('-TaskId', $TaskId) }
+    if (-not [string]::IsNullOrWhiteSpace($ExtensionId)) { $TaskHostArguments += @('-ExtensionId', $ExtensionId) }
+    if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostArguments += @('-Actor', $Actor) }
+    if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostArguments += @('-Reason', $Reason) }
     & $TaskHost @TaskHostArguments
     if ($LASTEXITCODE -ne 0) { throw "Task host failed with exit code $LASTEXITCODE." }
     return
