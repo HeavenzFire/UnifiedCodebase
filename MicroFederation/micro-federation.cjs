@@ -78,12 +78,22 @@ function createRootConductor({sandboxes,externalVerifier}){
   const checks=await Promise.all(results.map((result,i)=>externalVerifier({task,result,sourceSandboxId:ordered[i].id,peerResults:results.map((r,j)=>({sandboxId:ordered[j].id,builderHash:builderHashes[j],decision:r.decision.outcome}))})));
   const allApproved=results.every(r=>r.decision.outcome==='approve');
   const allVerified=checks.every((v,i)=>v&&v.ok===true&&v.resultHash===builderHashes[i]);
-  const accepted=allApproved&&sameArtifact&&allVerified;
+  // Task-declared deterministic acceptance is enforced by the root, not delegated to model text.
+  const acceptanceChecks=results.map(result=>{
+   const contract=task.payload&&task.payload.acceptance;
+   if(!contract)return {sandboxId:result.sandboxId,ok:true,check:'legacy-no-task-contract'};
+   const artifact=result.outputs.builder&&result.outputs.builder.artifact;
+   if(contract.type==='number-equals'){const ok=!!artifact&&Number.isFinite(contract.expected)&&artifact.result===contract.expected;return {sandboxId:result.sandboxId,ok,check:'number-equals',expected:contract.expected,observed:artifact?artifact.result:null};}
+   return {sandboxId:result.sandboxId,ok:false,check:'unsupported-acceptance-type',type:contract.type||null};
+  });
+  const allAcceptancePassed=acceptanceChecks.every(v=>v.ok===true);
+  const accepted=allApproved&&sameArtifact&&allVerified&&allAcceptancePassed;
   const rejected=results.some(r=>r.decision.outcome==='reject');
-  return {taskId:task.id,sandboxResults:results,rootDecision:accepted?'accepted':rejected?'rejected':'quarantined',sandboxIds:ordered.map(s=>s.id),sandboxId:ordered[0].id,sandboxDecision:results[0].decision,sandboxDecisions:results.map((r,i)=>({sandboxId:ordered[i].id,...r.decision})),independentVerification:checks,artifactsAgree:sameArtifact,accepted,traceHeads:results.map((r,i)=>({sandboxId:ordered[i].id,traceHead:r.traceHead})),traceHead:results[0].traceHead};
+  return {taskId:task.id,sandboxResults:results,rootDecision:accepted?'accepted':rejected?'rejected':'quarantined',sandboxIds:ordered.map(s=>s.id),sandboxId:ordered[0].id,sandboxDecision:results[0].decision,sandboxDecisions:results.map((r,i)=>({sandboxId:ordered[i].id,...r.decision})),independentVerification:checks,acceptanceChecks,allAcceptancePassed,artifactsAgree:sameArtifact,accepted,traceHeads:results.map((r,i)=>({sandboxId:ordered[i].id,traceHead:r.traceHead})),traceHead:results[0].traceHead};
  }});
 }
 module.exports={ROLES,VOTE,canonical,hash,makeTask,signTaskEnvelope,createTaskEnvelopeVerifier,decide,createSandbox,createRootConductor};
+
 
 
 
