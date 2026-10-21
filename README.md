@@ -37,5 +37,22 @@ Run the full configured Node.js contract suite:
 
 The extension registry validates manifest shape, stable identifiers, versions, and explicit capability/permission allowlists. It is a metadata gate, not a sandbox: registering a manifest does not execute or isolate the extension. Runtime enforcement must remain in the host.
 
+## Governed task host (PowerShell 5.1)
+
+The task host is separate from the provider-routing prompt command. It runs only the statically registered Guardian Evidence and Funding Integrity handlers; it does not execute arbitrary shell commands.
+
+List registered workers:
+    .\Invoke-UnifiedFieldTask.ps1 -Action Workers
+
+Submit a JSON task object (the metadata must include a capability and the corresponding input):
+    $taskJson = '{ "taskId":"funding-demo-1", "title":"Reconcile supplied records", "requestedBy":"local-operator", "metadata": { "capability":"funding.reconcile.read_only", "input": { "appropriations":[], "awards":[], "disbursements":[] } } }'
+    .\Invoke-UnifiedFieldTask.ps1 -Action Submit -TaskJson $taskJson
+
+Approve and dispatch are separate, explicit operations:
+    .\Invoke-UnifiedFieldTask.ps1 -Action Approve -TaskId funding-demo-1 -Actor local-operator -Reason "Reviewed input and approved"
+    .\Invoke-UnifiedFieldTask.ps1 -Action Dispatch -TaskId funding-demo-1 -ExtensionId funding.integrity -Actor local-operator -Reason "Run approved read-only reconciliation"
+
+State is stored under `~/.heavenzfire/unified-field` by default; set `HEAVENZFIRE_STATE_DIR` to choose another local directory. The audit command reports journal counts and the result-chain head. Actor labels are recorded but not authenticated by this local host.
+
 ## Operating principles
 Local-first; explicit provider selection; no silent fallback; no secrets in source control; reproducible tests; human review for consequential decisions; evidence and corrections preserved.
