@@ -84,11 +84,19 @@ export function createWorkerDispatcher({ lifecycle, workers = [], maxConcurrent 
       }
       const output = await worker.run(Object.freeze(safeClone(runningTask)));
       const finishedAt = now();
-      const resultDigest = createHash("sha256").update(JSON.stringify(output ?? null), "utf8").digest("hex");
+      const serializedOutput = JSON.stringify(output ?? null);
+      if (serializedOutput === undefined) throw new TypeError("Worker result must be JSON-serializable.");
+      const normalizedOutput = JSON.parse(serializedOutput);
+      const resultDigest = createHash("sha256").update(canonicalJson(normalizedOutput), "utf8").digest("hex");
+      const journalReceipt = resultJournal ? resultJournal.append({
+        taskId: id, workerId: selectedWorkerId, startedAt, finishedAt, result: normalizedOutput,
+      }) : null;
+      const evidenceRefs = ["worker-result:sha256:" + resultDigest];
+      if (journalReceipt) evidenceRefs.push("worker-result-journal:sha256:" + journalReceipt.hash);
       lifecycle.transition(id, "succeeded", {
         actor: "worker:" + selectedWorkerId,
         reason: "Worker completed successfully.",
-        evidenceRefs: ["worker-result:sha256:" + resultDigest],
+        evidenceRefs,
       });
       return Object.freeze({
         taskId: id, workerId: selectedWorkerId, status: "succeeded",
