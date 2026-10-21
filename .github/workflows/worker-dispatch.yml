@@ -8,6 +8,8 @@ on:
       - "integrations/worker-result-journal.mjs"
       - "integrations/registry-worker-adapter.mjs"
       - "integrations/registry-worker-adapter.test.mjs"
+      - "integrations/worker-host.mjs"
+      - "integrations/worker-host.test.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -25,6 +27,8 @@ on:
       - "integrations/worker-result-journal.mjs"
       - "integrations/registry-worker-adapter.mjs"
       - "integrations/registry-worker-adapter.test.mjs"
+      - "integrations/worker-host.mjs"
+      - "integrations/worker-host.test.mjs"
       - "integrations/extension-registry.mjs"
       - "integrations/governed-task-lifecycle.mjs"
       - "integrations/durable-task-lifecycle.mjs"
@@ -49,7 +53,9 @@ jobs:
           node --check integrations/worker-result-journal.mjs
           node --check integrations/registry-worker-adapter.mjs
           node --check integrations/registry-worker-adapter.test.mjs
+          node --check integrations/worker-host.mjs
+          node --check integrations/worker-host.test.mjs
           node --check integrations/worker-dispatcher.test.mjs
       - name: Run governed lifecycle and worker dispatch tests
         run: |
-          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs
+          node --test integrations/task-lifecycle.test.mjs integrations/durable-task-lifecycle.test.mjs integrations/governed-task-lifecycle.test.mjs integrations/worker-dispatcher.test.mjs integrations/registry-worker-adapter.test.mjs integrations/worker-host.test.mjs
