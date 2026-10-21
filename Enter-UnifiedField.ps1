@@ -9,9 +9,13 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Router = Join-Path $Root 'unified-field\provider-router.mjs'
+$RegistryValidator = Join-Path $Root 'integrations\validate-extension-manifests.mjs'
 $Node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $Node) { throw 'Node.js is not installed or is not on PATH.' }
 if (-not (Test-Path -LiteralPath $Router -PathType Leaf)) { throw "Provider router missing: $Router" }
+if (-not (Test-Path -LiteralPath $RegistryValidator -PathType Leaf)) { throw "Extension registry validator missing: $RegistryValidator" }
+& $Node.Source $RegistryValidator
+if ($LASTEXITCODE -ne 0) { throw "Extension manifest validation failed with exit code $LASTEXITCODE. No extension entrypoints were executed." }
 Write-Host 'HeavenzFire Unified Field — explicit provider routing' -ForegroundColor Cyan
 Write-Host ("Provider: {0}" -f $Provider)
 if ($HealthOnly) {
