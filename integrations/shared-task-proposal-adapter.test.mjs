@@ -53,6 +53,7 @@ test("rejects non-loopback, alternate-path, credentialed, and non-HTTP endpoints
     "https://127.0.0.1:18796/api/tasks",
     "http://user:pass@127.0.0.1:18796/api/tasks",
     "http://127.0.0.1:18796/other",
+    "http://127.0.0.1/api/tasks",
   ];
   for (const endpoint of badEndpoints) {
     let called = false;
