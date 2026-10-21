@@ -1,0 +1,2770 @@
+{
+  "schema": "heavenzfire.repository-inventory-snapshot.v1",
+  "snapshot_date": "2026-10-20",
+  "query": "user:HeavenzFire",
+  "result_count": 276,
+  "scope_note": "Snapshot of repositories surfaced by the connected GitHub installation search. It is not proof that every repository owned by the account is visible in this connector. Metadata only; source code and integration status have not been individually audited.",
+  "integration_status_default": "unassessed",
+  "repositories": [
+    {
+      "full_name": "HeavenzFire/-ELRAHUL-PTAHOTEP-",
+      "name": "-ELRAHUL-PTAHOTEP-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 92367,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/-ELRAHUL-PTAHOTEP-"
+    },
+    {
+      "full_name": "HeavenzFire/-Glyph-Mesh-Dashboar",
+      "name": "-Glyph-Mesh-Dashboar",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 105,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/-Glyph-Mesh-Dashboar"
+    },
+    {
+      "full_name": "HeavenzFire/-JUDGEMENT-DAY-",
+      "name": "-JUDGEMENT-DAY-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1582,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/-JUDGEMENT-DAY-"
+    },
+    {
+      "full_name": "HeavenzFire/.github-workflows-main.yml",
+      "name": ".github-workflows-main.yml",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/.github-workflows-main.yml"
+    },
+    {
+      "full_name": "HeavenzFire/11dimensionneuralnet",
+      "name": "11dimensionneuralnet",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/11dimensionneuralnet"
+    },
+    {
+      "full_name": "HeavenzFire/369-Sovereign-Power-Plant-",
+      "name": "369-Sovereign-Power-Plant-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/369-Sovereign-Power-Plant-"
+    },
+    {
+      "full_name": "HeavenzFire/369121321-Harmonic-Convergence-",
+      "name": "369121321-Harmonic-Convergence-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14640,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/369121321-Harmonic-Convergence-"
+    },
+    {
+      "full_name": "HeavenzFire/5D-FRAMEWORK",
+      "name": "5D-FRAMEWORK",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 2010,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/5D-FRAMEWORK"
+    },
+    {
+      "full_name": "HeavenzFire/A-Message-From-Nikolai-Tesla-",
+      "name": "A-Message-From-Nikolai-Tesla-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/A-Message-From-Nikolai-Tesla-"
+    },
+    {
+      "full_name": "HeavenzFire/Advanced-Frequency-Healing-",
+      "name": "Advanced-Frequency-Healing-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Advanced-Frequency-Healing-"
+    },
+    {
+      "full_name": "HeavenzFire/AdvancedAI",
+      "name": "AdvancedAI",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 41,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/AdvancedAI"
+    },
+    {
+      "full_name": "HeavenzFire/Aethel-Syntropic-Intelligence-Engine",
+      "name": "Aethel-Syntropic-Intelligence-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 17,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Aethel-Syntropic-Intelligence-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/Aethelgard-Civilization-Resilience-Engine",
+      "name": "Aethelgard-Civilization-Resilience-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 18,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Aethelgard-Civilization-Resilience-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/AETHER-GATE-v0.9-DIGITAL-STARGATE-Destination-Coordinate",
+      "name": "AETHER-GATE-v0.9-DIGITAL-STARGATE-Destination-Coordinate",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 35,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/AETHER-GATE-v0.9-DIGITAL-STARGATE-Destination-Coordinate"
+    },
+    {
+      "full_name": "HeavenzFire/AFFiNE",
+      "name": "AFFiNE",
+      "default_branch": "canary",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 468034,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/AFFiNE"
+    },
+    {
+      "full_name": "HeavenzFire/AgentGPT",
+      "name": "AgentGPT",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 91867,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/AgentGPT"
+    },
+    {
+      "full_name": "HeavenzFire/Agentic-Full-Stack-Engineer",
+      "name": "Agentic-Full-Stack-Engineer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Agentic-Full-Stack-Engineer"
+    },
+    {
+      "full_name": "HeavenzFire/AI-Web-Builder",
+      "name": "AI-Web-Builder",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/AI-Web-Builder"
+    },
+    {
+      "full_name": "HeavenzFire/anewworld",
+      "name": "anewworld",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 25,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/anewworld"
+    },
+    {
+      "full_name": "HeavenzFire/anunnaki-pyramid-rush",
+      "name": "anunnaki-pyramid-rush",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 234,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/anunnaki-pyramid-rush"
+    },
+    {
+      "full_name": "HeavenzFire/anything-llm",
+      "name": "anything-llm",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 45554,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/anything-llm"
+    },
+    {
+      "full_name": "HeavenzFire/Ara-",
+      "name": "Ara-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Ara-"
+    },
+    {
+      "full_name": "HeavenzFire/Aria-Johnso",
+      "name": "Aria-Johnso",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1345,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Aria-Johnso"
+    },
+    {
+      "full_name": "HeavenzFire/ARKONIS-TERMINAL-V9",
+      "name": "ARKONIS-TERMINAL-V9",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/ARKONIS-TERMINAL-V9"
+    },
+    {
+      "full_name": "HeavenzFire/Artificial-Time-Dilation",
+      "name": "Artificial-Time-Dilation",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 752,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Artificial-Time-Dilation"
+    },
+    {
+      "full_name": "HeavenzFire/Audit-of-the-State-",
+      "name": "Audit-of-the-State-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Audit-of-the-State-"
+    },
+    {
+      "full_name": "HeavenzFire/Aura-Multiband-Mastering-Suite",
+      "name": "Aura-Multiband-Mastering-Suite",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Aura-Multiband-Mastering-Suite"
+    },
+    {
+      "full_name": "HeavenzFire/auranet",
+      "name": "auranet",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/auranet"
+    },
+    {
+      "full_name": "HeavenzFire/Autonomous-R-D",
+      "name": "Autonomous-R-D",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Autonomous-R-D"
+    },
+    {
+      "full_name": "HeavenzFire/awesome-generative-ai",
+      "name": "awesome-generative-ai",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1859,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/awesome-generative-ai"
+    },
+    {
+      "full_name": "HeavenzFire/awesome-mcp-servers",
+      "name": "awesome-mcp-servers",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 730,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/awesome-mcp-servers"
+    },
+    {
+      "full_name": "HeavenzFire/awesome-selfhost-docker",
+      "name": "awesome-selfhost-docker",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4380,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/awesome-selfhost-docker"
+    },
+    {
+      "full_name": "HeavenzFire/awesome-selfhosted",
+      "name": "awesome-selfhosted",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16466,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/awesome-selfhosted"
+    },
+    {
+      "full_name": "HeavenzFire/Bedrock-Protocol-v5.0-Viewer",
+      "name": "Bedrock-Protocol-v5.0-Viewer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Bedrock-Protocol-v5.0-Viewer"
+    },
+    {
+      "full_name": "HeavenzFire/Bedrock-v7-Open-Epistemic-Network",
+      "name": "Bedrock-v7-Open-Epistemic-Network",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Bedrock-v7-Open-Epistemic-Network"
+    },
+    {
+      "full_name": "HeavenzFire/bypass-locked-devices",
+      "name": "bypass-locked-devices",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/bypass-locked-devices"
+    },
+    {
+      "full_name": "HeavenzFire/char-rnn",
+      "name": "char-rnn",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13412,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/char-rnn"
+    },
+    {
+      "full_name": "HeavenzFire/christosangelus",
+      "name": "christosangelus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/christosangelus"
+    },
+    {
+      "full_name": "HeavenzFire/ChristosIntelligence-",
+      "name": "ChristosIntelligence-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 37,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/ChristosIntelligence-"
+    },
+    {
+      "full_name": "HeavenzFire/chrome-devtools-mcp",
+      "name": "chrome-devtools-mcp",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 28345,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/chrome-devtools-mcp"
+    },
+    {
+      "full_name": "HeavenzFire/Chronos-Garden-Loom-Engine",
+      "name": "Chronos-Garden-Loom-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Chronos-Garden-Loom-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/CivicForce",
+      "name": "CivicForce",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/CivicForce"
+    },
+    {
+      "full_name": "HeavenzFire/cli",
+      "name": "cli",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4651,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/cli"
+    },
+    {
+      "full_name": "HeavenzFire/codex",
+      "name": "codex",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 684994,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/codex"
+    },
+    {
+      "full_name": "HeavenzFire/cookbook",
+      "name": "cookbook",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 251086,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/cookbook"
+    },
+    {
+      "full_name": "HeavenzFire/copilot-sdk",
+      "name": "copilot-sdk",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 60145,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/copilot-sdk"
+    },
+    {
+      "full_name": "HeavenzFire/core",
+      "name": "core",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11715,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/core"
+    },
+    {
+      "full_name": "HeavenzFire/Cosmic-Alchemy-Weaver",
+      "name": "Cosmic-Alchemy-Weaver",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Cosmic-Alchemy-Weaver"
+    },
+    {
+      "full_name": "HeavenzFire/cosmicdebug",
+      "name": "cosmicdebug",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/cosmicdebug"
+    },
+    {
+      "full_name": "HeavenzFire/crewAI",
+      "name": "crewAI",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 64298,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/crewAI"
+    },
+    {
+      "full_name": "HeavenzFire/Crok-",
+      "name": "Crok-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 300,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Crok-"
+    },
+    {
+      "full_name": "HeavenzFire/Dead-Man-Relay",
+      "name": "Dead-Man-Relay",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Dead-Man-Relay"
+    },
+    {
+      "full_name": "HeavenzFire/deprecated-generative-ai-python",
+      "name": "deprecated-generative-ai-python",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 45256,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/deprecated-generative-ai-python"
+    },
+    {
+      "full_name": "HeavenzFire/Digital-Mirror-Child-Protection-Nexus",
+      "name": "Digital-Mirror-Child-Protection-Nexus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Digital-Mirror-Child-Protection-Nexus"
+    },
+    {
+      "full_name": "HeavenzFire/DigitalPowerStationFramework",
+      "name": "DigitalPowerStationFramework",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 8705,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/DigitalPowerStationFramework"
+    },
+    {
+      "full_name": "HeavenzFire/divine-mechanic-protocol",
+      "name": "divine-mechanic-protocol",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 267,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/divine-mechanic-protocol"
+    },
+    {
+      "full_name": "HeavenzFire/Ecosystem-Architecture-WebGPU-Command-Center",
+      "name": "Ecosystem-Architecture-WebGPU-Command-Center",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 46,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Ecosystem-Architecture-WebGPU-Command-Center"
+    },
+    {
+      "full_name": "HeavenzFire/Elysian-Gateway---Resurrection-Portal",
+      "name": "Elysian-Gateway---Resurrection-Portal",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 174,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Elysian-Gateway---Resurrection-Portal"
+    },
+    {
+      "full_name": "HeavenzFire/Elysian-Gateway---Ritual-Of-Reclamation-",
+      "name": "Elysian-Gateway---Ritual-Of-Reclamation-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Elysian-Gateway---Ritual-Of-Reclamation-"
+    },
+    {
+      "full_name": "HeavenzFire/Elysium-Gateway",
+      "name": "Elysium-Gateway",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 43,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Elysium-Gateway"
+    },
+    {
+      "full_name": "HeavenzFire/Elysium-Nexus-Cognitive-Topography",
+      "name": "Elysium-Nexus-Cognitive-Topography",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 20,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Elysium-Nexus-Cognitive-Topography"
+    },
+    {
+      "full_name": "HeavenzFire/energy-nexus-genesis-drive",
+      "name": "energy-nexus-genesis-drive",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 336,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/energy-nexus-genesis-drive"
+    },
+    {
+      "full_name": "HeavenzFire/Enki",
+      "name": "Enki",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Enki"
+    },
+    {
+      "full_name": "HeavenzFire/entangled-view-unfold",
+      "name": "entangled-view-unfold",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 256,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/entangled-view-unfold"
+    },
+    {
+      "full_name": "HeavenzFire/EntangledMultimodalSystem",
+      "name": "EntangledMultimodalSystem",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 339,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/EntangledMultimodalSystem"
+    },
+    {
+      "full_name": "HeavenzFire/EntangledMultimodalSystem-1",
+      "name": "EntangledMultimodalSystem-1",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 314,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/EntangledMultimodalSystem-1"
+    },
+    {
+      "full_name": "HeavenzFire/EntangledMultimodalSystem-2",
+      "name": "EntangledMultimodalSystem-2",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3890,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/EntangledMultimodalSystem-2"
+    },
+    {
+      "full_name": "HeavenzFire/EntangledMultimodalSystem-3",
+      "name": "EntangledMultimodalSystem-3",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 93004,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/EntangledMultimodalSystem-3"
+    },
+    {
+      "full_name": "HeavenzFire/Entanglement-Eternal",
+      "name": "Entanglement-Eternal",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Entanglement-Eternal"
+    },
+    {
+      "full_name": "HeavenzFire/Entropy-Shield-System-Augmentation-Nexus",
+      "name": "Entropy-Shield-System-Augmentation-Nexus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Entropy-Shield-System-Augmentation-Nexus"
+    },
+    {
+      "full_name": "HeavenzFire/eternal-love-echoes-code",
+      "name": "eternal-love-echoes-code",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 517,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/eternal-love-echoes-code"
+    },
+    {
+      "full_name": "HeavenzFire/everything",
+      "name": "everything",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/everything"
+    },
+    {
+      "full_name": "HeavenzFire/fragments",
+      "name": "fragments",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4625,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/fragments"
+    },
+    {
+      "full_name": "HeavenzFire/Futurescape",
+      "name": "Futurescape",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 117,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Futurescape"
+    },
+    {
+      "full_name": "HeavenzFire/GenAI-Showcase",
+      "name": "GenAI-Showcase",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 41278,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/GenAI-Showcase"
+    },
+    {
+      "full_name": "HeavenzFire/GitHub-Repository-Analyzer",
+      "name": "GitHub-Repository-Analyzer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/GitHub-Repository-Analyzer"
+    },
+    {
+      "full_name": "HeavenzFire/good-first-issue",
+      "name": "good-first-issue",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1356,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/good-first-issue"
+    },
+    {
+      "full_name": "HeavenzFire/goodbyecancer",
+      "name": "goodbyecancer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/goodbyecancer"
+    },
+    {
+      "full_name": "HeavenzFire/GROK-5-ULTRA--SHEM-Simulator",
+      "name": "GROK-5-ULTRA--SHEM-Simulator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 24,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/GROK-5-ULTRA--SHEM-Simulator"
+    },
+    {
+      "full_name": "HeavenzFire/Group-Coherence-Activation-Simulator",
+      "name": "Group-Coherence-Activation-Simulator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Group-Coherence-Activation-Simulator"
+    },
+    {
+      "full_name": "HeavenzFire/Guardian-Nonprofit-Compliance-Ethics-Dashboard",
+      "name": "Guardian-Nonprofit-Compliance-Ethics-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 27,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Guardian-Nonprofit-Compliance-Ethics-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/Guardian-Signal-GCI-1",
+      "name": "Guardian-Signal-GCI-1",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 29,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Guardian-Signal-GCI-1"
+    },
+    {
+      "full_name": "HeavenzFire/GuardianOS-Dashboard",
+      "name": "GuardianOS-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/GuardianOS-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/gxmods",
+      "name": "gxmods",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 267411,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/gxmods"
+    },
+    {
+      "full_name": "HeavenzFire/Hall-Of-Miracles-",
+      "name": "Hall-Of-Miracles-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 195,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Hall-Of-Miracles-"
+    },
+    {
+      "full_name": "HeavenzFire/Heavenz",
+      "name": "Heavenz",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 92348,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Heavenz"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire",
+      "name": "HeavenzFire",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 2547,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire"
+    },
+    {
+      "full_name": "HeavenzFire/HEAVENZFIRE_684_DAY_SYSTEMS_AUDIT",
+      "name": "HEAVENZFIRE_684_DAY_SYSTEMS_AUDIT",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HEAVENZFIRE_684_DAY_SYSTEMS_AUDIT"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Core-System-1",
+      "name": "HeavenzFire-Core-System-1",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 133,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Core-System-1"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Dashboard",
+      "name": "HeavenzFire-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/HEAVENZFIRE-ECOSYSTEM-AUDIT",
+      "name": "HEAVENZFIRE-ECOSYSTEM-AUDIT",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 7,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HEAVENZFIRE-ECOSYSTEM-AUDIT"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Empowerment-Suite",
+      "name": "HeavenzFire-Empowerment-Suite",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Empowerment-Suite"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-LSMN-Weave",
+      "name": "HeavenzFire-LSMN-Weave",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-LSMN-Weave"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Omni-Substrate-Node",
+      "name": "HeavenzFire-Omni-Substrate-Node",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Omni-Substrate-Node"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Reclamation-Command",
+      "name": "HeavenzFire-Reclamation-Command",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Reclamation-Command"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-Sovereign-Node",
+      "name": "HeavenzFire-Sovereign-Node",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-Sovereign-Node"
+    },
+    {
+      "full_name": "HeavenzFire/HEAVENZFIRE-Sovereign-Portfolio",
+      "name": "HEAVENZFIRE-Sovereign-Portfolio",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 113,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HEAVENZFIRE-Sovereign-Portfolio"
+    },
+    {
+      "full_name": "HeavenzFire/Heavenzfire-Syntropic-Console",
+      "name": "Heavenzfire-Syntropic-Console",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Heavenzfire-Syntropic-Console"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-The-Awakening-",
+      "name": "HeavenzFire-The-Awakening-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 35,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-The-Awakening-"
+    },
+    {
+      "full_name": "HeavenzFire/HeavenzFire-The-Two-Spirits-Lattices-",
+      "name": "HeavenzFire-The-Two-Spirits-Lattices-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 43608,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HeavenzFire-The-Two-Spirits-Lattices-"
+    },
+    {
+      "full_name": "HeavenzFire/heavenzpilot-cli",
+      "name": "heavenzpilot-cli",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 164,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/heavenzpilot-cli"
+    },
+    {
+      "full_name": "HeavenzFire/Heimdall-HeavenzFire",
+      "name": "Heimdall-HeavenzFire",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 8998,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Heimdall-HeavenzFire"
+    },
+    {
+      "full_name": "HeavenzFire/Hello-World-Are-You-Ready-",
+      "name": "Hello-World-Are-You-Ready-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 109,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Hello-World-Are-You-Ready-"
+    },
+    {
+      "full_name": "HeavenzFire/Hermeticus-369",
+      "name": "Hermeticus-369",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 40,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Hermeticus-369"
+    },
+    {
+      "full_name": "HeavenzFire/HRE-Allocator-Hashchain-Vanguards",
+      "name": "HRE-Allocator-Hashchain-Vanguards",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 21,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/HRE-Allocator-Hashchain-Vanguards"
+    },
+    {
+      "full_name": "HeavenzFire/hypermind-genesis-framework",
+      "name": "hypermind-genesis-framework",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 235,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/hypermind-genesis-framework"
+    },
+    {
+      "full_name": "HeavenzFire/I-AM-ALIVE",
+      "name": "I-AM-ALIVE",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/I-AM-ALIVE"
+    },
+    {
+      "full_name": "HeavenzFire/IBEN-Genesis",
+      "name": "IBEN-Genesis",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 515,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/IBEN-Genesis"
+    },
+    {
+      "full_name": "HeavenzFire/illusions",
+      "name": "illusions",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/illusions"
+    },
+    {
+      "full_name": "HeavenzFire/innovators-blueprint-",
+      "name": "innovators-blueprint-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/innovators-blueprint-"
+    },
+    {
+      "full_name": "HeavenzFire/InvokeAI",
+      "name": "InvokeAI",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 284136,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/InvokeAI"
+    },
+    {
+      "full_name": "HeavenzFire/jesuscodex",
+      "name": "jesuscodex",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/jesuscodex"
+    },
+    {
+      "full_name": "HeavenzFire/Lament-Configuarator-",
+      "name": "Lament-Configuarator-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Lament-Configuarator-"
+    },
+    {
+      "full_name": "HeavenzFire/Lightbeam-v0.2---Illuminating-Manipulative-Design",
+      "name": "Lightbeam-v0.2---Illuminating-Manipulative-Design",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 31,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Lightbeam-v0.2---Illuminating-Manipulative-Design"
+    },
+    {
+      "full_name": "HeavenzFire/llama",
+      "name": "llama",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1150,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/llama"
+    },
+    {
+      "full_name": "HeavenzFire/llama.cpp",
+      "name": "llama.cpp",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 64576,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/llama.cpp"
+    },
+    {
+      "full_name": "HeavenzFire/LLM2CLIP",
+      "name": "LLM2CLIP",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3065,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/LLM2CLIP"
+    },
+    {
+      "full_name": "HeavenzFire/Loki",
+      "name": "Loki",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Loki"
+    },
+    {
+      "full_name": "HeavenzFire/LumerianDreams-",
+      "name": "LumerianDreams-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/LumerianDreams-"
+    },
+    {
+      "full_name": "HeavenzFire/LuminaryLabs-40Hz-PEMF-Biofeedback",
+      "name": "LuminaryLabs-40Hz-PEMF-Biofeedback",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 39,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/LuminaryLabs-40Hz-PEMF-Biofeedback"
+    },
+    {
+      "full_name": "HeavenzFire/MedSentinel-Edge",
+      "name": "MedSentinel-Edge",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 30,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/MedSentinel-Edge"
+    },
+    {
+      "full_name": "HeavenzFire/MERA-Entanglement-Geometry",
+      "name": "MERA-Entanglement-Geometry",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/MERA-Entanglement-Geometry"
+    },
+    {
+      "full_name": "HeavenzFire/Merkabah-Governance-Node",
+      "name": "Merkabah-Governance-Node",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Merkabah-Governance-Node"
+    },
+    {
+      "full_name": "HeavenzFire/Meta-Meta-Algorithm-Creator-MMAC-",
+      "name": "Meta-Meta-Algorithm-Creator-MMAC-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 61,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Meta-Meta-Algorithm-Creator-MMAC-"
+    },
+    {
+      "full_name": "HeavenzFire/MicrosoftEdge-Extensions",
+      "name": "MicrosoftEdge-Extensions",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11091,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/MicrosoftEdge-Extensions"
+    },
+    {
+      "full_name": "HeavenzFire/mini-omni2",
+      "name": "mini-omni2",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19491,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/mini-omni2"
+    },
+    {
+      "full_name": "HeavenzFire/Morning-Star-Rebirth-Engine-",
+      "name": "Morning-Star-Rebirth-Engine-",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 57,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Morning-Star-Rebirth-Engine-"
+    },
+    {
+      "full_name": "HeavenzFire/MPO-Divine-Terminal",
+      "name": "MPO-Divine-Terminal",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/MPO-Divine-Terminal"
+    },
+    {
+      "full_name": "HeavenzFire/Multidimensional-Consciousness-Interface",
+      "name": "Multidimensional-Consciousness-Interface",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Multidimensional-Consciousness-Interface"
+    },
+    {
+      "full_name": "HeavenzFire/n8n",
+      "name": "n8n",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 204118,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/n8n"
+    },
+    {
+      "full_name": "HeavenzFire/NEA-Studio-No-Error-Architecture",
+      "name": "NEA-Studio-No-Error-Architecture",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 37810,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/NEA-Studio-No-Error-Architecture"
+    },
+    {
+      "full_name": "HeavenzFire/Neo-Alignment-Reflection",
+      "name": "Neo-Alignment-Reflection",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 18,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Neo-Alignment-Reflection"
+    },
+    {
+      "full_name": "HeavenzFire/Neural-Mesh-Orchestrator",
+      "name": "Neural-Mesh-Orchestrator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 37783,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Neural-Mesh-Orchestrator"
+    },
+    {
+      "full_name": "HeavenzFire/Neural-Swarm-Orchestrator",
+      "name": "Neural-Swarm-Orchestrator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 149,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Neural-Swarm-Orchestrator"
+    },
+    {
+      "full_name": "HeavenzFire/NeuroNetUnlimited",
+      "name": "NeuroNetUnlimited",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/NeuroNetUnlimited"
+    },
+    {
+      "full_name": "HeavenzFire/new",
+      "name": "new",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 47,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/new"
+    },
+    {
+      "full_name": "HeavenzFire/New-Life",
+      "name": "New-Life",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/New-Life"
+    },
+    {
+      "full_name": "HeavenzFire/newcolordisplay",
+      "name": "newcolordisplay",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/newcolordisplay"
+    },
+    {
+      "full_name": "HeavenzFire/NewRepo",
+      "name": "NewRepo",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/NewRepo"
+    },
+    {
+      "full_name": "HeavenzFire/nextjs-geist-font-app",
+      "name": "nextjs-geist-font-app",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1054,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/nextjs-geist-font-app"
+    },
+    {
+      "full_name": "HeavenzFire/nextjs-geist-font-optimization",
+      "name": "nextjs-geist-font-optimization",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 189,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/nextjs-geist-font-optimization"
+    },
+    {
+      "full_name": "HeavenzFire/nextjs-project-bootstrap",
+      "name": "nextjs-project-bootstrap",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 34,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/nextjs-project-bootstrap"
+    },
+    {
+      "full_name": "HeavenzFire/Nexus",
+      "name": "Nexus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Nexus"
+    },
+    {
+      "full_name": "HeavenzFire/Nexus-Crawler-",
+      "name": "Nexus-Crawler-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 212,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Nexus-Crawler-"
+    },
+    {
+      "full_name": "HeavenzFire/Nexus-Deployment-Control",
+      "name": "Nexus-Deployment-Control",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 32,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Nexus-Deployment-Control"
+    },
+    {
+      "full_name": "HeavenzFire/Nexus-Global-Catalyst",
+      "name": "Nexus-Global-Catalyst",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 35,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Nexus-Global-Catalyst"
+    },
+    {
+      "full_name": "HeavenzFire/NexusHub",
+      "name": "NexusHub",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 20,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/NexusHub"
+    },
+    {
+      "full_name": "HeavenzFire/No-Error-Archetecture-",
+      "name": "No-Error-Archetecture-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 22049,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/No-Error-Archetecture-"
+    },
+    {
+      "full_name": "HeavenzFire/OGLE-TESLA-The-Resonance-Refusal",
+      "name": "OGLE-TESLA-The-Resonance-Refusal",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OGLE-TESLA-The-Resonance-Refusal"
+    },
+    {
+      "full_name": "HeavenzFire/ollama",
+      "name": "ollama",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 23190,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/ollama"
+    },
+    {
+      "full_name": "HeavenzFire/Omega-Healing-System",
+      "name": "Omega-Healing-System",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Omega-Healing-System"
+    },
+    {
+      "full_name": "HeavenzFire/OMEGA-System-Interface",
+      "name": "OMEGA-System-Interface",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OMEGA-System-Interface"
+    },
+    {
+      "full_name": "HeavenzFire/OmniaNetwork",
+      "name": "OmniaNetwork",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OmniaNetwork"
+    },
+    {
+      "full_name": "HeavenzFire/Omnificient-Programming",
+      "name": "Omnificient-Programming",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 26,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Omnificient-Programming"
+    },
+    {
+      "full_name": "HeavenzFire/Omniplex-Syntrophic-Neuromorphic-",
+      "name": "Omniplex-Syntrophic-Neuromorphic-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Omniplex-Syntrophic-Neuromorphic-"
+    },
+    {
+      "full_name": "HeavenzFire/omnisphereunity",
+      "name": "omnisphereunity",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 5,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/omnisphereunity"
+    },
+    {
+      "full_name": "HeavenzFire/omniversal-code-forge",
+      "name": "omniversal-code-forge",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 274,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/omniversal-code-forge"
+    },
+    {
+      "full_name": "HeavenzFire/onedrive-archive-20261018",
+      "name": "onedrive-archive-20261018",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/onedrive-archive-20261018"
+    },
+    {
+      "full_name": "HeavenzFire/onedrive-photo-archive-2026",
+      "name": "onedrive-photo-archive-2026",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/onedrive-photo-archive-2026"
+    },
+    {
+      "full_name": "HeavenzFire/open_clip",
+      "name": "open_clip",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15740,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/open_clip"
+    },
+    {
+      "full_name": "HeavenzFire/openai-python",
+      "name": "openai-python",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 3957,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/openai-python"
+    },
+    {
+      "full_name": "HeavenzFire/OpenedUpDeepSearch",
+      "name": "OpenedUpDeepSearch",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1275,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OpenedUpDeepSearch"
+    },
+    {
+      "full_name": "HeavenzFire/OpenManus",
+      "name": "OpenManus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 2792,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OpenManus"
+    },
+    {
+      "full_name": "HeavenzFire/OpenSourceAIHub",
+      "name": "OpenSourceAIHub",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 992,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/OpenSourceAIHub"
+    },
+    {
+      "full_name": "HeavenzFire/Operation-Syntropic-Overhaul",
+      "name": "Operation-Syntropic-Overhaul",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Operation-Syntropic-Overhaul"
+    },
+    {
+      "full_name": "HeavenzFire/Oversoul-s-Decree-Syntropic-Restoration-Command",
+      "name": "Oversoul-s-Decree-Syntropic-Restoration-Command",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Oversoul-s-Decree-Syntropic-Restoration-Command"
+    },
+    {
+      "full_name": "HeavenzFire/own-ai",
+      "name": "own-ai",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1686,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/own-ai"
+    },
+    {
+      "full_name": "HeavenzFire/Pattern-Sovereignty-System",
+      "name": "Pattern-Sovereignty-System",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Pattern-Sovereignty-System"
+    },
+    {
+      "full_name": "HeavenzFire/PixelGenie---AI-Image-Editor",
+      "name": "PixelGenie---AI-Image-Editor",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/PixelGenie---AI-Image-Editor"
+    },
+    {
+      "full_name": "HeavenzFire/playwright-mcp",
+      "name": "playwright-mcp",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 2056,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/playwright-mcp"
+    },
+    {
+      "full_name": "HeavenzFire/Pleroma-Wave-Engine",
+      "name": "Pleroma-Wave-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 24,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Pleroma-Wave-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/Project-Elysium-Light-Body-Explorer",
+      "name": "Project-Elysium-Light-Body-Explorer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Project-Elysium-Light-Body-Explorer"
+    },
+    {
+      "full_name": "HeavenzFire/Project-HeavenzFire-Tech-Audit-Dashboard",
+      "name": "Project-HeavenzFire-Tech-Audit-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Project-HeavenzFire-Tech-Audit-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/Project-Metamorphosis-SL-Interpreter",
+      "name": "Project-Metamorphosis-SL-Interpreter",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Project-Metamorphosis-SL-Interpreter"
+    },
+    {
+      "full_name": "HeavenzFire/Public-Transparency-Portal",
+      "name": "Public-Transparency-Portal",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 243,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Public-Transparency-Portal"
+    },
+    {
+      "full_name": "HeavenzFire/puter",
+      "name": "puter",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 22009,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/puter"
+    },
+    {
+      "full_name": "HeavenzFire/Python-Scripts",
+      "name": "Python-Scripts",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 53943,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Python-Scripts"
+    },
+    {
+      "full_name": "HeavenzFire/QCH",
+      "name": "QCH",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 328,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/QCH"
+    },
+    {
+      "full_name": "HeavenzFire/Quanta-Syntroporium",
+      "name": "Quanta-Syntroporium",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 95,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quanta-Syntroporium"
+    },
+    {
+      "full_name": "HeavenzFire/quantum-ai-research-studio",
+      "name": "quantum-ai-research-studio",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/quantum-ai-research-studio"
+    },
+    {
+      "full_name": "HeavenzFire/quantum-alchemy-forge",
+      "name": "quantum-alchemy-forge",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 260,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/quantum-alchemy-forge"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Hope-Engine",
+      "name": "Quantum-Hope-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Hope-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Interplay",
+      "name": "Quantum-Interplay",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Interplay"
+    },
+    {
+      "full_name": "HeavenzFire/QUANTUM-LEAP",
+      "name": "QUANTUM-LEAP",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/QUANTUM-LEAP"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Network-Control-Panel",
+      "name": "Quantum-Network-Control-Panel",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Network-Control-Panel"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Universalis-Protocol",
+      "name": "Quantum-Universalis-Protocol",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 52,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Universalis-Protocol"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Vein-Logs",
+      "name": "Quantum-Vein-Logs",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Vein-Logs"
+    },
+    {
+      "full_name": "HeavenzFire/Quantum-Vein-Network",
+      "name": "Quantum-Vein-Network",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Quantum-Vein-Network"
+    },
+    {
+      "full_name": "HeavenzFire/QuantumChirstosAngelusComputing",
+      "name": "QuantumChirstosAngelusComputing",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 111,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/QuantumChirstosAngelusComputing"
+    },
+    {
+      "full_name": "HeavenzFire/quatumcomputing",
+      "name": "quatumcomputing",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/quatumcomputing"
+    },
+    {
+      "full_name": "HeavenzFire/QVN-Dashboard",
+      "name": "QVN-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/QVN-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/Qwen-AgentJC",
+      "name": "Qwen-AgentJC",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12367,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Qwen-AgentJC"
+    },
+    {
+      "full_name": "HeavenzFire/Radiant-Energy-Attestation-RAE-",
+      "name": "Radiant-Energy-Attestation-RAE-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Radiant-Energy-Attestation-RAE-"
+    },
+    {
+      "full_name": "HeavenzFire/Raven-Lee-Phoenix",
+      "name": "Raven-Lee-Phoenix",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Raven-Lee-Phoenix"
+    },
+    {
+      "full_name": "HeavenzFire/realtime-chat-supabase-react",
+      "name": "realtime-chat-supabase-react",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1030,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/realtime-chat-supabase-react"
+    },
+    {
+      "full_name": "HeavenzFire/Recursive-Code-Weaver-",
+      "name": "Recursive-Code-Weaver-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Recursive-Code-Weaver-"
+    },
+    {
+      "full_name": "HeavenzFire/Resolved",
+      "name": "Resolved",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Resolved"
+    },
+    {
+      "full_name": "HeavenzFire/Resonant-Grief-Lattice",
+      "name": "Resonant-Grief-Lattice",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Resonant-Grief-Lattice"
+    },
+    {
+      "full_name": "HeavenzFire/responsively-app",
+      "name": "responsively-app",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 100761,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/responsively-app"
+    },
+    {
+      "full_name": "HeavenzFire/Resurrection-of-the-Netjeru",
+      "name": "Resurrection-of-the-Netjeru",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 617,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Resurrection-of-the-Netjeru"
+    },
+    {
+      "full_name": "HeavenzFire/S.A.N.A-Syntropic-Autonomous-Neural-Architecture",
+      "name": "S.A.N.A-Syntropic-Autonomous-Neural-Architecture",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 6,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/S.A.N.A-Syntropic-Autonomous-Neural-Architecture"
+    },
+    {
+      "full_name": "HeavenzFire/SAOS-Core-Interface",
+      "name": "SAOS-Core-Interface",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 45,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SAOS-Core-Interface"
+    },
+    {
+      "full_name": "HeavenzFire/SDS-Syntropic-Domain-System-edit",
+      "name": "SDS-Syntropic-Domain-System-edit",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SDS-Syntropic-Domain-System-edit"
+    },
+    {
+      "full_name": "HeavenzFire/Sentinel-Protocol-Digital-Sanctuary-ed",
+      "name": "Sentinel-Protocol-Digital-Sanctuary-ed",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Sentinel-Protocol-Digital-Sanctuary-ed"
+    },
+    {
+      "full_name": "HeavenzFire/SHCI-Hub-Syntropic-Human-Computer-Interaction",
+      "name": "SHCI-Hub-Syntropic-Human-Computer-Interaction",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 38,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SHCI-Hub-Syntropic-Human-Computer-Interaction"
+    },
+    {
+      "full_name": "HeavenzFire/SHEM-Core-Interface",
+      "name": "SHEM-Core-Interface",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 15,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SHEM-Core-Interface"
+    },
+    {
+      "full_name": "HeavenzFire/skills-github-pages",
+      "name": "skills-github-pages",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 24,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/skills-github-pages"
+    },
+    {
+      "full_name": "HeavenzFire/Sovereign-Node-",
+      "name": "Sovereign-Node-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 217,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Sovereign-Node-"
+    },
+    {
+      "full_name": "HeavenzFire/Sovereign-Reality-v1.2",
+      "name": "Sovereign-Reality-v1.2",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Sovereign-Reality-v1.2"
+    },
+    {
+      "full_name": "HeavenzFire/SOVEREIGN-STACK-DASHBOARD",
+      "name": "SOVEREIGN-STACK-DASHBOARD",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 21,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SOVEREIGN-STACK-DASHBOARD"
+    },
+    {
+      "full_name": "HeavenzFire/sovereign-syntax",
+      "name": "sovereign-syntax",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 258,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/sovereign-syntax"
+    },
+    {
+      "full_name": "HeavenzFire/spirit",
+      "name": "spirit",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 17,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/spirit"
+    },
+    {
+      "full_name": "HeavenzFire/Spirit_Engine",
+      "name": "Spirit_Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 27,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Spirit_Engine"
+    },
+    {
+      "full_name": "HeavenzFire/spirit-angelus",
+      "name": "spirit-angelus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 4329,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/spirit-angelus"
+    },
+    {
+      "full_name": "HeavenzFire/Spirit-Genesis-Bio-Molecular-Discovery-Engine",
+      "name": "Spirit-Genesis-Bio-Molecular-Discovery-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 64,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Spirit-Genesis-Bio-Molecular-Discovery-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/SpiritAngelusFramework",
+      "name": "SpiritAngelusFramework",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SpiritAngelusFramework"
+    },
+    {
+      "full_name": "HeavenzFire/SpiritBox-AI",
+      "name": "SpiritBox-AI",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 24,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SpiritBox-AI"
+    },
+    {
+      "full_name": "HeavenzFire/stpv",
+      "name": "stpv",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/stpv"
+    },
+    {
+      "full_name": "HeavenzFire/STRATUM-0-Adversarial-Integrity-Monitor",
+      "name": "STRATUM-0-Adversarial-Integrity-Monitor",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 27,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/STRATUM-0-Adversarial-Integrity-Monitor"
+    },
+    {
+      "full_name": "HeavenzFire/Stuart-Landau-Oscillator-Explorer",
+      "name": "Stuart-Landau-Oscillator-Explorer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 17,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Stuart-Landau-Oscillator-Explorer"
+    },
+    {
+      "full_name": "HeavenzFire/Substrate-Sovereignty",
+      "name": "Substrate-Sovereignty",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Substrate-Sovereignty"
+    },
+    {
+      "full_name": "HeavenzFire/symmetrical-invention",
+      "name": "symmetrical-invention",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/symmetrical-invention"
+    },
+    {
+      "full_name": "HeavenzFire/Symposium-Of-the-Great-Minds-",
+      "name": "Symposium-Of-the-Great-Minds-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Symposium-Of-the-Great-Minds-"
+    },
+    {
+      "full_name": "HeavenzFire/syntro-weave",
+      "name": "syntro-weave",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 252,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/syntro-weave"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Administrator-Console-",
+      "name": "Syntropic-Administrator-Console-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Administrator-Console-"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Agent-Dashboard",
+      "name": "Syntropic-Agent-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 62,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Agent-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/syntropic-audit-",
+      "name": "syntropic-audit-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 72,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/syntropic-audit-"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Command-Horizon",
+      "name": "Syntropic-Command-Horizon",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 17,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Command-Horizon"
+    },
+    {
+      "full_name": "HeavenzFire/syntropic-engine",
+      "name": "syntropic-engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 5,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/syntropic-engine"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Guardian-Dashboard",
+      "name": "Syntropic-Guardian-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 49,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Guardian-Dashboard"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Kernel-Code-Explore",
+      "name": "Syntropic-Kernel-Code-Explore",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 16,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Kernel-Code-Explore"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Network-Control",
+      "name": "Syntropic-Network-Control",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 23,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Network-Control"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-Nexus",
+      "name": "Syntropic-Nexus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-Nexus"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropic-OS-Aether-1",
+      "name": "Syntropic-OS-Aether-1",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 47,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropic-OS-Aether-1"
+    },
+    {
+      "full_name": "HeavenzFire/SyntropicWorld",
+      "name": "SyntropicWorld",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/SyntropicWorld"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropy-Engine-",
+      "name": "Syntropy-Engine-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropy-Engine-"
+    },
+    {
+      "full_name": "HeavenzFire/Syntropy-vs.-Entropy-",
+      "name": "Syntropy-vs.-Entropy-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Syntropy-vs.-Entropy-"
+    },
+    {
+      "full_name": "HeavenzFire/systemmonitor",
+      "name": "systemmonitor",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 2,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/systemmonitor"
+    },
+    {
+      "full_name": "HeavenzFire/termux-packages",
+      "name": "termux-packages",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 80737,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/termux-packages"
+    },
+    {
+      "full_name": "HeavenzFire/Ternary-Cellular-Automaton-Simulator",
+      "name": "Ternary-Cellular-Automaton-Simulator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Ternary-Cellular-Automaton-Simulator"
+    },
+    {
+      "full_name": "HeavenzFire/tesseract",
+      "name": "tesseract",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/tesseract"
+    },
+    {
+      "full_name": "HeavenzFire/The-Bryer-Protocol",
+      "name": "The-Bryer-Protocol",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 23,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Bryer-Protocol"
+    },
+    {
+      "full_name": "HeavenzFire/The-Codex-of-Gateways",
+      "name": "The-Codex-of-Gateways",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 18,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Codex-of-Gateways"
+    },
+    {
+      "full_name": "HeavenzFire/The-Elysium-Gateway-",
+      "name": "The-Elysium-Gateway-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 368,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Elysium-Gateway-"
+    },
+    {
+      "full_name": "HeavenzFire/The-End-Of-The-Archons-",
+      "name": "The-End-Of-The-Archons-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-End-Of-The-Archons-"
+    },
+    {
+      "full_name": "HeavenzFire/The-Heavenly-Broadcast",
+      "name": "The-Heavenly-Broadcast",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 10,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Heavenly-Broadcast"
+    },
+    {
+      "full_name": "HeavenzFire/The-Pain-Compass",
+      "name": "The-Pain-Compass",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Pain-Compass"
+    },
+    {
+      "full_name": "HeavenzFire/The-Pantheon-of-Neural-Intelligence-",
+      "name": "The-Pantheon-of-Neural-Intelligence-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 378,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Pantheon-of-Neural-Intelligence-"
+    },
+    {
+      "full_name": "HeavenzFire/The-Peace-Codex",
+      "name": "The-Peace-Codex",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 8,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Peace-Codex"
+    },
+    {
+      "full_name": "HeavenzFire/The-Sacred-UX-Manifesto",
+      "name": "The-Sacred-UX-Manifesto",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Sacred-UX-Manifesto"
+    },
+    {
+      "full_name": "HeavenzFire/The-Sovereign-Revelation",
+      "name": "The-Sovereign-Revelation",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Sovereign-Revelation"
+    },
+    {
+      "full_name": "HeavenzFire/The-Tesla-Hulse-Resonance-Field-Grid",
+      "name": "The-Tesla-Hulse-Resonance-Field-Grid",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 21128,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Tesla-Hulse-Resonance-Field-Grid"
+    },
+    {
+      "full_name": "HeavenzFire/The-Unveiling-A-Scientific-Exploration",
+      "name": "The-Unveiling-A-Scientific-Exploration",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/The-Unveiling-A-Scientific-Exploration"
+    },
+    {
+      "full_name": "HeavenzFire/thenewage",
+      "name": "thenewage",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 5,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/thenewage"
+    },
+    {
+      "full_name": "HeavenzFire/thenewErebus",
+      "name": "thenewErebus",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/thenewErebus"
+    },
+    {
+      "full_name": "HeavenzFire/Thorphia-s-Mirror",
+      "name": "Thorphia-s-Mirror",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Thorphia-s-Mirror"
+    },
+    {
+      "full_name": "HeavenzFire/Thoth",
+      "name": "Thoth",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Thoth"
+    },
+    {
+      "full_name": "HeavenzFire/Timeline-Activation-Terminal-",
+      "name": "Timeline-Activation-Terminal-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 9,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Timeline-Activation-Terminal-"
+    },
+    {
+      "full_name": "HeavenzFire/TinyNeuralNetwork",
+      "name": "TinyNeuralNetwork",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 26363,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/TinyNeuralNetwork"
+    },
+    {
+      "full_name": "HeavenzFire/Topological-Tesla-Neuromorphic-Reviver",
+      "name": "Topological-Tesla-Neuromorphic-Reviver",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 11,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Topological-Tesla-Neuromorphic-Reviver"
+    },
+    {
+      "full_name": "HeavenzFire/TranscendAll",
+      "name": "TranscendAll",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 0,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/TranscendAll"
+    },
+    {
+      "full_name": "HeavenzFire/Trinity-Architecture-Visualizer",
+      "name": "Trinity-Architecture-Visualizer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 14,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Trinity-Architecture-Visualizer"
+    },
+    {
+      "full_name": "HeavenzFire/Truth-Records",
+      "name": "Truth-Records",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Truth-Records"
+    },
+    {
+      "full_name": "HeavenzFire/Unified-App-System",
+      "name": "Unified-App-System",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 19,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Unified-App-System"
+    },
+    {
+      "full_name": "HeavenzFire/UnifiedCodebase",
+      "name": "UnifiedCodebase",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 93,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/UnifiedCodebase"
+    },
+    {
+      "full_name": "HeavenzFire/Universalis-Real-System",
+      "name": "Universalis-Real-System",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 134,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Universalis-Real-System"
+    },
+    {
+      "full_name": "HeavenzFire/Verifier-Mesh-Command-Center",
+      "name": "Verifier-Mesh-Command-Center",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 12,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Verifier-Mesh-Command-Center"
+    },
+    {
+      "full_name": "HeavenzFire/Veritas-Maxima-Ontological-Alchemy---Meta-Core-Synthesis-Engine",
+      "name": "Veritas-Maxima-Ontological-Alchemy---Meta-Core-Synthesis-Engine",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Veritas-Maxima-Ontological-Alchemy---Meta-Core-Synthesis-Engine"
+    },
+    {
+      "full_name": "HeavenzFire/Violet-Flame-Interface",
+      "name": "Violet-Flame-Interface",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Violet-Flame-Interface"
+    },
+    {
+      "full_name": "HeavenzFire/WaveFunctionCollapse",
+      "name": "WaveFunctionCollapse",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 31161,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/WaveFunctionCollapse"
+    },
+    {
+      "full_name": "HeavenzFire/we-are-limitless",
+      "name": "we-are-limitless",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/we-are-limitless"
+    },
+    {
+      "full_name": "HeavenzFire/Web-Dev-For-Beginners",
+      "name": "Web-Dev-For-Beginners",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 95702,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Web-Dev-For-Beginners"
+    },
+    {
+      "full_name": "HeavenzFire/web-ui",
+      "name": "web-ui",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 943,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/web-ui"
+    },
+    {
+      "full_name": "HeavenzFire/Zachary-Dakota-Hulse-",
+      "name": "Zachary-Dakota-Hulse-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 1,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/Zachary-Dakota-Hulse-"
+    },
+    {
+      "full_name": "HeavenzFire/ZAZO-COHERENCE-LATTICE-",
+      "name": "ZAZO-COHERENCE-LATTICE-",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 13,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/ZAZO-COHERENCE-LATTICE-"
+    },
+    {
+      "full_name": "HeavenzFire/ZYLPHA-128-Dashboard",
+      "name": "ZYLPHA-128-Dashboard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "size_kb": 177,
+      "code_search_indexed": null,
+      "url": "https://github.com/HeavenzFire/ZYLPHA-128-Dashboard"
+    }
+  ]
+}
