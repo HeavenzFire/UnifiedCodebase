@@ -20,6 +20,7 @@ const ACCOUNTING_BASES = new Set([
 const REVIEW_STATES = new Set(["unreviewed", "corroborated", "disputed", "corrected", "retracted"]);
 const PII_STATES = new Set(["passed", "redacted", "blocked"]);
 const SHA256 = /^[a-f0-9]{64}$/i;
+const ALLOWED_FIELDS = new Set(["schema_version", "record_id", "source_url", "source_type", "retrieved_at_utc", "source_sha256", "reporting_period", "accounting_basis", "claim", "review_status", "pii_review", "limitations", "source_publisher", "source_document_id", "source_archive_url", "calculation_method", "reviewer_role", "correction_of"]);
 
 function validatePublicHttpsUrl(value, field) {
   let url;
@@ -48,11 +49,16 @@ export function validatePublicRecord(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("Public record must be an object.");
   }
+  const unknownFields = Object.keys(input).filter(field => !ALLOWED_FIELDS.has(field));
+  if (unknownFields.length) throw new TypeError("Unsupported public-record fields: " + unknownFields.join(", "));
+  if (input.schema_version !== undefined && input.schema_version !== "heavenzfire.public-record.v1") {
+    throw new TypeError("schema_version is not supported.");
+  }
   const recordId = requiredText(input.record_id, "record_id", 200);
   const url = validatePublicHttpsUrl(input.source_url, "source_url");
   if (!SOURCE_TYPES.has(input.source_type)) throw new TypeError("source_type is not supported.");
   const retrievedAt = requiredText(input.retrieved_at_utc, "retrieved_at_utc", 64);
-  if (!retrievedAt.endsWith("Z") || Number.isNaN(Date.parse(retrievedAt))) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(retrievedAt) || Number.isNaN(Date.parse(retrievedAt))) {
     throw new TypeError("retrieved_at_utc must be a valid UTC timestamp ending in Z.");
   }
   if (typeof input.source_sha256 !== "string" || !SHA256.test(input.source_sha256)) {
