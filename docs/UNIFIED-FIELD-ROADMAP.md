@@ -32,14 +32,15 @@ Phase 5: repository inventory and staged adapters, one project at a time.
 Phase 6: reviewable pull requests and reproducible release artifacts.
 
 ## Shared task proposal bridge (integration verified)
-- `integrations/task-lifecycle.mjs` tracks local task state in memory; it is not durable and does not execute work.
+- `integrations/task-lifecycle.mjs` defines the lifecycle contract; `integrations/durable-task-lifecycle.mjs` persists snapshots and audit events in an append-only, SHA-256 hash-chained JSONL log and replays state on restart.
 - `integrations/shared-task-proposal-adapter.mjs` maps a local task into `heavenzfire.shared-task.v1` and submits only to an explicit HTTP loopback inbox endpoint at `127.0.0.1:<port>/api/tasks`.
 - The adapter sends only `status: proposed` and `approvalState: pending`; it does not approve, dispatch, or execute tasks.
 - Proposal serialization uses the task's stable timestamps so retries of an unchanged task are idempotent; a conflicting payload reusing the same ID is rejected by the inbox.
-- Automated tests cover lifecycle transitions, defensive snapshots, endpoint restrictions, contract mapping, and response validation.
+- `integrations/governed-task-lifecycle.mjs` adds a separate durable approval journal. Transitions to `running` require an explicit approval by an identified actor with a reason; the approval is consumed before the transition, so a persistence failure requires fresh approval rather than silently proceeding.
+- Automated tests cover lifecycle transitions, defensive snapshots, durable restart replay, hash-chain tamper detection, approval persistence/revocation/consumption, endpoint restrictions, contract mapping, and response validation.
 - Cross-repository GitHub Actions run 39522915367 passed 21 tests, including live HTTP delivery to the actual inbox server, duplicate delivery, conflicting duplicate rejection, and persistence across an inbox process restart. The integration test checks out the adapter from the UnifiedCodebase feature branch.
-- UnifiedCodebase GitHub Actions run 39522874490 passed 50 tests, including the task lifecycle and adapter test suites.
-- Remaining work: the adapter is not wired into the PowerShell launcher or a worker, lifecycle state is not durable, and no task execution is enabled through this bridge. The inbox remains loopback-only, with explicit approval as a separate action.
+- UnifiedCodebase GitHub Actions run 39523706121 passed 59 tests, including durable lifecycle replay and explicit approval-gate suites.
+- Remaining work: the proposal adapter is not wired into the PowerShell launcher or a worker; no task execution is enabled through the shared inbox. JSONL persistence assumes a single writer and is tamper-evident, not tamper-proof. The approval gate is a host API boundary, not an operating-system sandbox; production integration must ensure callers cannot bypass it.
 
 ## Acceptance gates
 - Unit tests pass on a clean Node.js LTS runtime.
