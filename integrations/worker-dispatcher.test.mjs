@@ -48,6 +48,14 @@ test("dispatch consumes approval, runs only the registered handler, and records 
   assert.ok(approvalAudit.some(record => record.event?.taskId === "success-1" && record.event.eventType === "task.approval_consumed"));
   assert.ok(taskAudit.some(record => record.event?.taskId === "success-1" && record.event?.evidenceRefs?.some(ref => ref === "worker-result:sha256:" + result.resultSha256)));
   assert.equal(dispatcher.status().activeTasks, 0);
+  const recovered = createGovernedTaskLifecycle({
+    taskFilePath: join(directory, "tasks.jsonl"),
+    approvalFilePath: join(directory, "approvals.jsonl"),
+  });
+  assert.equal(recovered.get("success-1").status, "succeeded");
+  assert.equal(recovered.isApproved("success-1"), false);
+  assert.ok(recovered.audit().length >= 3);
+  assert.ok(recovered.approvalAudit().some(record => record.event?.eventType === "task.approval_consumed"));
 }));
 
 test("capability mismatch fails closed before consuming approval", async () => withLifecycle(async ({ lifecycle }) => {
