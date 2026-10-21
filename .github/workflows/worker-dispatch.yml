@@ -228,7 +228,7 @@ jobs:
             throw
           } finally {
             Remove-Item Env:HEAVENZFIRE_TASK_INBOX_URL -ErrorAction SilentlyContinue
-            if (Test-Path -LiteralPath $inboxStdout) {
+            if (-not [string]::IsNullOrWhiteSpace($inboxStdout) -and (Test-Path -LiteralPath $inboxStdout)) {
               try {
                 $serverInfo = Get-Content -LiteralPath $inboxStdout -Raw | ConvertFrom-Json
                 if ($serverInfo.pid) { Stop-Process -Id $serverInfo.pid -Force -ErrorAction SilentlyContinue }
