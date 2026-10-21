@@ -21,6 +21,18 @@ const REVIEW_STATES = new Set(["unreviewed", "corroborated", "disputed", "correc
 const PII_STATES = new Set(["passed", "redacted", "blocked"]);
 const SHA256 = /^[a-f0-9]{64}$/i;
 
+function validatePublicHttpsUrl(value, field) {
+  let url;
+  try { url = new URL(requiredText(value, field, 2048)); }
+  catch { throw new TypeError(field + " must be a valid URL."); }
+  if (url.protocol !== "https:") throw new TypeError(field + " must use HTTPS.");
+  if (url.username || url.password) throw new TypeError(field + " must not contain embedded credentials.");
+  if ([...url.searchParams.keys()].some(key => /token|api[_-]?key|secret|signature|password|authorization|credential/i.test(key))) {
+    throw new TypeError(field + " must not contain credential-like query parameters.");
+  }
+  return url;
+}
+
 function requiredText(value, field, max = 4000) {
   if (typeof value !== "string" || !value.trim() || value.length > max) {
     throw new TypeError(field + " must be a non-empty string no longer than " + max + " characters.");
@@ -37,11 +49,7 @@ export function validatePublicRecord(input) {
     throw new TypeError("Public record must be an object.");
   }
   const recordId = requiredText(input.record_id, "record_id", 200);
-  const sourceUrl = requiredText(input.source_url, "source_url", 2048);
-  let url;
-  try { url = new URL(sourceUrl); } catch { throw new TypeError("source_url must be a valid URL."); }
-  if (url.protocol !== "https:") throw new TypeError("source_url must use HTTPS.");
-  if (url.username || url.password) throw new TypeError("source_url must not contain embedded credentials.");
+  const url = validatePublicHttpsUrl(input.source_url, "source_url");
   if (!SOURCE_TYPES.has(input.source_type)) throw new TypeError("source_type is not supported.");
   const retrievedAt = requiredText(input.retrieved_at_utc, "retrieved_at_utc", 64);
   if (!retrievedAt.endsWith("Z") || Number.isNaN(Date.parse(retrievedAt))) {
@@ -79,11 +87,7 @@ export function validatePublicRecord(input) {
     if (input[field] !== undefined) result[field] = requiredText(input[field], field, field === "calculation_method" ? 4000 : 500);
   }
   if (input.source_archive_url !== undefined) {
-    let archive;
-    try { archive = new URL(requiredText(input.source_archive_url, "source_archive_url", 2048)); }
-    catch { throw new TypeError("source_archive_url must be a valid URL."); }
-    if (archive.protocol !== "https:") throw new TypeError("source_archive_url must use HTTPS.");
-    result.source_archive_url = archive.toString();
+    result.source_archive_url = validatePublicHttpsUrl(input.source_archive_url, "source_archive_url").toString();
   }
   return result;
 }
