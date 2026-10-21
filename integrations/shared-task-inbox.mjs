@@ -83,6 +83,58 @@ function readAndVerify(filePath) {
   return { records, previousHash };
 }
 
+
+function readAndVerifyClaims(filePath, taskIds) {
+  if (!existsSync(filePath)) return { records: [], previousHash: ZERO_HASH, claims: new Map() };
+  const content = readFileSync(filePath, "utf8");
+  if (!content) return { records: [], previousHash: ZERO_HASH, claims: new Map() };
+  const lines = content.split("\n");
+  if (lines[lines.length - 1] === "") lines.pop();
+  const records = [];
+  const claims = new Map();
+  let previousHash = ZERO_HASH;
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineNumber = index + 1;
+    let record;
+    try { record = JSON.parse(lines[index]); }
+    catch { throw new Error("Malformed shared task claims JSON at line " + lineNumber + "."); }
+    if (!record || record.sequence !== lineNumber || record.previousHash !== previousHash ||
+        typeof record.hash !== "string" || !/^[a-f0-9]{64}$/.test(record.hash) || !record.event) {
+      throw new Error("Invalid shared task claims chain at line " + lineNumber + ".");
+    }
+    const event = record.event;
+    requiredText(event.taskId, "claim.taskId", 128);
+    requiredText(event.workerId, "claim.workerId", 128);
+    requiredText(event.at, "claim.at", 100);
+    if (!taskIds.has(event.taskId) || Number.isNaN(Date.parse(event.at))) {
+      throw new Error("Claim references an unknown task or invalid timestamp at line " + lineNumber + ".");
+    }
+    const expected = sha256(canonicalJson({ sequence: record.sequence, previousHash: record.previousHash, event }));
+    if (record.hash !== expected) throw new Error("Shared task claims hash mismatch at line " + lineNumber + ".");
+    const current = claims.get(event.taskId);
+    if (event.action === "claim") {
+      requiredText(event.expiresAt, "claim.expiresAt", 100);
+      if (Number.isNaN(Date.parse(event.expiresAt)) || Date.parse(event.expiresAt) <= Date.parse(event.at)) {
+        throw new Error("Invalid claim expiry at line " + lineNumber + ".");
+      }
+      if (current && Date.parse(current.expiresAt) > Date.parse(event.at) && current.workerId !== event.workerId) {
+        throw new Error("Conflicting active claim in journal at line " + lineNumber + ".");
+      }
+      claims.set(event.taskId, { taskId: event.taskId, workerId: event.workerId, claimedAt: event.at, expiresAt: event.expiresAt });
+    } else if (event.action === "release") {
+      if (!current || current.workerId !== event.workerId) {
+        throw new Error("Invalid claim release in journal at line " + lineNumber + ".");
+      }
+      claims.delete(event.taskId);
+    } else {
+      throw new Error("Unknown shared task claim action at line " + lineNumber + ".");
+    }
+    records.push(record);
+    previousHash = record.hash;
+  }
+  return { records, previousHash, claims };
+}
+
 export function createSharedTaskInbox({ filePath, now = () => new Date().toISOString() } = {}) {
   if (typeof filePath !== "string" || !filePath.trim()) throw new TypeError("filePath is required.");
   if (typeof now !== "function") throw new TypeError("now must be a function.");
