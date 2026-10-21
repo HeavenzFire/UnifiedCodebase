@@ -18,6 +18,7 @@ Commands:
   list
   status
   audit
+  inbox-list [http://127.0.0.1:PORT/api/tasks]
 
 submit reads JSON from an argument or stdin when the argument is "-".
 Task metadata must include a capability and the corresponding input/evidence fields.
