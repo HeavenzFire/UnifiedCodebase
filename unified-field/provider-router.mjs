@@ -51,6 +51,7 @@ export async function routePrompt({ providerName = "ollama", model, prompt, env 
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer " + config.apiKey },
       body: JSON.stringify({ model: chosenModel, messages: [{ role: "user", content: prompt }], stream: false }),
+      redirect: "error",
       signal: controller.signal
     });
     const data = await response.json().catch(() => ({}));
