@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0",
+  "extension_id": "sovereign-node.health",
+  "version": "0.1.0",
+  "entrypoint": "extensions/sovereign-node-health/health-worker.mjs",
+  "capabilities": [
+    "service.health.read_only"
+  ],
+  "permissions": [
+    "network.loopback:sovereign-node"
+  ],
+  "data_flows": [
+    "approved-task-to-loopback-health-status"
+  ],
+  "healthcheck": "node --check extensions/sovereign-node-health/health-worker.mjs",
+  "test_command": "node --test extensions/sovereign-node-health/health-worker.test.mjs",
+  "rollback": "disable the extension and revert the pinned repository revision"
+}
