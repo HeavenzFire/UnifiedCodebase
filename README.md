@@ -75,6 +75,12 @@ Approve, revoke, and dispatch are separate, explicit operations:
     .\Enter-UnifiedField.ps1 -TaskAction Revoke -TaskId funding-demo-1 -Actor local-operator -Reason "Approval withdrawn before execution"
     .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId funding-demo-1 -ExtensionId funding.integrity -Actor local-operator -Reason "Run approved read-only reconciliation"
 
+Submit and dispatch a bounded live GitHub metadata query (network access occurs only when the approved task is dispatched):
+    $githubTaskJson = '{ "taskId":"github-metadata-1", "title":"Read public repository metadata", "requestedBy":"local-operator", "metadata": { "capability":"repository.github.metadata.read_only", "operation":"list", "owner":"HeavenzFire", "page":1, "perPage":10 } }'
+    .\Enter-UnifiedField.ps1 -TaskAction Submit -TaskJson $githubTaskJson
+    .\Enter-UnifiedField.ps1 -TaskAction Approve -TaskId github-metadata-1 -Actor local-operator -Reason "Approve read-only GitHub metadata query"
+    .\Enter-UnifiedField.ps1 -TaskAction Dispatch -TaskId github-metadata-1 -ExtensionId github.metadata -Actor local-operator -Reason "Read bounded repository metadata"
+
 State is stored under `~/.heavenzfire/unified-field` by default; set `HEAVENZFIRE_STATE_DIR` to choose another local directory. The audit command reports journal counts and the result-chain head. Actor labels are recorded but not authenticated by this local host.
 
 ## Operating principles
