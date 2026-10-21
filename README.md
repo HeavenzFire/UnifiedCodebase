@@ -50,6 +50,11 @@ Start the proposal inbox in a separate PowerShell window before dispatching `tas
 
 The inbox binds only to `127.0.0.1:18796`, stores proposals in a hash-chained local journal, and accepts proposed/pending records only. It has no approval or execution endpoint.
 
+List proposals from another local worker or instance:
+    .\\Enter-UnifiedField.ps1 -TaskAction InboxList
+
+For a non-default loopback port, set `HEAVENZFIRE_TASK_INBOX_URL` to `http://127.0.0.1:PORT/api/tasks`; non-loopback endpoints are rejected.
+
 List registered workers through the unified entry point:
     .\Enter-UnifiedField.ps1 -TaskAction Workers
 
