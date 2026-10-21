@@ -15,7 +15,7 @@ A local-first, evidence-preserving research and coordination platform that conne
 ## Provider policy
 - Default provider is local Ollama at 127.0.0.1:11434.
 - Remote providers are opt-in and require their own provider-specific environment variable.
-- Credentialed remote endpoints must use HTTPS and may not embed URL credentials, query parameters, or fragments; unsafe endpoint configuration is rejected before fetch.
+- Credentialed remote endpoints must use HTTPS, may not embed URL credentials/query parameters/fragments, and disable HTTP redirects; unsafe endpoint configuration is rejected before fetch.
 - No silent fallback from failed remote calls to local inference or vice versa.
 - The selected provider and model are included in result metadata.
 - Secrets and prompt contents are not logged by the router.
