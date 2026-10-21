@@ -23,15 +23,15 @@ if (-not $Node) { throw 'Node.js is not installed or is not on PATH.' }
 if (-not [string]::IsNullOrWhiteSpace($TaskAction)) {
     $TaskHost = Join-Path $Root 'Invoke-UnifiedFieldTask.ps1'
     if (-not (Test-Path -LiteralPath $TaskHost -PathType Leaf)) { throw "Task host entry point missing: $TaskHost" }
-    $TaskHostArguments = @('-Action', $TaskAction)
-    if (-not [string]::IsNullOrWhiteSpace($TaskJson)) { $TaskHostArguments += @('-TaskJson', $TaskJson) }
-    if (-not [string]::IsNullOrWhiteSpace($TaskId)) { $TaskHostArguments += @('-TaskId', $TaskId) }
-    if (-not [string]::IsNullOrWhiteSpace($ExtensionId)) { $TaskHostArguments += @('-ExtensionId', $ExtensionId) }
-    if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostArguments += @('-Actor', $Actor) }
-    if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostArguments += @('-Reason', $Reason) }
-    if ($InboxPort -ne 18796) { $TaskHostArguments += @('-InboxPort', [string]$InboxPort) }
-    if (-not [string]::IsNullOrWhiteSpace($InboxFilePath)) { $TaskHostArguments += @('-InboxFilePath', $InboxFilePath) }
-    & $TaskHost @TaskHostArguments
+    $TaskHostParameters = @{ Action = $TaskAction }
+    if (-not [string]::IsNullOrWhiteSpace($TaskJson)) { $TaskHostParameters.TaskJson = $TaskJson }
+    if (-not [string]::IsNullOrWhiteSpace($TaskId)) { $TaskHostParameters.TaskId = $TaskId }
+    if (-not [string]::IsNullOrWhiteSpace($ExtensionId)) { $TaskHostParameters.ExtensionId = $ExtensionId }
+    if (-not [string]::IsNullOrWhiteSpace($Actor)) { $TaskHostParameters.Actor = $Actor }
+    if (-not [string]::IsNullOrWhiteSpace($Reason)) { $TaskHostParameters.Reason = $Reason }
+    if ($InboxPort -ne 18796) { $TaskHostParameters.InboxPort = $InboxPort }
+    if (-not [string]::IsNullOrWhiteSpace($InboxFilePath)) { $TaskHostParameters.InboxFilePath = $InboxFilePath }
+    & $TaskHost @TaskHostParameters
     return
 }
 if (-not (Test-Path -LiteralPath $Router -PathType Leaf)) { throw "Provider router missing: $Router" }
