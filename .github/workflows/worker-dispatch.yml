@@ -238,6 +238,11 @@ jobs:
             $releasedListRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxList
             $releasedList = ($releasedListRaw -join [Environment]::NewLine) | ConvertFrom-Json
             if ($releasedList.tasks[0].claim) { throw "Released lease remains visible as active." }
+            $inboxAuditRaw = & .\Enter-UnifiedField.ps1 -TaskAction InboxAudit
+            $inboxAudit = ($inboxAuditRaw -join [Environment]::NewLine) | ConvertFrom-Json
+            if ($inboxAudit.proposalCount -ne 1 -or $inboxAudit.claimEventCount -ne 2 -or -not $inboxAudit.proposalChainHead -or -not $inboxAudit.claimChainHead) {
+              throw "PowerShell inbox audit failed: $($inboxAuditRaw -join '')"
+            }
             if ($inboxBody.tasks[0].metadata.prompt -or $inboxBody.tasks[0].metadata.input) { throw "Sensitive task payload leaked into the shared proposal." }
           } catch {
             Write-Host "Windows PowerShell E2E failed: $($_.Exception.Message)"
