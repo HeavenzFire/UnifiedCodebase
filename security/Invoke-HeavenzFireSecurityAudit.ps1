@@ -22,7 +22,7 @@ $findings=New-Object System.Collections.Generic.List[object]
 $inventory=New-Object System.Collections.Generic.List[object]
 $notes=New-Object System.Collections.Generic.List[string]
 $maxBytes=[long]$MaxFileSizeMB * 1MB
-$extensions=@('.ps1','.psm1','.py','.js','.jsx','.ts','.tsx','.json','.yaml','.yml','.toml','.env','.config','.xml','.html','.cs','.go','.rs','.java','.properties','.txt','.md','.ini','.conf','.sh','.bat','.cmd','.tf','.ipynb')
+$extensions=@('.ps1','.psm1','.py','.js','.jsx','.ts','.tsx','.json','.yaml','.yml','.toml','.env','.config','.xml','.html','.cs','.go','.rs','.java','.properties','.txt','.md','.ini','.conf','.sh','.bat','.cmd','.tf','.ipynb','.pem','.key','.crt','.cer','.pub')
 $excluded=@('\.git\','\node_modules\','\vendor\','\.venv\','\venv\','\bin\','\obj\','\dist\','\build\','\coverage\')
 $rules=@(
  @{id='HF-CRED-001';severity='CRITICAL';category='Private key material';regex='-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----';fix='Validate owner and purpose; treat a real exposed key as compromised and replace/revoke after explicit approval.'},
@@ -47,7 +47,7 @@ foreach($r in $Root){
  if($outFull.StartsWith($resolved.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'OutputDirectory must be outside scanned roots.'}
  $files=Get-ChildItem -LiteralPath $resolved -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object {
    $p=$_.FullName
-   (@($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0 -and ($extensions -contains $_.Extension.ToLowerInvariant()) -and $_.Length -le $maxBytes)
+   (@($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0 -and (($extensions -contains $_.Extension.ToLowerInvariant()) -or $_.Name -match '^\.env(?:\..+)? -and $_.Length -le $maxBytes)) -and $_.Length -le $maxBytes)
  }
  foreach($f in $files){
   try{
@@ -55,8 +55,8 @@ foreach($r in $Root){
    $sha=(Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash
    $inventory.Add([pscustomobject]@{path=$f.FullName;bytes=$f.Length;last_write_utc=$f.LastWriteTimeUtc.ToString('o');sha256=$sha})
    foreach($rule in $rules){
-    $m=[regex]::Match($content,$rule.regex)
-    if($m.Success){
+    $ruleMatches=[regex]::Matches($content,$rule.regex)
+    foreach($m in $ruleMatches){
      $prefix=$content.Substring(0,[Math]::Min($m.Index,$content.Length))
      $line=1+([regex]::Matches($prefix,[string][char]10)).Count
      Add-Finding 'local_file' '' $f.FullName $rule.id $rule.severity $rule.category ('sha256:'+ $sha) 'REVIEW_REQUIRED' $rule.fix $line $sha
