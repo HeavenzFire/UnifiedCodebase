@@ -3,9 +3,9 @@
 .SYNOPSIS
 Read-only combined HeavenzFire credential/API exposure audit.
 .DESCRIPTION
-Scans authorized local source trees and optional authenticated GitHub code-search
+Scans authorized local working trees and optional authenticated GitHub code-search
 results. Reports metadata only; never stores matched secret values or source excerpts.
-No rotation, deployment changes, endpoint probing, permission changes, or history rewrite.
+Git history is not scanned. No rotation, deployment changes, endpoint probing, permission changes, or history rewrite.
 #>
 [CmdletBinding()]
 param(
@@ -13,7 +13,6 @@ param(
  [string]$OutputDirectory = (Join-Path $PWD 'HeavenzFire-SecurityAudit'),
  [string]$GitHubOwner = 'HeavenzFire',
  [switch]$GitHubCodeSearch,
- [switch]$IncludeGitHistory,
  [int]$MaxFileSizeMB = 5
 )
 $ErrorActionPreference='Stop'
@@ -48,7 +47,7 @@ foreach($r in $Root){
  if($outFull.StartsWith($resolved.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'OutputDirectory must be outside scanned roots.'}
  $files=Get-ChildItem -LiteralPath $resolved -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object {
    $p=$_.FullName
-   (($IncludeGitHistory -or @($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0) -and ($extensions -contains $_.Extension.ToLowerInvariant()) -and $_.Length -le $maxBytes)
+   (@($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0 -and ($extensions -contains $_.Extension.ToLowerInvariant()) -and $_.Length -le $maxBytes)
  }
  foreach($f in $files){
   try{
@@ -104,7 +103,7 @@ $report=[ordered]@{
  schema='heavenzfire.security-audit.v1';run_id=$runId;started_utc=$started;completed_utc=(Get-Date).ToUniversalTime().ToString('o')
  read_only=$true;changes_applied=$false;secret_values_collected=$false;roots_scanned=$Root;local_files_scanned=$inventory.Count;findings_total=$findings.Count
  findings_by_severity=@{CRITICAL=@($findings|Where-Object severity -eq 'CRITICAL').Count;HIGH=@($findings|Where-Object severity -eq 'HIGH').Count;MEDIUM=@($findings|Where-Object severity -eq 'MEDIUM').Count;LOW=@($findings|Where-Object severity -eq 'LOW').Count}
- limitations=@('GitHub code search covers indexed current/default-branch code, not complete commit history.','Pattern matches are not proof that credentials are valid or abused.','Cloud, OAuth and Apps Script runtime settings require separate authorized API inspection.','No credentials, deployments, permissions or repository history were changed.')
+ limitations=@('GitHub code search covers indexed current/default-branch code; local Git history is not scanned.','Pattern matches are not proof that credentials are valid or abused.','Cloud, OAuth and Apps Script runtime settings require separate authorized API inspection.','No credentials, deployments, permissions or repository history were changed.')
  notes=@($notes);findings=$findings;inventory=$inventory
 }
 $json=Join-Path $outFull ("HF-SecurityAudit-"+$stamp+".json")
