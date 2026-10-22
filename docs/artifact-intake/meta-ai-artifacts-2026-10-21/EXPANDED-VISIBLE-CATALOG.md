@@ -152,3 +152,8 @@ Captured from the visible page text of the user's open Meta AI Artifacts workspa
 ## Retrieval required to complete transfer
 
 The browser-visible artifact listing does not expose complete source code or unique artifact identifiers. For a faithful transfer, export/download the artifacts from Meta AI in batches (preferably preserving each artifact as a separate file, with assets and metadata). Then commit the originals to a dedicated raw-import directory, add checksums and provenance, and perform a separate reviewed consolidation.
+
+
+## Supplemental inventory
+
+The additional visible names supplied on 2026-10-22 are recorded in [SUPPLEMENTAL-INVENTORY-2026-10-22.md](SUPPLEMENTAL-INVENTORY-2026-10-22.md). This is a metadata-only delta; it does not claim source bytes were exported. Repeated names and UUID-like display names must remain distinct until original artifact IDs, exports, and checksums resolve identity.
