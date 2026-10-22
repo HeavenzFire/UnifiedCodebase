@@ -152,11 +152,11 @@ This supplement records additional names and type labels supplied in the user's 
 | recursive_dreamer.py | Python | Candidate tool; inspect external side effects |
 | federated_bus_sim.py | Python | Candidate simulation; do not represent simulation as live federation |
 | auto_tuner.py | Python | Repeated entries visible; preserve source identity |
-| requirements.txt | TXT | Dependency declaration; associate with original package before installation |
+| Requirements | TXT | Dependency declaration; associate with original package before installation |
 | README.txt | TXT | Repeated entries visible; preserve source identity |
 | SIDE_CONFIG.txt | TXT | Repeated entries visible; inspect for secrets before publication |
 | SIDE_CONFIG_1.txt | TXT | Repeated entries visible; preserve source identity |
-| README.md | Markdown | Repeated generic filename; parent artifact identity required |
+| README | Markdown | Repeated generic display name; parent artifact identity required |
 | legion-status.sh | Shell | Candidate status script; inspect before execution |
 | Docker Compose | YAML | Preserve exact source filename and validate with associated build files |
 | DFPS_Form_4885G_Draft_Bryer_Lee_Raven.pdf | PDF | Privacy-sensitive child/family document; exclude from public software transfer pending explicit scope/privacy review |
