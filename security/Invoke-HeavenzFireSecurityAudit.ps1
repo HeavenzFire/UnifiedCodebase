@@ -28,7 +28,7 @@ $rules=@(
  @{id='HF-CRED-001';severity='CRITICAL';category='Private key material';regex='-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----';fix='Validate owner and purpose; treat a real exposed key as compromised and replace/revoke after explicit approval.'},
  @{id='HF-CRED-002';severity='HIGH';category='Google API key candidate';regex='AIza[0-9A-Za-z_-]{30,}';fix='Validate in Google Cloud; restrict or rotate after approval; remove from source and history under an approved plan.'},
  @{id='HF-CRED-003';severity='HIGH';category='GitHub token candidate';regex='(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})';fix='Revoke/rotate through GitHub after approval; inspect scopes and audit activity.'},
- @{id='HF-CRED-004';severity='HIGH';category='Potential hardcoded credential assignment';regex='(?i)(?:api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|private[_-]?key|password)\s*["'']?\s*[:=]\s*["'']?[A-Za-z0-9_./+=:-]{12,}';fix='Manually distinguish real secrets from placeholders; use OS/CI secret storage and rotate confirmed exposure after approval.'},
+ @{id='HF-CRED-004';severity='MEDIUM';category='Potential hardcoded credential assignment';regex='(?i)(?:api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|private[_-]?key|password)[ \t]*["'']?[ \t]*[:=][ \t]*["'']?[A-Za-z0-9_./+=:-]{12,}';fix='Manually distinguish real secrets from placeholders; use OS/CI secret storage and rotate confirmed exposure after approval.'},
  @{id='HF-API-001';severity='MEDIUM';category='Gemini endpoint configuration';regex='generativelanguage\.googleapis\.com';fix='Check server-side boundary, API-key restrictions, quotas and logs.'},
  @{id='HF-OAUTH-001';severity='MEDIUM';category='OAuth client secret reference';regex='(?i)client_secret';fix='Determine whether placeholder, variable name or secret; confidential secrets must remain server-side.'},
  @{id='HF-OAUTH-002';severity='MEDIUM';category='OAuth redirect configuration';regex='(?i)redirect_uris|redirect_uri';fix='Review exact allowlisted redirect URIs, state/PKCE, scopes and callback ownership.'},
@@ -97,7 +97,7 @@ if($GitHubCodeSearch){
  }
 }
 $findings=@($findings|Sort-Object source,repository,path,rule_id,line -Unique)
-$inventory=@($inventory)
+$inventory = $inventory.ToArray()
 $stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $report=[ordered]@{
  schema='heavenzfire.security-audit.v1';run_id=$runId;started_utc=$started;completed_utc=(Get-Date).ToUniversalTime().ToString('o')
