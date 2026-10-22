@@ -47,7 +47,7 @@ foreach($r in $Root){
  if($outFull.StartsWith($resolved.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'OutputDirectory must be outside scanned roots.'}
  $files=Get-ChildItem -LiteralPath $resolved -File -Recurse -Force -ErrorAction SilentlyContinue | Where-Object {
    $p=$_.FullName
-   (@($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0 -and (($extensions -contains $_.Extension.ToLowerInvariant()) -or $_.Name -match '^\.env(?:\..+)? -and $_.Length -le $maxBytes)) -and $_.Length -le $maxBytes)
+   (@($excluded|Where-Object {$p -match [regex]::Escape($_)}).Count -eq 0 -and (($extensions -contains $_.Extension.ToLowerInvariant()) -or $_.Name -match '^\.env(?:\..+)?$') -and $_.Length -le $maxBytes)
  }
  foreach($f in $files){
   try{
