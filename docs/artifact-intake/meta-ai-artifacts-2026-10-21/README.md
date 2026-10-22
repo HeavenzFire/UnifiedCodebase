@@ -57,3 +57,4 @@ These observations establish that the displayed snippets are not valid as-is in 
 
 - [Consolidation architecture](CONSOLIDATION-ARCHITECTURE.md)
 - [Verification plan](VERIFICATION-PLAN.md)
+- [Supplemental visible artifact inventory — 2026-10-22](SUPPLEMENTAL-INVENTORY-2026-10-22.md)
