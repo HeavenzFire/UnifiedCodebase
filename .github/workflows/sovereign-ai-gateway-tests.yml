@@ -1,0 +1,28 @@
+name: Sovereign AI Gateway MVP
+
+on:
+  pull_request:
+    paths:
+      - "SovereignAIGateway/**"
+      - ".github/workflows/sovereign-ai-gateway-tests.yml"
+  push:
+    branches:
+      - main
+      - sovereign-ai-gateway-mvp
+    paths:
+      - "SovereignAIGateway/**"
+      - ".github/workflows/sovereign-ai-gateway-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SovereignAIGateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline unit tests
+        run: python -m unittest discover -s tests -v
