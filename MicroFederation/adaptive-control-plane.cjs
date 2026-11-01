@@ -486,6 +486,60 @@ function createAdaptiveControlPlane({ stateDir, ledger, capabilityStore, approva
       return { candidateId: stored.id, evaluation: result };
     },
     async runScheduled(kind, work, options) { return scheduler.run(kind, work, options); },
+    startTelemetry({ intervalMs = 5000, getProviderTelemetry = async () => ({}), onError = () => {} } = {}) {
+      if (!Number.isInteger(intervalMs) || intervalMs < 250) throw Error('intervalMs must be at least 250ms');
+      if (typeof getProviderTelemetry !== 'function' || typeof onError !== 'function') throw Error('telemetry callbacks must be functions');
+      let stopped = false;
+      let timer = null;
+      const cycle = async () => {
+        if (stopped) return;
+        try { await scheduler.refresh(await getProviderTelemetry()); }
+        catch (error) { onError(error); }
+        if (!stopped) { timer = setTimeout(cycle, intervalMs); if (timer.unref) timer.unref(); }
+      };
+      void cycle();
+      return Object.freeze({ stop() { stopped = true; if (timer) clearTimeout(timer); }, get stopped() { return stopped; } });
+    },
+    async runEvolution({ taskId, generator, evaluator, signal, shouldContinue = async () => true } = {}) {
+      if (!ID.test(taskId || '') || typeof generator !== 'function' || typeof evaluator !== 'function' ||
+          typeof shouldContinue !== 'function') throw Error('taskId, generator, evaluator and shouldContinue are required');
+      const budget = await budgets.get(taskId);
+      if (!budget) throw Error('evolution task has no allocated budget');
+      const history = [];
+      let generation = 0;
+      while (!signal || !signal.aborted) {
+        if (!(await shouldContinue({ taskId, generation, history: clone(history), budget: await budgets.get(taskId) }))) break;
+        let generated;
+        try {
+          generated = await generator({ taskId, generation, parents: history.slice(-8).map(x => x.candidateId), signal });
+        } catch (error) {
+          history.push({ generation, status: 'generator-failed', error: String(error && error.message || error) });
+          break;
+        }
+        if (!generated || !generated.candidate || !generated.usage) throw Error('generator must return candidate and measured usage');
+        const usage = generated.usage;
+        for (const resource of ['tokens', 'currencyMicros', 'computeMs', 'networkBytes']) {
+          const amount = Number(usage[resource] || 0);
+          if (!Number.isFinite(amount) || amount < 0) throw Error('generator returned invalid usage for ' + resource);
+          if (amount > 0) await budgets.consume(taskId, resource, amount);
+        }
+        if (!Object.values(usage).some(value => Number(value) > 0)) {
+          throw Error('evolution generator must report non-zero measured usage to prevent unbudgeted infinite execution');
+        }
+        const candidate = { ...generated.candidate, generation,
+          parentIds: Array.isArray(generated.candidate.parentIds) ? generated.candidate.parentIds : [],
+          provenance: generated.candidate.provenance || { taskId, generation } };
+        const stored = await candidates.put(candidate);
+        const evaluation = await evaluator({ candidate: stored, generated, signal });
+        await candidates.recordEvaluation(stored.id, evaluation);
+        history.push({ generation, candidateId: stored.id, evaluation });
+        generation++;
+        const remaining = await budgets.get(taskId);
+        if (Object.values(remaining.remaining).every(value => value <= 0)) break;
+      }
+      return { taskId, generations: history.length, history, stopped: !!(signal && signal.aborted),
+        remainingBudget: await budgets.get(taskId) };
+    },
     async status() {
       const telemetry = scheduler.snapshot;
       return { schema: SCHEMA, initialized: !!budgets.state && !!candidates.index,
