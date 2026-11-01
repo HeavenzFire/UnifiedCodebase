@@ -22,7 +22,9 @@ jobs:
         with:
           node-version: "22"
       - name: Syntax check
-        run: node --check MicroFederation/adaptive-control-plane.cjs
+        run: |
+          node --check MicroFederation/adaptive-control-plane.cjs
+          node --check MicroFederation/bootstrap-adaptive-control-plane.cjs
       - name: Adaptive control plane tests
         run: node --test MicroFederation/test-adaptive-control-plane.cjs
       - name: Existing MicroFederation regression tests
