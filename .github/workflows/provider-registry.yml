@@ -8,6 +8,8 @@ on:
       - "MicroFederation/verify-provider-registry.ps1"
       - "MicroFederation/task-ledger.cjs"
       - "MicroFederation/test-task-ledger.cjs"
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
       - ".github/workflows/provider-registry.yml"
   push:
     branches: ["main"]
@@ -17,6 +19,8 @@ on:
       - "MicroFederation/verify-provider-registry.ps1"
       - "MicroFederation/task-ledger.cjs"
       - "MicroFederation/test-task-ledger.cjs"
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
       - ".github/workflows/provider-registry.yml"
 
 permissions:
@@ -38,7 +42,10 @@ jobs:
         run: |
           node --check MicroFederation/provider-registry.cjs
           node --check MicroFederation/task-ledger.cjs
+          node --check MicroFederation/ledger-orchestrator-worker.cjs
       - name: Run provider registry tests
         run: node --test MicroFederation/test-provider-registry.cjs
       - name: Run durable task ledger tests
         run: node --test MicroFederation/test-task-ledger.cjs
+      - name: Run ledger-backed orchestrator worker tests
+        run: node --test MicroFederation/test-ledger-orchestrator-worker.cjs
