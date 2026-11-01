@@ -2,7 +2,7 @@ name: Shared task adapter verification
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "fix/**"]
     paths:
       - "MicroFederation/shared-task-adapter.cjs"
       - "MicroFederation/shared-task-adapter.test.cjs"
@@ -13,6 +13,8 @@ on:
     paths:
       - "MicroFederation/shared-task-adapter.cjs"
       - "MicroFederation/shared-task-adapter.test.cjs"
+      - "MicroFederation/task-ledger.cjs"
+      - "MicroFederation/test-task-ledger.cjs"
       - ".github/workflows/shared-task-adapter.yml"
 
 permissions:
