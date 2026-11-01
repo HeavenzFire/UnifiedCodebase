@@ -19,6 +19,7 @@ Set-Location C:\Users\rucke\HeavenzFire\UnifiedField\MicroFederation
 node .\test-micro-federation.cjs
 node .\test-federation-services.cjs
 node --test .\test-provider-registry.cjs
+.\verify-provider-registry.ps1
 node --test .\semantic-acceptance.test.cjs
 ```
 
@@ -52,6 +53,8 @@ This submits eight real model-backed tasks through the existing loopback orchest
 `provider-registry.cjs` persists provider declarations and lifecycle evidence in a local JSON file using an atomic replacement. Supported states are `configured`, `authenticated`, `smoke-tested`, `capability-tested`, `degraded`, and `disabled`. Credential configuration stores only an environment-variable name such as `GEMINI_API_KEY`; the registry does not accept API-key values, authenticate providers, or make network requests. A provider remains `configured` until a separate credential check and real provider smoke test produce evidence references. No Gemini, Mistral, Qwen Cloud, Meta, Monica, or Merlin live connection is claimed by this module.
 
 Run `node --test .\test-provider-registry.cjs` to verify persistence, lifecycle transitions, redaction boundaries, concurrent registration, and corrupted-file rejection.
+
+The PowerShell 5.1 verifier checks for Node.js 18+, syntax-checks the module, and runs the same test suite. For rollback, stop any process writing the registry, copy the current JSON file to a timestamped backup before an upgrade, and restore that snapshot before restarting if the new registry version must be rolled back. The registry module itself does not delete or rewrite user backups.
 
 ## Next integration milestones
 
