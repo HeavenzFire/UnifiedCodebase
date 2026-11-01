@@ -1,5 +1,7 @@
 'use strict';
 
+const { createHash } = require('node:crypto');
+
 /**
  * Governed adapter between heavenzfire.shared-task.v1 and the durable
  * MicroFederation TaskLedger.
@@ -25,6 +27,16 @@ function safeMetadata(value) {
   const encoded = JSON.stringify(value);
   if (encoded === undefined || encoded.length > 8192) throw new Error('task metadata is invalid or too large');
   return JSON.parse(encoded);
+}
+function canonicalJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+  return '{' + Object.keys(value).sort().map(key =>
+    JSON.stringify(key) + ':' + canonicalJson(value[key])
+  ).join(',') + '}';
+}
+function canonicalRecordSha256(record) {
+  return createHash('sha256').update(canonicalJson(record), 'utf8').digest('hex');
 }
 function validateRecord(record, contract) {
   if (!contract || typeof contract.validateTaskRecord !== 'function') {
@@ -94,6 +106,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
         adapter: 'heavenzfire.shared-task.v1',
         canonicalTaskId: record.taskId,
         canonicalSchema: record.schema,
+        canonicalRecordSha256: canonicalRecordSha256(record),
         approvalActor: attestation.actor,
         approvalEvidenceRef: attestation.evidenceRef,
         approvalVerifiedAt: attestation.verifiedAt
@@ -119,6 +132,9 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
       const canonicalId = claimed.metadata && claimed.metadata.canonicalTaskId;
       if (!canonicalId) throw new Error('ledger task is missing canonical task identity');
       const record = await loadCanonicalTask(canonicalId);
+      if (canonicalRecordSha256(record) !== claimed.metadata.canonicalRecordSha256) {
+        throw new Error('canonical task content changed after enqueue; refusing execution');
+      }
       const attestation = await verify(record);
       if (attestation.actor !== claimed.metadata.approvalActor ||
           attestation.evidenceRef !== claimed.metadata.approvalEvidenceRef) {
