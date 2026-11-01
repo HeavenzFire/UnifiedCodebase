@@ -279,6 +279,7 @@ class CandidateRepository {
         index.candidates[digest] = record;
         for (const parentId of record.parentIds) {
           if (!/^[a-f0-9]{64}$/.test(parentId)) throw Error('candidate parent id must be a SHA-256 digest');
+          if (!index.candidates[parentId]) throw Error('candidate parent does not exist: ' + parentId);
           index.edges.push({ from: parentId, to: digest, type: 'mutation' });
         }
         index.events.push({ at: record.createdAt, type: 'candidate.created', candidateId: digest });
@@ -380,7 +381,7 @@ class AdaptiveScheduler {
 class DockerSandbox {
   constructor({ image, workspaceRoot, timeoutMs = 120000, memoryMb = 512, cpuCores = 1, pidsLimit = 128 } = {}) {
     if (typeof image !== 'string' || !image.trim()) throw Error('a pinned, trusted sandbox image is required');
-    if (image.includes(':latest')) throw Error('sandbox image must be pinned; :latest is not accepted');
+    if (!/@sha256:[a-f0-9]{64}$/.test(image)) throw Error('sandbox image must be pinned by a full SHA-256 digest');
     if (typeof workspaceRoot !== 'string' || !workspaceRoot.trim()) throw Error('sandbox workspaceRoot is required');
     this.image = image;
     this.workspaceRoot = path.resolve(workspaceRoot);
@@ -389,7 +390,7 @@ class DockerSandbox {
     this.cpuCores = cpuCores;
     this.pidsLimit = pidsLimit;
   }
-  async evaluate({ candidateDirectory, command, args = [] }) {
+  async evaluate({ candidateDirectory, command, args = [], resources = {} }) {
     if (!Array.isArray(command) || command.length !== 1 || typeof command[0] !== 'string' || !command[0].trim()) {
       throw Error('command must be a one-element executable array');
     }
@@ -402,11 +403,13 @@ class DockerSandbox {
     }
     const info = await fs.stat(root);
     if (!info.isDirectory()) throw Error('candidateDirectory must be a directory');
+    const memoryMb = Number.isFinite(resources.memoryMb) && resources.memoryMb > 0 ? Math.floor(resources.memoryMb) : this.memoryMb;
+    const cpuCores = Number.isFinite(resources.cpuCores) && resources.cpuCores > 0 ? resources.cpuCores : this.cpuCores;
     const dockerArgs = [
       'run', '--rm', '--network=none', '--read-only', '--cap-drop=ALL',
       '--security-opt=no-new-privileges', '--user=65532:65532',
-      '--pids-limit=' + this.pidsLimit, '--memory=' + this.memoryMb + 'm',
-      '--memory-swap=' + this.memoryMb + 'm', '--cpus=' + this.cpuCores,
+      '--pids-limit=' + this.pidsLimit, '--memory=' + memoryMb + 'm',
+      '--memory-swap=' + memoryMb + 'm', '--cpus=' + cpuCores,
       '--ulimit', 'nofile=1024:1024', '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
       '--mount', 'type=bind,src=' + root + ',dst=/candidate,readonly',
       '--workdir', '/candidate', this.image, command[0], ...args
