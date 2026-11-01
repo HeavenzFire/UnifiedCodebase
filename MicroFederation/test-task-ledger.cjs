@@ -79,3 +79,16 @@ test('expired leases at retry limit persist even when no task can be claimed',as
  assert.equal(await ledger.claimNext('worker-b',{now:2000,leaseMs:1000}),null);
  assert.equal(writes,1);assert.equal((await new TaskLedger(file).open().then(x=>x.get('task-expired'))).status,'failed');
 });
+
+
+test('capability-scoped claims leave unrelated queued tasks and expired leases untouched',async t=>{
+ const ledger=await new TaskLedger(await tempFile(t)).open();
+ await ledger.create(task('unrelated-task',{requiredCapabilities:['model.task'],maxAttempts:1}),{now:1000});
+ await ledger.claimNext('unrelated-worker',{now:1000,leaseMs:1000});
+ await ledger.create(task('shared-task',{requiredCapabilities:['shared-task.v1']}),{now:1001});
+ const claimed=await ledger.claimNext('shared-worker',{now:2000,leaseMs:1000,requiredCapabilities:['shared-task.v1']});
+ assert.equal(claimed.id,'shared-task');
+ assert.equal((await ledger.get('unrelated-task')).status,'claimed');
+ assert.equal((await ledger.get('shared-task')).owner,'shared-worker');
+ await assert.rejects(ledger.claimNext('bad-worker',{requiredCapabilities:['Invalid Capability']}),/requiredCapabilities/);
+});
