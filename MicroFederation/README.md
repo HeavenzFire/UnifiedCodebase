@@ -10,6 +10,7 @@
 - Root acceptance requires every sandbox to approve, stable builder-artifact hashes to agree, independent receipt verification, and any declared supported task acceptance contract to pass. Incorrect or unsupported declared contracts quarantine the task.
 - Task envelopes support HMAC-SHA256 signatures, expiry, issuer allowlists, and replay rejection.
 - Shared service prototypes cover capability scoping, expiry/revocation, high-impact human approval, append-only JSONL evidence, hash-chained audit events, content-addressed artifacts, bounded scheduling, and health reporting.
+- A durable provider registry records provider/model declarations, capability labels, environment-variable names for credential lookup, explicit lifecycle states, and evidence references. Credential values are never accepted or persisted by the registry.
 
 ## Run the local tests (Windows PowerShell 5.1)
 
@@ -17,6 +18,7 @@
 Set-Location C:\Users\rucke\HeavenzFire\UnifiedField\MicroFederation
 node .\test-micro-federation.cjs
 node .\test-federation-services.cjs
+node --test .\test-provider-registry.cjs
 node --test .\semantic-acceptance.test.cjs
 ```
 
@@ -43,6 +45,13 @@ This submits eight real model-backed tasks through the existing loopback orchest
 - Capability registry, policy engine, artifact store, health monitor, and audit-chain verifier are in-memory service prototypes. The live runner writes JSONL evidence to disk, but the service state itself is not a durable distributed database.
 - Local model requests are restricted to the existing `/task` API. The failed `/ask` tests show the agent endpoint did not survive four concurrent requests; do not use that endpoint as a parallel worker pool until its failure mode is fixed.
 - No remote GitHub mutations, commits, merges, or deployments are performed by these scripts.
+
+
+## Provider registry status
+
+`provider-registry.cjs` persists provider declarations and lifecycle evidence in a local JSON file using an atomic replacement. Supported states are `configured`, `authenticated`, `smoke-tested`, `capability-tested`, `degraded`, and `disabled`. Credential configuration stores only an environment-variable name such as `GEMINI_API_KEY`; the registry does not accept API-key values, authenticate providers, or make network requests. A provider remains `configured` until a separate credential check and real provider smoke test produce evidence references. No Gemini, Mistral, Qwen Cloud, Meta, Monica, or Merlin live connection is claimed by this module.
+
+Run `node --test .\test-provider-registry.cjs` to verify persistence, lifecycle transitions, redaction boundaries, concurrent registration, and corrupted-file rejection.
 
 ## Next integration milestones
 
