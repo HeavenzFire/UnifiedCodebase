@@ -1,11 +1,12 @@
 'use strict';
 const path = require('node:path');
+const os = require('node:os');
 const { TaskLedger } = require('./task-ledger.cjs');
 const { CapabilityStore } = require('./capability-store.cjs');
 const { createAdaptiveControlPlane } = require('./adaptive-control-plane.cjs');
 
 async function main() {
-  const root = path.resolve(__dirname, '.heavenzfire-adaptive-control-plane');
+  const root = path.join(os.homedir(), '.heavenzfire', 'adaptive-control-plane');
   const stateDir = process.env.HF_ADAPTIVE_STATE_DIR || root;
   const ledgerFile = process.env.HF_TASK_LEDGER_PATH || path.join(stateDir, 'task-ledger.json');
   const capabilityFile = process.env.HF_CAPABILITY_STORE_PATH || path.join(stateDir, 'capabilities.json');
