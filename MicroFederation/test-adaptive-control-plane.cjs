@@ -55,7 +55,7 @@ test('scheduler admits work according to the latest resource snapshot', async t 
   const results = await Promise.all(Array.from({ length: 4 }, (_, i) =>
     scheduler.run('worker', async () => i)));
   assert.deepEqual(results, [0, 1, 2, 3]);
-  memory = 1024;
+  memory = 900;
   await scheduler.refresh();
   assert.equal(scheduler.stats().capacity.worker.slots, 0);
   await assert.rejects(scheduler.run('worker', async () => true), /no current execution capacity/);
