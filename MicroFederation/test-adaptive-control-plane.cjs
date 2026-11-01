@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   deriveCapacity, BudgetLedger, CandidateRepository, AdaptiveScheduler,
-  DockerSandbox, CapabilityGate, createAdaptiveControlPlane
+  DockerSandbox, CredentialBroker, CapabilityGate, createAdaptiveControlPlane
 } = require('./adaptive-control-plane.cjs');
 const { TaskLedger } = require('./task-ledger.cjs');
 const { CapabilityStore } = require('./capability-store.cjs');
@@ -90,10 +90,40 @@ test('candidate content hash is checked when read back', async t => {
   await assert.rejects(repo.get(record.id), /hash mismatch/);
 });
 
-test('Docker sandbox requires a pinned image and disables network, root writes, and capabilities', async () => {
-  assert.throws(() => new DockerSandbox({ image: 'node:latest' }), /pinned/);
-  const sandbox = new DockerSandbox({ image: 'node:22.14.0-bookworm-slim@sha256:' + 'a'.repeat(64) });
+test('Docker sandbox requires a pinned image and an explicit workspace root', async t => {
+  assert.throws(() => new DockerSandbox({ image: 'node:latest', workspaceRoot: process.cwd() }), /pinned/);
+  assert.throws(() => new DockerSandbox({ image: 'node:22.14.0-bookworm-slim@sha256:' + 'a'.repeat(64) }), /workspaceRoot/);
+  const sandbox = new DockerSandbox({
+    image: 'node:22.14.0-bookworm-slim@sha256:' + 'a'.repeat(64),
+    workspaceRoot: await tempDir(t)
+  });
   assert.equal(sandbox.image.includes('@sha256:'), true);
+});
+
+test('credential broker keeps raw credentials server-side and enforces HTTPS path allowlists', async t => {
+  const old = process.env.HF_TEST_PROVIDER_TOKEN;
+  process.env.HF_TEST_PROVIDER_TOKEN = 'super-secret-test-token';
+  t.after(() => {
+    if (old === undefined) delete process.env.HF_TEST_PROVIDER_TOKEN;
+    else process.env.HF_TEST_PROVIDER_TOKEN = old;
+  });
+  let observed;
+  const broker = new CredentialBroker({
+    providers: {
+      test: { baseUrl: 'https://api.example.test', credentialEnv: 'HF_TEST_PROVIDER_TOKEN',
+        headerName: 'authorization', prefix: 'Bearer ', allowedPaths: ['/v1/models'] }
+    },
+    fetchImpl: async (url, options) => {
+      observed = { url: String(url), authorization: options.headers.authorization, redirect: options.redirect };
+      return { ok: true, status: 200, text: async () => 'response included super-secret-test-token' };
+    }
+  });
+  const result = await broker.request({ providerId: 'test', path: '/v1/models' });
+  assert.equal(observed.authorization, 'Bearer super-secret-test-token');
+  assert.equal(observed.redirect, 'error');
+  assert.equal(result.body.includes('super-secret-test-token'), false);
+  await assert.rejects(broker.request({ providerId: 'test', path: '/v1/admin' }), /not allowlisted/);
+  await assert.rejects(broker.request({ providerId: 'test', path: '/../secrets' }), /invalid/);
 });
 
 test('capability gate requires independent trusted approval for high-impact actions', async () => {
