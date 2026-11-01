@@ -29,6 +29,29 @@ function verifyEvents(events){
  }
  return {ok:true,count:events.length,head:previous};
 }
+function verifyGrantProjection(grants,events){
+ const projected=new Map();
+ for(const event of events){
+  if(event.type==='capability.granted'){
+   const d=event.detail||{};if(projected.has(d.grantId))return false;
+   projected.set(d.grantId,{grantId:d.grantId,agentId:d.agentId,taskId:d.taskId,capabilities:d.capabilities,expiresAt:d.expiresAt,createdAt:event.at,revoked:false,revocationReason:null,revokedAt:null});
+  }else if(event.type==='capability.revoked'){
+   const d=event.detail||{},record=projected.get(d.grantId);if(!record||record.revoked)return false;
+   record.revoked=true;record.revocationReason=d.reason;record.revokedAt=event.at;
+  }else if(event.type!=='policy.evaluated')return false;
+ }
+ const actual=[...grants].sort((a,b)=>a.grantId.localeCompare(b.grantId));
+ const expected=[...projected.values()].sort((a,b)=>a.grantId.localeCompare(b.grantId));
+ return hash(actual)===hash(expected);
+}
+function authorizeGrant(grants,{grantId,agentId,capability,taskId=null,now=Date.now()}){
+ if(!Number.isFinite(now))return {ok:false,reason:'invalid_time'};
+ const g=grants.find(x=>x.grantId===grantId);if(!g)return {ok:false,reason:'unknown_grant'};
+ if(g.revoked)return {ok:false,reason:'revoked'};if(g.expiresAt<=now)return {ok:false,reason:'expired'};
+ if(g.agentId!==agentId)return {ok:false,reason:'agent_mismatch'};if(g.taskId&&g.taskId!==taskId)return {ok:false,reason:'task_scope_mismatch'};
+ if(!g.capabilities.includes(capability))return {ok:false,reason:'capability_not_granted'};
+ return {ok:true,grantId,agentId,capability,taskId,expiresAt:g.expiresAt};
+}
 class CapabilityStore{
  constructor(file){if(typeof file!=='string'||!file.trim())throw Error('store file path is required');this.file=path.resolve(file);this.grants=[];this.events=[];this.loaded=false;this.opening=null;this.queue=Promise.resolve()}
  async open(){
@@ -44,6 +67,7 @@ class CapabilityStore{
     if(g.revoked&&typeof g.revocationReason!=='string')throw Error('revoked grant has no reason');
    }
    if(!verifyEvents(data.events).ok)throw Error('capability audit chain is invalid');
+   if(!verifyGrantProjection(data.grants,data.events))throw Error('capability state does not match its audit events');
    this.grants=data.grants;this.events=data.events;this.loaded=true;return this;
   })().finally(()=>{this.opening=null});return this.opening;
  }
@@ -56,9 +80,17 @@ class CapabilityStore{
  _mutate(fn){const op=this.queue.then(async()=>{await this.open();const grants=clone(this.grants),events=clone(this.events);const result=fn(grants,events);await this._persist(grants,events);this.grants=grants;this.events=events;return result===undefined?null:clone(result)});this.queue=op.catch(()=>{});return op}
  async grant(input,{now=Date.now()}={}){const data=validateGrant(input,now);return this._mutate((grants,events)=>{if(grants.some(g=>g.grantId===data.grantId))throw Error('grant id already exists');const record={...data,createdAt:iso(now),revoked:false,revocationReason:null,revokedAt:null};grants.push(record);this._event(events,'capability.granted',{grantId:data.grantId,agentId:data.agentId,taskId:data.taskId,capabilities:data.capabilities,expiresAt:data.expiresAt},now);return record})}
  async revoke(grantId,reason,{now=Date.now()}={}){if(typeof grantId!=='string'||!ID.test(grantId))throw Error('grantId is invalid');if(!Number.isFinite(now)||typeof reason!=='string'||!reason.trim()||reason.length>512)throw Error('revocation reason is required');return this._mutate((grants,events)=>{const g=grants.find(x=>x.grantId===grantId);if(!g)throw Error('unknown grant: '+grantId);if(g.revoked)return {ok:true,alreadyRevoked:true,grantId};g.revoked=true;g.revocationReason=reason;g.revokedAt=iso(now);this._event(events,'capability.revoked',{grantId,reason},now);return {ok:true,grantId,revokedAt:g.revokedAt}})}
- async authorize({grantId,agentId,capability,taskId=null,now=Date.now()}){await this.open();const g=this.grants.find(x=>x.grantId===grantId);if(!g)return {ok:false,reason:'unknown_grant'};if(g.revoked)return {ok:false,reason:'revoked'};if(g.expiresAt<=now)return {ok:false,reason:'expired'};if(g.agentId!==agentId)return {ok:false,reason:'agent_mismatch'};if(g.taskId&&g.taskId!==taskId)return {ok:false,reason:'task_scope_mismatch'};if(!g.capabilities.includes(capability))return {ok:false,reason:'capability_not_granted'};return {ok:true,grantId,agentId,capability,taskId,expiresAt:g.expiresAt}}
- async evaluate(context){if(!context||typeof context!=='object'||typeof context.action!=='string'||!context.action)return {allow:false,reason:'missing_action'};const auth=await this.authorize(context);if(!auth.ok)return {allow:false,reason:auth.reason};const highImpact=HIGH_IMPACT.has(context.capability);if(highImpact&&context.humanApproval!==true)return {allow:false,reason:'human_approval_required',highImpact:true};return {allow:true,reason:'capability_and_policy_passed',highImpact,authorization:auth}}
+ async authorize(context){await this.open();return authorizeGrant(this.grants,context||{})}
+ async evaluate(context,{now=Date.now()}={}){
+  if(!context||typeof context!=='object'||typeof context.action!=='string'||!context.action)return {allow:false,reason:'missing_action'};
+  return this._mutate((grants,events)=>{
+   const auth=authorizeGrant(grants,{...context,now}),highImpact=HIGH_IMPACT.has(context.capability);
+   const decision=!auth.ok?{allow:false,reason:auth.reason}:highImpact&&context.humanApproval!==true?{allow:false,reason:'human_approval_required',highImpact:true}:{allow:true,reason:'capability_and_policy_passed',highImpact,authorization:auth};
+   this._event(events,'policy.evaluated',{action:context.action,grantId:context.grantId||null,agentId:context.agentId||null,taskId:context.taskId||null,capability:context.capability||null,allowed:decision.allow,reason:decision.reason,humanApproval:context.humanApproval===true},now);
+   return decision;
+  });
+ }
  async get(grantId){await this.open();const g=this.grants.find(x=>x.grantId===grantId);return g?clone(g):null}
  async snapshot(){await this.open();return {grants:clone(this.grants),events:clone(this.events),audit:verifyEvents(this.events)}}
 }
-module.exports={CapabilityStore,HIGH_IMPACT_CAPABILITIES:Object.freeze([...HIGH_IMPACT]),verifyCapabilityEvents:verifyEvents};
+module.exports={CapabilityStore,HIGH_IMPACT_CAPABILITIES:Object.freeze([...HIGH_IMPACT]),verifyCapabilityEvents:verifyEvents,verifyCapabilityProjection:verifyGrantProjection};
