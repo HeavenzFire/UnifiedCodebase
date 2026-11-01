@@ -1,6 +1,10 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { mkdtemp, rm } = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const { TaskLedger } = require('./task-ledger.cjs');
 const { createSharedTaskAdapter } = require('./shared-task-adapter.cjs');
 
 function canonical(status = 'proposed') {
@@ -128,6 +132,56 @@ test('approved canonical record is enqueued and re-verified immediately before e
   assert.equal(executions, 1);
   assert.equal(verifyCalls, 2);
   assert.equal(ledger.tasks.get(queued.ledgerTaskId).status, 'succeeded');
+});
+
+test('durable TaskLedger integration persists and executes an approved task', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-task-adapter-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = new TaskLedger(path.join(directory, 'tasks.json'));
+  await ledger.open();
+  const record = canonical('approved');
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => record,
+    execute: async input => ({
+      canonicalTaskId: input.canonicalTaskId,
+      prompt: input.prompt,
+      result: 'durable-ledger-integration-ok'
+    })
+  });
+
+  const queued = await adapter.enqueueApproved(record);
+  const result = await adapter.runOne({ workerId: 'rd-worker-durable' });
+  const persisted = await ledger.get(queued.ledgerTaskId);
+
+  assert.equal(result.status, 'succeeded');
+  assert.equal(persisted.status, 'succeeded');
+  assert.equal(persisted.metadata.canonicalRecordSha256.length, 64);
+  assert.equal(persisted.result.result, 'durable-ledger-integration-ok');
+  assert.equal(persisted.evidence.length, 1);
+});
+
+test('canonical task content drift blocks execution even when approval evidence is unchanged', async () => {
+  const ledger = memoryLedger();
+  const approved = canonical('approved');
+  const changed = { ...approved, goal: approved.goal + ' altered after approval' };
+  let executions = 0;
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => changed,
+    execute: async () => { executions++; return { ok: true }; }
+  });
+
+  const queued = await adapter.enqueueApproved(approved);
+  const result = await adapter.runOne({ workerId: 'rd-worker-content-drift' });
+
+  assert.equal(result.status, 'blocked');
+  assert.match(result.error, /content changed after enqueue/);
+  assert.equal(executions, 0);
+  assert.equal(ledger.tasks.get(queued.ledgerTaskId).status, 'failed');
+  assert.equal(ledger.tasks.get(queued.ledgerTaskId).retryable, false);
 });
 
 test('changed approval evidence blocks execution and is not retried', async () => {
