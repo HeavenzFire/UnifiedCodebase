@@ -1,4 +1,4 @@
-name: Provider registry verification
+name: MicroFederation durable services verification
 
 on:
   pull_request:
@@ -6,6 +6,12 @@ on:
       - "MicroFederation/provider-registry.cjs"
       - "MicroFederation/test-provider-registry.cjs"
       - "MicroFederation/verify-provider-registry.ps1"
+      - "MicroFederation/task-ledger.cjs"
+      - "MicroFederation/test-task-ledger.cjs"
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
+      - "MicroFederation/capability-store.cjs"
+      - "MicroFederation/test-capability-store.cjs"
       - ".github/workflows/provider-registry.yml"
   push:
     branches: ["main"]
@@ -13,13 +19,19 @@ on:
       - "MicroFederation/provider-registry.cjs"
       - "MicroFederation/test-provider-registry.cjs"
       - "MicroFederation/verify-provider-registry.ps1"
+      - "MicroFederation/task-ledger.cjs"
+      - "MicroFederation/test-task-ledger.cjs"
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
+      - "MicroFederation/capability-store.cjs"
+      - "MicroFederation/test-capability-store.cjs"
       - ".github/workflows/provider-registry.yml"
 
 permissions:
   contents: read
 
 jobs:
-  provider-registry:
+  durable-services:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,6 +43,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Check syntax
-        run: node --check MicroFederation/provider-registry.cjs
+        run: |
+          node --check MicroFederation/provider-registry.cjs
+          node --check MicroFederation/task-ledger.cjs
+          node --check MicroFederation/ledger-orchestrator-worker.cjs
+          node --check MicroFederation/capability-store.cjs
       - name: Run provider registry tests
         run: node --test MicroFederation/test-provider-registry.cjs
+      - name: Run durable task ledger tests
+        run: node --test MicroFederation/test-task-ledger.cjs
+      - name: Run ledger-backed orchestrator worker tests
+        run: node --test MicroFederation/test-ledger-orchestrator-worker.cjs
+      - name: Run persistent capability store tests
+        run: node --test MicroFederation/test-capability-store.cjs
