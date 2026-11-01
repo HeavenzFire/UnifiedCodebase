@@ -22,6 +22,7 @@ node .\test-federation-services.cjs
 node --test .\test-provider-registry.cjs
 .\verify-provider-registry.ps1
 node --test .\test-task-ledger.cjs
+node --test .\test-ledger-orchestrator-worker.cjs
 node --test .\semantic-acceptance.test.cjs
 ```
 
@@ -41,18 +42,20 @@ This submits eight real model-backed tasks through the existing loopback orchest
 - `live-orchestrator-acceptance.json`: four sequential live model task results.
 - `live-agent-acceptance.json` and `live-single-agent-evidence.json`: failed `/ask`-endpoint acceptance attempts; retained as counterevidence.
 
-## Durable task ledger
+## Durable task ledger and orchestrator bridge
 
 `task-ledger.cjs` is an opt-in persistence primitive for the existing orchestrator, not a replacement runtime or an automatic worker launcher. It supports:
 - `queued → claimed → running → succeeded/failed/cancelled` task lifecycle.
-- Atomic JSON-file replacement, restart recovery, idempotency keys, evidence references, and auditable transition events.
+- Atomic JSON-file replacement, restart recovery, idempotent task creation, evidence references, and auditable transition events.
 - Exclusive claims within one ledger instance, worker ownership checks, expiring leases, lease reclamation, and bounded retries (1–10 attempts).
 - Strict task input fields; arbitrary credential fields such as `apiKey` are rejected.
 - Explicit cancellation and status/attempt statistics.
 
-The current implementation serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented. It does not itself execute tasks, contact providers, or make a task result trustworthy; the existing orchestrator/worker and policy boundary remain responsible for execution and authorization.
+`ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
 
-Run `node --test .\test-task-ledger.cjs` to verify restart persistence, idempotency, claim ownership, retry limits, expired lease recovery, cancellation, evidence, and corrupt-store rejection.
+The current ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented. Neither module claims provider authentication or task-result correctness; the orchestrator/worker and independent acceptance checks remain responsible for execution and verification.
+
+Run `node --test .\test-task-ledger.cjs` and `node --test .\test-ledger-orchestrator-worker.cjs` to verify persistence/restart, idempotency, ownership, retries, lease recovery, cancellation, evidence, and the adapter bridge.
 
 ## Security and production boundaries
 
@@ -65,7 +68,7 @@ Run `node --test .\test-task-ledger.cjs` to verify restart persistence, idempote
 
 ## Next integration milestones
 
-1. Connect the durable ledger to the existing root conductor through an explicit adapter and acceptance tests.
+1. Integrate the ledger-backed worker into a supervised local service with single-writer ownership and graceful shutdown.
 2. Persist grants, revocations, policies, and artifact metadata in a durable store.
 3. Add independent model/tool adapters per sandbox and isolate their resource budgets.
 4. Resolve the current `/ask` concurrent 502 behavior and measure safe parallel inference capacity.
