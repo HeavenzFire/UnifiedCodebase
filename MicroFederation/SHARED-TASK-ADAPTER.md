@@ -18,6 +18,9 @@ not duplicate or silently drift from the canonical contract implementation.
   provider, task payload, or untrusted caller is not sufficient.
 - The verifier must return an attributable actor and immutable evidence
   reference. The adapter records both in ledger metadata.
+- Canonical task IDs are mapped to a fixed-length `shared:` plus SHA-256 ledger
+  ID, preserving the original ID in metadata and payload while respecting the
+  TaskLedger's 128-character identifier limit.
 - Immediately before execution, the adapter reloads the canonical record and
   verifies approval again. If the actor or evidence reference changed, the
   task is failed closed and is not retried automatically.

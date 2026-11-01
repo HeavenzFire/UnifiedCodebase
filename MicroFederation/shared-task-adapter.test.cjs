@@ -162,6 +162,33 @@ test('durable TaskLedger integration persists and executes an approved task', as
   assert.equal(persisted.evidence.length, 1);
 });
 
+
+test('maximum-length canonical task IDs map to a ledger-safe deterministic ID', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-task-long-id-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = new TaskLedger(path.join(directory, 'tasks.json'));
+  await ledger.open();
+  const record = canonical('approved');
+  record.taskId = 'x'.repeat(128);
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async id => {
+      assert.equal(id, record.taskId);
+      return record;
+    },
+    execute: async input => ({ canonicalTaskId: input.canonicalTaskId, ok: true })
+  });
+
+  const first = await adapter.enqueueApproved(record);
+  const second = await adapter.enqueueApproved(record);
+  assert.equal(first.ledgerTaskId, second.ledgerTaskId);
+  assert.ok(first.ledgerTaskId.length <= 128);
+  assert.match(first.ledgerTaskId, /^shared:[a-f0-9]{64}$/);
+  const persisted = await ledger.get(first.ledgerTaskId);
+  assert.equal(persisted.metadata.canonicalTaskId, record.taskId);
+});
+
 test('canonical task content drift blocks execution even when approval evidence is unchanged', async () => {
   const ledger = memoryLedger();
   const approved = canonical('approved');
