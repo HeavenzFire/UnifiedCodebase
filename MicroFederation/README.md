@@ -42,6 +42,23 @@ This submits eight real model-backed tasks through the existing loopback orchest
 - `live-orchestrator-acceptance.json`: four sequential live model task results.
 - `live-agent-acceptance.json` and `live-single-agent-evidence.json`: failed `/ask`-endpoint acceptance attempts; retained as counterevidence.
 
+## Provider registry and rollback
+
+`provider-registry.cjs` persists provider/model declarations, capability labels, lifecycle states, and evidence references. Supported states are `configured`, `authenticated`, `smoke-tested`, `capability-tested`, `degraded`, and `disabled`. Credential configuration stores only an environment-variable name such as `GEMINI_API_KEY`; raw API-key values are rejected and never persisted. A provider remains `configured` until a separate credential check and provider-specific smoke test produce evidence. No Gemini, Mistral, Qwen Cloud, Meta, Monica, or Merlin live connection is claimed by this registry.
+
+Run `node --test .\test-provider-registry.cjs` and `.\verify-provider-registry.ps1`. The PowerShell 5.1 verifier checks for Node.js 18+, syntax-checks the registry module, and runs the registry test suite.
+
+Before changing a live registry file, stop the process that writes it and make a timestamped backup **outside the repository**. Example PowerShell 5.1 commands (set the path to the actual registry file used by the running instance):
+
+```powershell
+$RegistryPath = 'C:\path\to\providers.json'
+$BackupPath = "$RegistryPath.$(Get-Date -Format yyyyMMddHHmmss).bak"
+Copy-Item -LiteralPath $RegistryPath -Destination $BackupPath
+Get-Content -LiteralPath $BackupPath -Raw | ConvertFrom-Json | Out-Null
+```
+
+To roll back, stop the writer, restore the chosen backup, verify that it parses, then restart the service. Do not commit registry data containing secrets; the module is designed to store environment-variable names rather than credential values.
+
 ## Durable task ledger and orchestrator bridge
 
 `task-ledger.cjs` is an opt-in persistence primitive for the existing orchestrator, not a replacement runtime or an automatic worker launcher. It supports:
@@ -51,7 +68,7 @@ This submits eight real model-backed tasks through the existing loopback orchest
 - Strict task input fields; arbitrary credential fields such as `apiKey` are rejected.
 - Explicit cancellation and status/attempt statistics.
 
-`ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
+`ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It times out adapter work before lease expiry and reports lease loss explicitly. It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
 
 The task ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented.
 
