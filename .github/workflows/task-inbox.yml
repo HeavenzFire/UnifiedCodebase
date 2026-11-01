@@ -1,0 +1,36 @@
+name: Unified Field task inbox verification
+
+on:
+  pull_request:
+    paths:
+      - "integrations/task-inbox-server.mjs"
+      - "integrations/task-inbox-server.test.mjs"
+      - "docs/TASK-INBOX.md"
+      - ".github/workflows/task-inbox.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "integrations/task-inbox-server.mjs"
+      - "integrations/task-inbox-server.test.mjs"
+      - "docs/TASK-INBOX.md"
+      - ".github/workflows/task-inbox.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  task-inbox:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Check syntax
+        run: node --check integrations/task-inbox-server.mjs
+      - name: Run loopback inbox contract tests
+        run: node --test integrations/task-inbox-server.test.mjs
