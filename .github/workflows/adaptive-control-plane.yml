@@ -27,6 +27,11 @@ jobs:
           node --check MicroFederation/bootstrap-adaptive-control-plane.cjs
       - name: Adaptive control plane tests
         run: node --test MicroFederation/test-adaptive-control-plane.cjs
+      - name: Bootstrap smoke test
+        run: |
+          state_dir="$(mktemp -d)"
+          trap 'rm -rf "$state_dir"' EXIT
+          HF_ADAPTIVE_STATE_DIR="$state_dir/state" node MicroFederation/bootstrap-adaptive-control-plane.cjs
       - name: Existing MicroFederation regression tests
         working-directory: MicroFederation
         run: |
