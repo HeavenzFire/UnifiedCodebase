@@ -65,3 +65,17 @@ test('stats report queued and cancelled states',async t=>{
  await ledger.cancel('task-9','not needed');const stats=await ledger.stats();
  assert.equal(stats.total,2);assert.equal(stats.byStatus.queued,1);assert.equal(stats.byStatus.cancelled,1);
 });
+
+test('idle claims do not rewrite the ledger',async t=>{
+ const ledger=await new TaskLedger(await tempFile(t)).open();let writes=0;const persist=ledger._persist.bind(ledger);
+ ledger._persist=async tasks=>{writes++;return persist(tasks)};
+ assert.equal(await ledger.claimNext('worker-idle'),null);assert.equal(writes,0);
+});
+test('expired leases at retry limit persist even when no task can be claimed',async t=>{
+ const file=await tempFile(t),ledger=await new TaskLedger(file).open();
+ await ledger.create(task('task-expired',{maxAttempts:1}),{now:1000});
+ await ledger.claimNext('worker-a',{now:1000,leaseMs:1000});
+ let writes=0;const persist=ledger._persist.bind(ledger);ledger._persist=async tasks=>{writes++;return persist(tasks)};
+ assert.equal(await ledger.claimNext('worker-b',{now:2000,leaseMs:1000}),null);
+ assert.equal(writes,1);assert.equal((await new TaskLedger(file).open().then(x=>x.get('task-expired'))).status,'failed');
+});
