@@ -6,6 +6,8 @@ on:
     paths:
       - "MicroFederation/shared-task-adapter.cjs"
       - "MicroFederation/shared-task-adapter.test.cjs"
+      - "MicroFederation/task-ledger.cjs"
+      - "MicroFederation/test-task-ledger.cjs"
       - ".github/workflows/shared-task-adapter.yml"
   pull_request:
     paths:
