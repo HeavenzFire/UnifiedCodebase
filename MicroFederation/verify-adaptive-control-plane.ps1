@@ -14,6 +14,7 @@ if ([int]$Matches[1] -lt 18) { throw "Node.js 18+ required; found $version." }
 
 $required = @(
     'adaptive-control-plane.cjs',
+    'bootstrap-adaptive-control-plane.cjs',
     'test-adaptive-control-plane.cjs',
     'task-ledger.cjs',
     'capability-store.cjs'
@@ -27,6 +28,8 @@ Write-Host "Node.js: $version"
 Write-Host 'Checking adaptive control plane syntax...'
 & node --check (Join-Path $root 'adaptive-control-plane.cjs')
 if ($LASTEXITCODE -ne 0) { throw 'Adaptive control plane syntax check failed.' }
+& node --check (Join-Path $root 'bootstrap-adaptive-control-plane.cjs')
+if ($LASTEXITCODE -ne 0) { throw 'Adaptive control plane bootstrap syntax check failed.' }
 
 Write-Host 'Running adaptive control plane tests...'
 & node --test (Join-Path $root 'test-adaptive-control-plane.cjs')
