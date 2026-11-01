@@ -93,17 +93,19 @@ class TaskLedger{
    tasks.push(record);return record;
   });
  }
- async claimNext(workerId,{now=Date.now(),leaseMs=60000}={}){
+ async claimNext(workerId,{now=Date.now(),leaseMs=60000,requiredCapabilities=[]}={}){
   if(typeof workerId!=='string'||!ID.test(workerId))throw Error('workerId is invalid');
   if(!Number.isFinite(now)||!Number.isInteger(leaseMs)||leaseMs<1000||leaseMs>3600000)throw Error('claim time or leaseMs is invalid');
+  if(!Array.isArray(requiredCapabilities)||requiredCapabilities.length>32||requiredCapabilities.some(x=>typeof x!=='string'||!/^[a-z][a-z0-9._-]{0,63}$/.test(x)))throw Error('requiredCapabilities must contain up to 32 capability slugs');
   return this._mutate(tasks=>{
+   const matchesCapabilities=t=>requiredCapabilities.every(cap=>t.requiredCapabilities.includes(cap));
    let expiredLeaseChanged=false;
-   for(const t of tasks.filter(x=>['claimed','running'].includes(x.status)&&x.leaseUntil!==null&&x.leaseUntil<=now&&x.attempts>=x.maxAttempts)){
+   for(const t of tasks.filter(x=>matchesCapabilities(x)&&['claimed','running'].includes(x.status)&&x.leaseUntil!==null&&x.leaseUntil<=now&&x.attempts>=x.maxAttempts)){
     expiredLeaseChanged=true;
     t.status='failed';t.owner=null;t.leaseUntil=null;t.completedAt=iso(now);t.updatedAt=t.completedAt;t.error='worker lease expired after maximum attempts';
     t.events.push({type:'task.failed',at:t.updatedAt,actor:'system',attempt:t.attempts,error:t.error});
    }
-   const candidate=tasks.filter(t=>(t.status==='queued'&&t.nextAttemptAt<=now)||(['claimed','running'].includes(t.status)&&t.leaseUntil!==null&&t.leaseUntil<=now&&t.attempts<t.maxAttempts))
+   const candidate=tasks.filter(t=>matchesCapabilities(t)&&((t.status==='queued'&&t.nextAttemptAt<=now)||(['claimed','running'].includes(t.status)&&t.leaseUntil!==null&&t.leaseUntil<=now&&t.attempts<t.maxAttempts)))
     .sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))[0];
    if(!candidate)return expiredLeaseChanged?null:NO_MUTATION;
    const reclaimed=['claimed','running'].includes(candidate.status);
