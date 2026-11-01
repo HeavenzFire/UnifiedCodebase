@@ -1,0 +1,38 @@
+name: MicroFederation adaptive control plane
+
+on:
+  pull_request:
+    paths:
+      - "MicroFederation/**"
+      - ".github/workflows/adaptive-control-plane.yml"
+  push:
+    branches:
+      - main
+      - adaptive-control-plane-implementation
+    paths:
+      - "MicroFederation/**"
+      - ".github/workflows/adaptive-control-plane.yml"
+
+jobs:
+  adaptive-control-plane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax check
+        run: node --check MicroFederation/adaptive-control-plane.cjs
+      - name: Adaptive control plane tests
+        run: node --test MicroFederation/test-adaptive-control-plane.cjs
+      - name: Existing MicroFederation regression tests
+        working-directory: MicroFederation
+        run: |
+          node ./test-micro-federation.cjs
+          node ./test-federation-services.cjs
+          node --test ./test-provider-registry.cjs
+          node --test ./test-task-ledger.cjs
+          node --test ./test-ledger-orchestrator-worker.cjs
+          node --test ./test-capability-store.cjs
+          node --test ./semantic-acceptance.test.cjs
+          node --test ./shared-task-adapter.test.cjs
