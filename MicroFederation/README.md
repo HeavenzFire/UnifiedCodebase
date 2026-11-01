@@ -96,3 +96,26 @@ Run `node --test .\test-capability-store.cjs` to verify restart persistence, rev
 3. Add independent model/tool adapters per sandbox and isolate their resource budgets.
 4. Resolve the current `/ask` concurrent 502 behavior and measure safe parallel inference capacity.
 5. Add live provider smoke tests only after authorized credentials are configured.
+
+
+## Adaptive control plane (opt-in)
+
+```powershell
+Set-Location C:\Users\rucke\HeavenzFire\UnifiedField\UnifiedCodebase\MicroFederation
+.\verify-adaptive-control-plane.ps1
+```
+
+The adaptive layer extends this repository; it does not replace the root conductor, TaskLedger, CapabilityStore, or shared-task approval contract.
+
+- `adaptive-control-plane.cjs` collects host telemetry (RAM, CPU, optional NVIDIA VRAM, disk and socket-count observations) and accepts explicit provider-quota telemetry. It derives per-workload concurrency from resource profiles. Capacity can expand or contract after each telemetry refresh; no fixed agent-count ceiling is encoded.
+- `BudgetLedger` persists task allocations and measured consumption for tokens, microcurrency, compute time, and network bytes. The evolutionary loop requires a budget and non-zero measured usage; it stops on budget exhaustion or an explicit stop condition.
+- `CandidateRepository` stores content-addressed candidate objects and parent/child mutation edges with evaluation history.
+- `DockerSandbox` requires a pinned image and a configured workspace root. It disables networking, mounts the candidate directory read-only, drops Linux capabilities, uses a non-root UID, and applies runtime resource controls. Docker isolation shares the host kernel; use a VM for higher-risk workloads.
+- `CredentialBroker` accepts provider IDs and allowlisted paths, reads credentials only inside the broker process, forces HTTPS, rejects redirects, and redacts the exact credential from returned response text. Agents must receive only the broker interface, never process environment access.
+- `CapabilityGate` delegates ordinary authorization to the existing CapabilityStore and requires a separately injected trusted approval verifier for high-impact actions. It never accepts a caller-supplied `humanApproval: true` as proof.
+- `startTelemetry()` is explicit. Importing the module starts no timers, workers, containers, model calls, or network requests.
+- `createAdaptiveControlPlane()` requires the existing MicroFederation TaskLedger. The caller supplies actual provider/model generation and evaluation adapters; no live independent provider connections are fabricated by this module.
+
+The implementation is an integration layer, not a claim that all providers, model agents, containers, or production approval infrastructure are already connected. The JSON ledgers are single-process coordination primitives; do not share them between independent processes. Production deployments still require OS-enforced isolation, protected key storage, durable external audit anchoring, and cross-process/distributed coordination.
+
+Run the verifier above to syntax-check the module and run its new tests plus the existing MicroFederation regression suites. The verifier does not start workers, enqueue model tasks, modify live services, or merge/deploy code.
