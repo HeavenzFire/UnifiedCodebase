@@ -28,3 +28,15 @@ test('worker records invalid task payload as a failed attempt instead of sending
  const result=await worker.runOnce();const saved=await ledger.get('live-task-3');
  assert.equal(result.status,'failed');assert.equal(calls,0);assert.match(saved.error,/non-empty prompt/);
 });
+test('worker times out a hung adapter before lease expiry and records a retry',async t=>{
+ const ledger=await makeLedger(t);await ledger.create({id:'live-task-4',payload:{prompt:'hang safely'},maxAttempts:2},{now:1000});
+ const worker=createOrchestratorTaskWorker({ledger,adapter:{run(){return new Promise(()=>{})}},workerId:'local-worker',leaseMs:1000,retryDelayMs:10,clock:()=>1001});
+ const result=await worker.runOnce();assert.equal(result.status,'retry-scheduled');assert.match(result.error,/timed out/);
+});
+test('worker reports lease-lost when ledger rejects a late failure update',async t=>{
+ let now=1001;
+ const ledger={async claimNext(){return {id:'late-task',payload:{prompt:'expire'},owner:'worker',attempts:1}},async start(){return {status:'running'}},async complete(){throw Error('should not complete')},async fail(){throw Error('task lease has expired')}};
+ const adapter={async run(){now=3000;throw Error('adapter failed after lease')}};
+ const worker=createOrchestratorTaskWorker({ledger,adapter,workerId:'worker',leaseMs:1000,clock:()=>now});
+ const result=await worker.runOnce({now:1001});assert.equal(result.status,'lease-lost');assert.match(result.ledgerError,/lease has expired/);
+});
