@@ -102,8 +102,10 @@ Run `node --test .\test-capability-store.cjs` to verify restart persistence, rev
 
 ```powershell
 Set-Location C:\Users\rucke\HeavenzFire\UnifiedField\UnifiedCodebase\MicroFederation
-.\verify-adaptive-control-plane.ps1
+.\install-adaptive-control-plane.ps1
 ```
+
+The installer fast-forwards a clean checkout from `origin/main`, preserves the known untracked `mesh-queue-recovery.json` snapshot, runs the adaptive and existing regression suites, initializes the persistent control-plane state, and records a fresh host telemetry snapshot. It refuses to overwrite other local changes. To verify without updating Git, run ` .\verify-adaptive-control-plane.ps1 `.
 
 The adaptive layer extends this repository; it does not replace the root conductor, TaskLedger, CapabilityStore, or shared-task approval contract.
 
