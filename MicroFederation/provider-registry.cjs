@@ -49,7 +49,7 @@ class ProviderRegistry{
    if(!parsed||parsed.schema!==SCHEMA||!Array.isArray(parsed.providers))throw Error('provider registry schema is invalid');
    const seen=new Set(),records=[];
    for(const record of parsed.providers){
-    const definition=validateProvider(record);
+    const definition=validateProvider({id:record.id,provider:record.provider,model:record.model,capabilities:record.capabilities,credentialEnv:record.credentialEnv});
     if(seen.has(definition.id))throw Error('provider registry contains duplicate id: '+definition.id);
     seen.add(definition.id);
     if(!STATES.has(record.status)||!record.createdAt||!record.updatedAt||!Array.isArray(record.evidence))throw Error('provider registry record is invalid: '+definition.id);
