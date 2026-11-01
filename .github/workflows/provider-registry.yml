@@ -1,0 +1,36 @@
+name: Provider registry verification
+
+on:
+  pull_request:
+    paths:
+      - "MicroFederation/provider-registry.cjs"
+      - "MicroFederation/test-provider-registry.cjs"
+      - "MicroFederation/verify-provider-registry.ps1"
+      - ".github/workflows/provider-registry.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "MicroFederation/provider-registry.cjs"
+      - "MicroFederation/test-provider-registry.cjs"
+      - "MicroFederation/verify-provider-registry.ps1"
+      - ".github/workflows/provider-registry.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  provider-registry:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Check syntax
+        run: node --check MicroFederation/provider-registry.cjs
+      - name: Run provider registry tests
+        run: node --test MicroFederation/test-provider-registry.cjs
