@@ -13,12 +13,18 @@ function createOrchestratorTaskWorker({ledger,adapter,workerId,leaseMs=120000,re
   try{
    const payload=claimed.payload;
    if(!payload||typeof payload.prompt!=='string'||!payload.prompt.trim())throw Error('task payload must contain a non-empty prompt');
-   const result=await adapter.run({taskId:claimed.id,role:payload.role||'worker',prompt:payload.prompt});
+   let timer;
+   const result=await Promise.race([
+    adapter.run({taskId:claimed.id,role:payload.role||'worker',prompt:payload.prompt}),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('orchestrator adapter timed out before task lease expiry')),Math.max(1,leaseMs-5000))})
+   ]).finally(()=>clearTimeout(timer));
    const completed=await ledger.complete(claimed.id,workerId,result,{now:clock(),evidenceRef:'orchestrator:'+claimed.id});
    return {status:'succeeded',taskId:claimed.id,result:completed.result,attempts:completed.attempts};
   }catch(error){
    const message=String(error&&error.message||error).slice(0,2048);
-   const failed=await ledger.fail(claimed.id,workerId,message,{retryable:true,retryDelayMs,now:clock()});
+   let failed;
+   try{failed=await ledger.fail(claimed.id,workerId,message,{retryable:true,retryDelayMs,now:clock()})}
+   catch(ledgerError){return {status:'lease-lost',taskId:claimed.id,error:message,ledgerError:String(ledgerError&&ledgerError.message||ledgerError)}}
    return {status:failed.status==='queued'?'retry-scheduled':'failed',taskId:claimed.id,error:message,attempts:failed.attempts,nextAttemptAt:failed.nextAttemptAt||null};
   }
  }
