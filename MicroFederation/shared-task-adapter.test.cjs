@@ -233,3 +233,27 @@ test('changed approval evidence blocks execution and is not retried', async () =
   assert.equal(ledger.tasks.get(queued.ledgerTaskId).status, 'failed');
   assert.equal(ledger.tasks.get(queued.ledgerTaskId).retryable, false);
 });
+
+
+test('adapter worker claims only shared-task capability and leaves unrelated work queued', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-task-isolation-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  await ledger.create({
+    id: 'unrelated-task', payload: { prompt: 'belongs to another worker' },
+    requiredCapabilities: ['model.task']
+  });
+  const record = canonical('approved');
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => record,
+    execute: async input => ({ canonicalTaskId: input.canonicalTaskId, ok: true })
+  });
+  const queued = await adapter.enqueueApproved(record);
+  const result = await adapter.runOne({ workerId: 'shared-task-worker' });
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.taskId, queued.ledgerTaskId);
+  assert.equal((await ledger.get('unrelated-task')).status, 'queued');
+  assert.equal((await ledger.get(queued.ledgerTaskId)).status, 'succeeded');
+});
