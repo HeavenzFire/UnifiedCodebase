@@ -38,7 +38,9 @@ The host supplies:
 
 Use `enqueueApproved(record)` only after trusted verification is configured.
 Use `propose(record)` for proposal intake. Run workers with unique worker IDs
-and bounded leases. Do not wire an untrusted provider directly to
+and bounded leases. The adapter claims only ledger tasks tagged with the
+`shared-task.v1` capability; unrelated tasks and their expired-lease cleanup
+are left to their owning workers. Do not wire an untrusted provider directly to
 `verifyApproval` or grant the worker unrestricted shell execution.
 
 ## Verification
