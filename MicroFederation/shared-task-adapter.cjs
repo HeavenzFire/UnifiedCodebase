@@ -96,7 +96,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
   async function enqueueApproved(record) {
     const attestation = await verify(record);
     const metadata = safeMetadata(record.metadata);
-    const ledgerId = 'shared:' + record.taskId;
+    const ledgerId = 'shared:' + createHash('sha256').update(record.taskId, 'utf8').digest('hex');
     const task = await ledger.create({
       id: ledgerId,
       idempotencyKey: ledgerId,
