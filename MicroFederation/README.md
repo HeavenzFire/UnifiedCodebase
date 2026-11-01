@@ -11,7 +11,6 @@
 - Task envelopes support HMAC-SHA256 signatures, expiry, issuer allowlists, and replay rejection.
 - Shared service prototypes cover capability scoping, expiry/revocation, high-impact human approval, append-only JSONL evidence, hash-chained audit events, content-addressed artifacts, bounded scheduling, and health reporting.
 - The provider registry persists provider/model declarations and lifecycle evidence without accepting or storing credential values.
-- The task ledger persists task ownership, status, attempts, leases, results, evidence references, and transition events with bounded retries and idempotent task creation.
 
 ## Run the local tests (Windows PowerShell 5.1)
 
@@ -23,6 +22,7 @@ node --test .\test-provider-registry.cjs
 .\verify-provider-registry.ps1
 node --test .\test-task-ledger.cjs
 node --test .\test-ledger-orchestrator-worker.cjs
+node --test .\test-capability-store.cjs
 node --test .\semantic-acceptance.test.cjs
 ```
 
@@ -53,23 +53,29 @@ This submits eight real model-backed tasks through the existing loopback orchest
 
 `ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
 
-The current ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented. Neither module claims provider authentication or task-result correctness; the orchestrator/worker and independent acceptance checks remain responsible for execution and verification.
+The task ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented.
 
-Run `node --test .\test-task-ledger.cjs` and `node --test .\test-ledger-orchestrator-worker.cjs` to verify persistence/restart, idempotency, ownership, retries, lease recovery, cancellation, evidence, and the adapter bridge.
+## Durable capability and policy store
+
+`capability-store.cjs` persists scoped grants and revocations with atomic JSON replacement. It checks agent identity, optional task scope, capability membership, and expiry. High-impact capabilities (`repo.merge`, `deploy`, `credential.write`, `network.expose`, and `command.privileged`) require explicit `humanApproval: true` at evaluation time. Grant inputs reject undeclared fields such as raw API keys.
+
+Grant, revocation, and policy-evaluation events are hash-chained. On restart, the store verifies the chain and checks that persisted grant state matches the event history. This detects accidental or unsophisticated edits, but is not a signed or externally anchored audit system. Writes are serialized within one Node.js process only. The component is opt-in and is not wired into the live instance by default; production integration must source approval from the trusted control plane, not from an untrusted agent payload.
+
+Run `node --test .\test-capability-store.cjs` to verify restart persistence, revocation, scoped authorization, human-approval enforcement, credential-field rejection, and audit integrity.
 
 ## Security and production boundaries
 
 - The live acceptance generates a per-run signing key in process memory. It is intentionally not persisted; this demonstrates signature validation but is **not** a production identity/key-management design.
 - Audit log append mode is append-only by application behavior, not tamper-proof against a host administrator. Production needs OS-enforced ACLs, protected signing keys, and remote or WORM-backed anchoring.
-- Capability registry, policy engine, artifact store, health monitor, and audit-chain verifier remain in-memory service prototypes.
+- The original capability registry, policy engine, artifact store, and health monitor remain in-memory prototypes.
 - Local model requests are restricted to the existing `/task` API. The failed `/ask` tests show the agent endpoint did not survive four concurrent requests; do not use that endpoint as a parallel worker pool until its failure mode is fixed.
 - No Gemini, Mistral, Qwen Cloud, Meta, Monica, or Merlin live connection is claimed without provider-specific credentials and successful smoke-test evidence.
 - No remote GitHub mutations, commits, merges, or deployments are performed by these scripts.
 
 ## Next integration milestones
 
-1. Integrate the ledger-backed worker into a supervised local service with single-writer ownership and graceful shutdown.
-2. Persist grants, revocations, policies, and artifact metadata in a durable store.
+1. Integrate task and capability persistence through a single supervised local service with single-writer ownership and graceful shutdown.
+2. Persist artifact metadata and policy decisions with the same recovery/evidence contract.
 3. Add independent model/tool adapters per sandbox and isolate their resource budgets.
 4. Resolve the current `/ask` concurrent 502 behavior and measure safe parallel inference capacity.
 5. Add live provider smoke tests only after authorized credentials are configured.
