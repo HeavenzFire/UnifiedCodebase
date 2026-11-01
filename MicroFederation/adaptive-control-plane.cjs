@@ -378,10 +378,12 @@ class AdaptiveScheduler {
 }
 
 class DockerSandbox {
-  constructor({ image, timeoutMs = 120000, memoryMb = 512, cpuCores = 1, pidsLimit = 128 } = {}) {
+  constructor({ image, workspaceRoot, timeoutMs = 120000, memoryMb = 512, cpuCores = 1, pidsLimit = 128 } = {}) {
     if (typeof image !== 'string' || !image.trim()) throw Error('a pinned, trusted sandbox image is required');
     if (image.includes(':latest')) throw Error('sandbox image must be pinned; :latest is not accepted');
+    if (typeof workspaceRoot !== 'string' || !workspaceRoot.trim()) throw Error('sandbox workspaceRoot is required');
     this.image = image;
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.timeoutMs = timeoutMs;
     this.memoryMb = memoryMb;
     this.cpuCores = cpuCores;
@@ -392,14 +394,20 @@ class DockerSandbox {
       throw Error('command must be a one-element executable array');
     }
     if (!Array.isArray(args) || args.some(x => typeof x !== 'string')) throw Error('args must be strings');
-    const root = path.resolve(candidateDirectory);
+    const root = await fs.realpath(candidateDirectory);
+    const workspace = await fs.realpath(this.workspaceRoot);
+    const relative = path.relative(workspace, root);
+    if (!relative || relative.startsWith('..' + path.sep) || relative === '..' || path.isAbsolute(relative)) {
+      throw Error('candidateDirectory must be a child of the configured sandbox workspace');
+    }
     const info = await fs.stat(root);
     if (!info.isDirectory()) throw Error('candidateDirectory must be a directory');
     const dockerArgs = [
       'run', '--rm', '--network=none', '--read-only', '--cap-drop=ALL',
-      '--security-opt=no-new-privileges', '--pids-limit=' + this.pidsLimit,
-      '--memory=' + this.memoryMb + 'm', '--cpus=' + this.cpuCores,
-      '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
+      '--security-opt=no-new-privileges', '--user=65532:65532',
+      '--pids-limit=' + this.pidsLimit, '--memory=' + this.memoryMb + 'm',
+      '--memory-swap=' + this.memoryMb + 'm', '--cpus=' + this.cpuCores,
+      '--ulimit', 'nofile=1024:1024', '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
       '--mount', 'type=bind,src=' + root + ',dst=/candidate,readonly',
       '--workdir', '/candidate', this.image, command[0], ...args
     ];
@@ -408,6 +416,61 @@ class DockerSandbox {
     return { ok: result.ok, exitCode: result.code === undefined ? null : result.code,
       stdout: result.stdout.slice(0, 20000), stderr: result.stderr.slice(0, 10000),
       elapsedMs: Date.now() - started, sandbox: 'docker-isolated-network-disabled-readonly-rootfs' };
+  }
+}
+
+
+class CredentialBroker {
+  constructor({ providers, fetchImpl = globalThis.fetch } = {}) {
+    if (!providers || typeof providers !== 'object' || typeof fetchImpl !== 'function') {
+      throw Error('provider definitions and fetch implementation are required');
+    }
+    this.providers = new Map();
+    this.fetchImpl = fetchImpl;
+    for (const [id, raw] of Object.entries(providers)) {
+      if (!ID.test(id) || !raw || typeof raw !== 'object') throw Error('credential provider definition is invalid');
+      const base = new URL(raw.baseUrl);
+      if (base.protocol !== 'https:' || base.username || base.password) throw Error('credential broker requires an HTTPS origin without embedded credentials');
+      if (typeof raw.credentialEnv !== 'string' || !/^[A-Z_][A-Z0-9_]{0,127}$/.test(raw.credentialEnv)) throw Error('credentialEnv must be an environment-variable name');
+      const headerName = raw.headerName || 'authorization';
+      if (!/^[A-Za-z0-9-]{1,64}$/.test(headerName)) throw Error('credential header name is invalid');
+      if (!Array.isArray(raw.allowedPaths) || raw.allowedPaths.length < 1 ||
+          raw.allowedPaths.some(p => typeof p !== 'string' || !p.startsWith('/') || p.includes('..'))) {
+        throw Error('provider must declare explicit allowedPaths');
+      }
+      this.providers.set(id, { baseUrl: base.toString().replace(/\/?$/, '/'),
+        credentialEnv: raw.credentialEnv, headerName, prefix: raw.prefix || 'Bearer ',
+        allowedPaths: raw.allowedPaths.slice() });
+    }
+  }
+  async request({ providerId, path: requestPath, method = 'GET', body = undefined } = {}) {
+    const provider = this.providers.get(providerId);
+    if (!provider) throw Error('unknown credential provider');
+    if (typeof requestPath !== 'string' || !requestPath.startsWith('/') || requestPath.includes('..')) {
+      throw Error('request path is invalid');
+    }
+    if (!provider.allowedPaths.some(prefix => requestPath === prefix || requestPath.startsWith(prefix.endsWith('/') ? prefix : prefix + '/'))) {
+      throw Error('request path is not allowlisted');
+    }
+    if (!['GET', 'POST'].includes(method)) throw Error('credential broker method is not permitted');
+    const url = new URL(requestPath.slice(1), provider.baseUrl);
+    if (url.origin !== new URL(provider.baseUrl).origin || url.protocol !== 'https:') throw Error('credential broker URL escaped its provider origin');
+    const secret = process.env[provider.credentialEnv];
+    if (!secret) throw Error('provider credential is not configured in the broker environment');
+    const headers = { accept: 'application/json', [provider.headerName]: provider.prefix + secret };
+    let encodedBody;
+    if (body !== undefined) {
+      encodedBody = JSON.stringify(safeJson(body, 'provider request body'));
+      headers['content-type'] = 'application/json';
+    }
+    const response = await this.fetchImpl(url, {
+      method, headers, body: encodedBody, redirect: 'error',
+      signal: AbortSignal.timeout(30000)
+    });
+    let text = await response.text();
+    text = text.split(secret).join('[REDACTED]');
+    return { ok: response.ok, status: response.status, body: text.slice(0, 50000),
+      providerId, requestPath };
   }
 }
 
@@ -550,6 +613,6 @@ function createAdaptiveControlPlane({ stateDir, ledger, capabilityStore, approva
 
 module.exports = {
   SCHEMA, HIGH_IMPACT, collectTelemetry, deriveCapacity, BudgetLedger,
-  CandidateRepository, AdaptiveScheduler, DockerSandbox, CapabilityGate,
+  CandidateRepository, AdaptiveScheduler, DockerSandbox, CredentialBroker, CapabilityGate,
   createAdaptiveControlPlane, atomicJson, sha256
 };
