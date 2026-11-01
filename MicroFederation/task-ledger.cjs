@@ -6,6 +6,7 @@ const SCHEMA='heavenzfire.task-ledger.v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const STATES=new Set(['queued','claimed','running','succeeded','failed','cancelled']);
 const TERMINAL=new Set(['succeeded','failed','cancelled']);
+const NO_MUTATION=Symbol('no mutation');
 const clone=v=>JSON.parse(JSON.stringify(v));
 const digest=v=>crypto.createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const iso=ms=>new Date(ms).toISOString();
@@ -70,11 +71,13 @@ class TaskLedger{
    handle=await fs.open(temp,'wx',0o600);
    await handle.writeFile(JSON.stringify({schema:SCHEMA,tasks},null,2)+'\n','utf8');
    await handle.sync();await handle.close();handle=null;await fs.rename(temp,this.file);
+   try{const directory=await fs.open(path.dirname(this.file),'r');try{await directory.sync()}finally{await directory.close()}}catch(error){if(!['EISDIR','EPERM','EINVAL','ENOTSUP','EACCES'].includes(error.code))throw error}
   }catch(e){if(handle)await handle.close().catch(()=>{});await fs.unlink(temp).catch(()=>{});throw e}
  }
  _mutate(change){
   const op=this.writeQueue.then(async()=>{
    await this.open();const next=clone(this.tasks),result=change(next);
+   if(result===NO_MUTATION)return null;
    await this._persist(next);this.tasks=next;return result===undefined?null:clone(result);
   });
   this.writeQueue=op.catch(()=>{});return op;
@@ -94,13 +97,15 @@ class TaskLedger{
   if(typeof workerId!=='string'||!ID.test(workerId))throw Error('workerId is invalid');
   if(!Number.isFinite(now)||!Number.isInteger(leaseMs)||leaseMs<1000||leaseMs>3600000)throw Error('claim time or leaseMs is invalid');
   return this._mutate(tasks=>{
+   let expiredLeaseChanged=false;
    for(const t of tasks.filter(x=>['claimed','running'].includes(x.status)&&x.leaseUntil!==null&&x.leaseUntil<=now&&x.attempts>=x.maxAttempts)){
+    expiredLeaseChanged=true;
     t.status='failed';t.owner=null;t.leaseUntil=null;t.completedAt=iso(now);t.updatedAt=t.completedAt;t.error='worker lease expired after maximum attempts';
     t.events.push({type:'task.failed',at:t.updatedAt,actor:'system',attempt:t.attempts,error:t.error});
    }
    const candidate=tasks.filter(t=>(t.status==='queued'&&t.nextAttemptAt<=now)||(['claimed','running'].includes(t.status)&&t.leaseUntil!==null&&t.leaseUntil<=now&&t.attempts<t.maxAttempts))
     .sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))[0];
-   if(!candidate)return null;
+   if(!candidate)return expiredLeaseChanged?null:NO_MUTATION;
    const reclaimed=['claimed','running'].includes(candidate.status);
    candidate.status='claimed';candidate.owner=workerId;candidate.attempts++;candidate.leaseUntil=now+leaseMs;candidate.updatedAt=iso(now);
    candidate.events.push({type:reclaimed?'task.lease_reclaimed':'task.claimed',at:candidate.updatedAt,actor:workerId,attempt:candidate.attempts});
