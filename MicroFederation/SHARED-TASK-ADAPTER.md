@@ -49,7 +49,7 @@ Run:
 
 ```sh
 node --check MicroFederation/shared-task-adapter.cjs
-node --test MicroFederation/shared-task-adapter.test.cjs
+node --test MicroFederation/test-task-ledger.cjs MicroFederation/shared-task-adapter.test.cjs
 ```
 
 The GitHub Actions workflow runs these deterministic checks on Node 20 and 22.
