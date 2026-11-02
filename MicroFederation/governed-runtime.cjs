@@ -12,7 +12,7 @@ function createGovernedRuntime({
   leaseMs = 120000, pollMs = 1000, retryDelayMs = 1000,
   clock = () => Date.now(), onError = () => {}
 } = {}) {
-  if (!ledger || !['claimNext', 'start', 'complete', 'fail'].every(k => typeof ledger[k] === 'function')) {
+  if (!ledger || !['claimNext', 'start', 'releaseClaim', 'complete', 'fail'].every(k => typeof ledger[k] === 'function')) {
     throw Error('a compatible durable TaskLedger is required');
   }
   if (!adapter || typeof adapter.run !== 'function') throw Error('an orchestrator adapter with run() is required');
@@ -59,8 +59,10 @@ function createGovernedRuntime({
   async function runOnce({ now = clock() } = {}) {
     const claimed = await ledger.claimNext(workerId, { now, leaseMs });
     if (!claimed) return { status: 'idle' };
-    await ledger.start(claimed.id, workerId, { now });
+    let started = false;
     try {
+      await ledger.start(claimed.id, workerId, { now });
+      started = true;
       await authorize(claimed);
       const payload = claimed.payload;
       if (!payload || typeof payload.prompt !== 'string' || !payload.prompt.trim()) {
@@ -81,9 +83,13 @@ function createGovernedRuntime({
       const policyDenied = error && error.policyDenied === true;
       let saved;
       try {
-        saved = await ledger.fail(claimed.id, workerId, message, {
-          now: clock(), retryable: !policyDenied, retryDelayMs
-        });
+        saved = started
+          ? await ledger.fail(claimed.id, workerId, message, {
+              now: clock(), retryable: !policyDenied, retryDelayMs
+            })
+          : await ledger.releaseClaim(claimed.id, workerId, {
+              now: clock(), retryDelayMs, reason: message
+            });
       } catch (ledgerError) {
         lastError = String(ledgerError && ledgerError.message || ledgerError);
         return { status: 'lease-lost', taskId: claimed.id, error: message, ledgerError: lastError };
