@@ -103,3 +103,33 @@ test('supervisor starts one polling loop and stops cleanly', async t => {
   assert.equal(status.inFlight, false);
   assert.equal(calls, 0);
 });
+
+test('releases a claimed task immediately when ledger.start fails, then recovers it', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'runtime-start-recovery', payload: { prompt: 'recover me' }, maxAttempts: 2 });
+  const start = ledger.start.bind(ledger);
+  let rejectOnce = true;
+  ledger.start = async (...args) => {
+    if (rejectOnce) { rejectOnce = false; throw Error('simulated start persistence failure'); }
+    return start(...args);
+  };
+  let calls = 0;
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'runtime-worker', retryDelayMs: 0,
+    adapter: { async run() { calls++; return { recovered: true }; } }
+  });
+  const first = await runtime.runOnce({ now: 1000 });
+  const afterFailure = await ledger.get('runtime-start-recovery');
+  assert.equal(first.status, 'retry-scheduled');
+  assert.equal(afterFailure.status, 'queued');
+  assert.equal(afterFailure.owner, null);
+  assert.equal(afterFailure.leaseUntil, null);
+  assert.equal(afterFailure.events.at(-1).type, 'task.claim_released');
+  assert.equal(calls, 0);
+  const second = await runtime.runOnce({ now: 1001 });
+  const afterRecovery = await ledger.get('runtime-start-recovery');
+  assert.equal(second.status, 'succeeded');
+  assert.equal(afterRecovery.status, 'succeeded');
+  assert.equal(afterRecovery.attempts, 2);
+  assert.equal(calls, 1);
+});
