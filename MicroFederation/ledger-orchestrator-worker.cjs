@@ -29,14 +29,14 @@ function createOrchestratorTaskWorker({ledger,adapter,workerId,leaseMs=120000,re
  async function currentTask(taskId){
   try{return await ledger.get(taskId)}catch{return null}
  }
- async function cancelTask(taskId,reason){
+ async function cancelTask(taskId,reason,{executionMayContinue=true}={}){
   const text=reasonText(reason);
   try{
    const cancelled=await ledger.cancel(taskId,text,{now:clock(),actor:workerId});
-   return {status:'cancelled',taskId,attempts:cancelled.attempts,executionMayContinue:true};
+   return {status:'cancelled',taskId,attempts:cancelled.attempts,executionMayContinue};
   }catch(error){
    const current=await currentTask(taskId);
-   if(current&&current.status==='cancelled')return {status:'cancelled',taskId,attempts:current.attempts,executionMayContinue:true};
+   if(current&&current.status==='cancelled')return {status:'cancelled',taskId,attempts:current.attempts,executionMayContinue};
    if(current&&current.status==='succeeded')return {status:'succeeded',taskId,result:current.result,completedBeforeCancellation:true};
    return {status:'cancel-unconfirmed',taskId,error:String(error&&error.message||error),executionMayContinue:true};
   }
@@ -67,10 +67,16 @@ function createOrchestratorTaskWorker({ledger,adapter,workerId,leaseMs=120000,re
 
   const claimed=await ledger.claimNext(workerId,{now,leaseMs});
   if(!claimed)return {status:'idle'};
-  if(signal&&signal.aborted)return cancelTask(claimed.id,signal.reason||'cancelled before task start');
+  if(signal&&signal.aborted)return cancelTask(claimed.id,signal.reason||'cancelled before task start',{executionMayContinue:false});
 
-  await ledger.start(claimed.id,workerId,{now});
-  if(signal&&signal.aborted)return cancelTask(claimed.id,signal.reason||'cancelled before adapter start');
+  try{
+   await ledger.start(claimed.id,workerId,{now});
+  }catch(error){
+   const current=await currentTask(claimed.id);
+   if(current&&current.status==='cancelled')return {status:'cancelled',taskId:claimed.id,attempts:current.attempts,executionMayContinue:false};
+   return {status:'lease-lost',taskId:claimed.id,error:String(error&&error.message||error),executionMayContinue:false};
+  }
+  if(signal&&signal.aborted)return cancelTask(claimed.id,signal.reason||'cancelled before adapter start',{executionMayContinue:false});
 
   const controller=new AbortController();
   let callerAborted=false;
