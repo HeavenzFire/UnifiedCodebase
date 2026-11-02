@@ -68,7 +68,7 @@ To roll back, stop the writer, restore the chosen backup, verify that it parses,
 - Strict task input fields; arbitrary credential fields such as `apiKey` are rejected.
 - Explicit cancellation and status/attempt statistics.
 
-`ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It times out adapter work before lease expiry and reports lease loss explicitly. It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
+`ledger-orchestrator-worker.cjs` is a small opt-in bridge to the existing `LiveOrchestratorAdapter` contract. A caller supplies the existing ledger and adapter; `runOnce()` claims one task, passes its prompt/role to the adapter, and persists either the result or a bounded retry/failure. It passes an AbortSignal to adapters, records caller cancellation, aborts timed-out work, and marks timeouts non-retryable to avoid automatic duplicate side effects. A non-cooperative adapter may continue after timeout or cancellation, so these results are not proof that downstream execution stopped. See [ORCHESTRATOR-WORKER-CANCELLATION.md](ORCHESTRATOR-WORKER-CANCELLATION.md). It does not start automatically, modify the existing live runner, or bypass the policy/approval boundary.
 
 The task ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented.
 
