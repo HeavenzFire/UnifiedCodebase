@@ -104,6 +104,10 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
       maxAttempts: 3,
       metadata: {
         adapter: 'heavenzfire.shared-task.v1',
+        agentId: typeof metadata.agentId === 'string' ? metadata.agentId : null,
+        grantId: typeof metadata.grantId === 'string' ? metadata.grantId : null,
+        action: typeof metadata.action === 'string' ? metadata.action : 'shared-task.execute',
+        approvalRequestId: typeof metadata.approvalRequestId === 'string' ? metadata.approvalRequestId : null,
         canonicalTaskId: record.taskId,
         canonicalSchema: record.schema,
         canonicalRecordSha256: canonicalRecordSha256(record),
@@ -120,6 +124,48 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
       }
     });
     return Object.freeze({ status: 'queued', taskId: record.taskId, ledgerTaskId: task.id });
+  }
+
+  // GovernedRuntime owns claim/start/complete/fail. This adapter only
+  // revalidates the canonical task and trusted approval, then performs work.
+  async function run({ taskId, role, prompt } = {}) {
+    requireText(taskId, 'ledger taskId', 128);
+    const task = await ledger.get(taskId);
+    if (!task || task.status !== 'running') {
+      throw Object.assign(new Error('shared task must be running under the governed supervisor'), { policyDenied: true });
+    }
+    const metadata = task.metadata || {};
+    if (metadata.adapter !== 'heavenzfire.shared-task.v1' ||
+        typeof metadata.canonicalTaskId !== 'string' ||
+        typeof metadata.canonicalRecordSha256 !== 'string') {
+      throw Object.assign(new Error('ledger task is missing canonical shared-task metadata'), { policyDenied: true });
+    }
+    const record = await loadCanonicalTask(metadata.canonicalTaskId);
+    try {
+      validateRecord(record, contract);
+      if (canonicalRecordSha256(record) !== metadata.canonicalRecordSha256) {
+        throw new Error('canonical task content changed after enqueue; refusing execution');
+      }
+      const attestation = await verify(record);
+      if (attestation.actor !== metadata.approvalActor ||
+          attestation.evidenceRef !== metadata.approvalEvidenceRef) {
+        throw new Error('canonical approval evidence changed after enqueue; refusing execution');
+      }
+      if (prompt !== task.payload.prompt || prompt !== record.goal ||
+          role !== task.payload.role) {
+        throw new Error('governed task payload does not match its approved canonical record');
+      }
+    } catch (error) {
+      error.policyDenied = true;
+      throw error;
+    }
+    return execute({
+      taskId,
+      canonicalTaskId: metadata.canonicalTaskId,
+      role,
+      prompt,
+      canonicalRecord: record
+    });
   }
 
   async function runOne({ workerId, now = Date.now(), leaseMs = 120000 } = {}) {
@@ -161,7 +207,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
     }
   }
 
-  return Object.freeze({ propose, enqueueApproved, runOne });
+  return Object.freeze({ propose, enqueueApproved, run, runOne });
 }
 
 module.exports = { createSharedTaskAdapter };

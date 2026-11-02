@@ -6,6 +6,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { TaskLedger } = require('./task-ledger.cjs');
 const { createSharedTaskAdapter } = require('./shared-task-adapter.cjs');
+const { createGovernedRuntime } = require('./governed-runtime.cjs');
+const { CapabilityStore } = require('./capability-store.cjs');
+const { CapabilityGate } = require('./adaptive-control-plane.cjs');
 
 function canonical(status = 'proposed') {
   return {
@@ -232,4 +235,132 @@ test('changed approval evidence blocks execution and is not retried', async () =
   assert.equal(executions, 0);
   assert.equal(ledger.tasks.get(queued.ledgerTaskId).status, 'failed');
   assert.equal(ledger.tasks.get(queued.ledgerTaskId).retryable, false);
+});
+
+
+test('governed supervisor owns lifecycle while shared adapter re-verifies approval before execution', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-governed-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  const record = canonical('approved');
+  record.metadata = { role: 'research', agentId: 'agent-shared', grantId: 'grant-shared' };
+  let verificationCalls = 0;
+  let executionCalls = 0;
+  const shared = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => { verificationCalls++; return attestation; },
+    loadCanonicalTask: async () => record,
+    execute: async input => { executionCalls++; return { accepted: true, canonicalTaskId: input.canonicalTaskId }; }
+  });
+  const queued = await shared.enqueueApproved(record);
+  const capabilityStore = await new CapabilityStore(path.join(directory, 'capabilities.json')).open();
+  await capabilityStore.grant({
+    grantId: 'grant-shared', agentId: 'agent-shared', taskId: queued.ledgerTaskId,
+    capabilities: ['shared-task.v1'], expiresAt: Date.now() + 60000
+  });
+  const capabilityGate = new CapabilityGate({
+    capabilityStore,
+    approvalVerifier: async () => ({ verified: false })
+  });
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'governed-shared-worker',
+    capabilityGate,
+    adapter: shared
+  });
+
+  const result = await runtime.runOnce();
+  const persisted = await ledger.get(queued.ledgerTaskId);
+  assert.equal(result.status, 'succeeded');
+  assert.equal(persisted.status, 'succeeded');
+  assert.equal(executionCalls, 1);
+  assert.equal(verificationCalls, 2);
+  assert.equal(persisted.events.filter(event => event.type === 'task.started').length, 1);
+  assert.equal(persisted.events.filter(event => event.type === 'task.succeeded').length, 1);
+});
+
+test('governed capability denial blocks shared execution before adapter work', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-governed-deny-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  const record = canonical('approved');
+  record.metadata = { role: 'research', agentId: 'agent-shared', grantId: 'grant-shared' };
+  let executionCalls = 0;
+  const shared = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => record,
+    execute: async () => { executionCalls++; return { unexpected: true }; }
+  });
+  const queued = await shared.enqueueApproved(record);
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'governed-shared-deny',
+    capabilityGate: { async authorize() { return { allow: false, reason: 'grant_revoked' }; } },
+    adapter: shared
+  });
+  const result = await runtime.runOnce();
+  const persisted = await ledger.get(queued.ledgerTaskId);
+  assert.equal(result.status, 'blocked');
+  assert.equal(persisted.status, 'failed');
+  assert.equal(executionCalls, 0);
+});
+
+test('governed shared adapter rejects canonical content drift without executing', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-governed-drift-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  const approved = canonical('approved');
+  approved.metadata = { role: 'research', agentId: 'agent-shared', grantId: 'grant-shared' };
+  const changed = { ...approved, goal: approved.goal + ' changed after approval' };
+  let executionCalls = 0;
+  const shared = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => changed,
+    execute: async () => { executionCalls++; return { unexpected: true }; }
+  });
+  const queued = await shared.enqueueApproved(approved);
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'governed-shared-drift',
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: shared
+  });
+  const result = await runtime.runOnce();
+  const persisted = await ledger.get(queued.ledgerTaskId);
+  assert.equal(result.status, 'blocked');
+  assert.equal(persisted.status, 'failed');
+  assert.match(persisted.error, /content changed after enqueue/);
+  assert.equal(executionCalls, 0);
+});
+
+
+test('governed shared adapter rejects changed trusted approval evidence before execution', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'hf-shared-governed-approval-drift-'));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  const record = canonical('approved');
+  record.metadata = { role: 'research', agentId: 'agent-shared', grantId: 'grant-shared' };
+  let verifyCalls = 0;
+  let executionCalls = 0;
+  const shared = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => {
+      verifyCalls++;
+      return verifyCalls === 1 ? attestation : { ...attestation, evidenceRef: 'approval-event:replaced' };
+    },
+    loadCanonicalTask: async () => record,
+    execute: async () => { executionCalls++; return { unexpected: true }; }
+  });
+  const queued = await shared.enqueueApproved(record);
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'governed-shared-approval-drift',
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: shared
+  });
+  const result = await runtime.runOnce();
+  const persisted = await ledger.get(queued.ledgerTaskId);
+  assert.equal(result.status, 'blocked');
+  assert.equal(persisted.status, 'failed');
+  assert.match(persisted.error, /approval evidence changed after enqueue/);
+  assert.equal(executionCalls, 0);
+  assert.equal(verifyCalls, 2);
 });

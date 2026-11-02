@@ -72,6 +72,36 @@ To roll back, stop the writer, restore the chosen backup, verify that it parses,
 
 The task ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented.
 
+## Governed supervised runtime
+
+`governed-runtime.cjs` adds an explicit, single-process polling supervisor around the durable TaskLedger and the existing `adapter.run()` contract. It is opt-in: importing the module starts no timers or workers. Call `start()` to begin polling and `stop()` to stop future claims and await the in-flight task.
+
+- Every declared task capability is checked through the injected CapabilityGate before the orchestrator adapter is invoked.
+- Capability-bearing tasks fail closed when the gate, agent identity, or grant identity is missing; policy denials are terminal and are not retried.
+- Transient adapter failures use the ledger's bounded retry policy. Successful results and evidence references are persisted through TaskLedger.
+- The supervisor exposes running/in-flight/completed/failed/blocked status and prevents overlapping polling cycles within the process.
+- This remains a single-process supervisor. It does not claim distributed locking, cross-process singleton enforcement, automatic service installation, or a configured production approval verifier.
+
+Run `node --test .\\test-governed-runtime.cjs` or use `verify-adaptive-control-plane.ps1`, which includes this suite.
+
+## Governed shared-task execution
+
+The shared-task adapter now exposes two execution modes:
+
+- `run()` is the governed-supervisor adapter contract. It does **not** claim, start, complete, or fail ledger tasks. The `governed-runtime.cjs` supervisor is the sole owner of those transitions.
+- `runOne()` remains available for compatibility with existing standalone callers. Do not run it against the same queue at the same time as a governed supervisor; it owns its own claim/start/complete/fail lifecycle.
+
+For governed execution, the canonical approved task metadata must include `agentId` and `grantId`. The enqueue path stores those identifiers with the canonical-record digest and trusted approval evidence reference. Before execution, `run()` reloads the canonical record, verifies its digest, rechecks the trusted approval attestation, and checks that the prompt and role still match the approved record. Verification failures are marked as policy denials, so the supervisor fails the task without retrying it. The supervisor's CapabilityGate separately checks the `shared-task.v1` grant before invoking the adapter.
+
+The trusted approval verifier and canonical-task loader remain host-injected dependencies. The adapter does not manufacture approvals, credentials, or provider connections. A grant must be scoped to the resulting ledger task ID when the CapabilityStore grant uses task-level scope.
+
+The governed integration tests cover the real CapabilityStore/CapabilityGate path, approval re-verification, canonical-content drift, capability denial, and single-owner lifecycle transitions:
+
+```powershell
+node --test .\\test-governed-runtime.cjs
+node --test .\\shared-task-adapter.test.cjs
+```
+
 ## Durable capability and policy store
 
 `capability-store.cjs` persists scoped grants and revocations with atomic JSON replacement. It checks agent identity, optional task scope, capability membership, and expiry. High-impact capabilities (`repo.merge`, `deploy`, `credential.write`, `network.expose`, and `command.privileged`) require explicit `humanApproval: true` at evaluation time. Grant inputs reject undeclared fields such as raw API keys.
