@@ -58,11 +58,31 @@ test('caller cancellation aborts adapter signal and records a terminal cancelled
  assert.equal(saved.events.at(-1).type,'task.cancelled');assert.match(saved.events.at(-1).reason,/operator requested stop/);
 });
 
+test('cancellation during task start records cancelled before any adapter invocation',async t=>{
+ const realLedger=await makeLedger(t);await realLedger.create({id:'live-task-6',payload:{prompt:'cancel before provider call'}},{now:1000});
+ let enteredStartResolve,releaseStart;const enteredStart=new Promise(resolve=>{enteredStartResolve=resolve});const startGate=new Promise(resolve=>{releaseStart=resolve});
+ const ledger={
+  claimNext:(...args)=>realLedger.claimNext(...args),
+  start:async(...args)=>{enteredStartResolve();await startGate;return realLedger.start(...args)},
+  complete:(...args)=>realLedger.complete(...args),
+  fail:(...args)=>realLedger.fail(...args),
+  cancel:(...args)=>realLedger.cancel(...args),
+  get:(...args)=>realLedger.get(...args)
+ };
+ const controller=new AbortController();let adapterCalls=0;
+ const worker=createOrchestratorTaskWorker({ledger,adapter:{async run(){adapterCalls++;return {ok:true}}},workerId:'local-worker',clock:()=>1001});
+ const running=worker.runOnce({signal:controller.signal});
+ await enteredStart;controller.abort('cancel before adapter');releaseStart();
+ const result=await running;const saved=await realLedger.get('live-task-6');
+ assert.equal(result.status,'cancelled');assert.equal(result.executionMayContinue,false);
+ assert.equal(adapterCalls,0);assert.equal(saved.status,'cancelled');
+});
+
 test('pre-aborted caller signal leaves queued work untouched',async t=>{
- const ledger=await makeLedger(t);await ledger.create({id:'live-task-6',payload:{prompt:'do not start'}},{now:1000});
+ const ledger=await makeLedger(t);await ledger.create({id:'live-task-7',payload:{prompt:'do not start'}},{now:1000});
  const controller=new AbortController();controller.abort('stop before dispatch');
  const worker=createOrchestratorTaskWorker({ledger,adapter:{async run(){throw Error('must not run')}},workerId:'local-worker',clock:()=>1001});
- const result=await worker.runOnce({signal:controller.signal});const saved=await ledger.get('live-task-6');
+ const result=await worker.runOnce({signal:controller.signal});const saved=await ledger.get('live-task-7');
  assert.equal(result.status,'cancelled-before-claim');assert.equal(saved.status,'queued');assert.equal(saved.attempts,0);
 });
 
@@ -82,8 +102,8 @@ test('worker reports lease-lost when ledger rejects a late failure update',async
 });
 
 test('rejects a malformed cancellation signal before claiming work',async t=>{
- const ledger=await makeLedger(t);await ledger.create({id:'live-task-7',payload:{prompt:'validate signal'}},{now:1000});
+ const ledger=await makeLedger(t);await ledger.create({id:'live-task-8',payload:{prompt:'validate signal'}},{now:1000});
  const worker=createOrchestratorTaskWorker({ledger,adapter:{async run(){return {ok:true}}},workerId:'local-worker',clock:()=>1001});
  await assert.rejects(worker.runOnce({signal:{aborted:false}}),/AbortSignal/);
- assert.equal((await ledger.get('live-task-7')).status,'queued');
+ assert.equal((await ledger.get('live-task-8')).status,'queued');
 });
