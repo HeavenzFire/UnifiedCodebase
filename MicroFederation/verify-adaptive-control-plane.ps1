@@ -42,6 +42,7 @@ if (-not $SkipExistingRegression) {
         @{ File = 'test-provider-registry.cjs'; Mode = 'test' },
         @{ File = 'test-task-ledger.cjs'; Mode = 'test' },
         @{ File = 'test-ledger-orchestrator-worker.cjs'; Mode = 'test' },
+        @{ File = 'test-governed-runtime.cjs'; Mode = 'test' },
         @{ File = 'test-capability-store.cjs'; Mode = 'test' },
         @{ File = 'semantic-acceptance.test.cjs'; Mode = 'test' },
         @{ File = 'shared-task-adapter.test.cjs'; Mode = 'test' }
