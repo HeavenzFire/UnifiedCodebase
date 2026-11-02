@@ -82,13 +82,17 @@ function createGovernedRuntime({
       const message = String(error && error.message || error).slice(0, 2048);
       const policyDenied = error && error.policyDenied === true;
       let saved;
+      // If start never committed, the operation is still in the claim's time
+      // domain. Use the same injected timestamp so deterministic recovery and
+      // retry scheduling cannot jump forward to wall-clock time.
+      const failureNow = started ? clock() : now;
       try {
         saved = started
           ? await ledger.fail(claimed.id, workerId, message, {
-              now: clock(), retryable: !policyDenied, retryDelayMs
+              now: failureNow, retryable: !policyDenied, retryDelayMs
             })
           : await ledger.releaseClaim(claimed.id, workerId, {
-              now: clock(), retryDelayMs, reason: message
+              now: failureNow, retryDelayMs, reason: message
             });
       } catch (ledgerError) {
         lastError = String(ledgerError && ledgerError.message || ledgerError);
