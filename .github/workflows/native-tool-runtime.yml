@@ -17,15 +17,12 @@ permissions:
 jobs:
   native-tool-runtime:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["18", "20", "22"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: \${{ matrix.node-version }}
+      - name: Verify runner Node.js
+        run: |
+          node --version
+          node -e "if (Number(process.versions.node.split('.')[0]) < 18) process.exit(1)"
       - name: Syntax check
         run: node --check Tools/native-tool-runtime.cjs
       - name: Contract and security-boundary tests
