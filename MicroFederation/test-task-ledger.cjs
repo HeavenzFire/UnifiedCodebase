@@ -79,3 +79,22 @@ test('expired leases at retry limit persist even when no task can be claimed',as
  assert.equal(await ledger.claimNext('worker-b',{now:2000,leaseMs:1000}),null);
  assert.equal(writes,1);assert.equal((await new TaskLedger(file).open().then(x=>x.get('task-expired'))).status,'failed');
 });
+
+test('releases a claimed task immediately when startup cannot proceed',async t=>{
+ const ledger=await new TaskLedger(await tempFile(t)).open();
+ await ledger.create(task('task-release',{maxAttempts:2}),{now:1000});
+ await ledger.claimNext('worker-a',{now:1000,leaseMs:5000});
+ const released=await ledger.releaseClaim('task-release','worker-a',{now:1001,retryDelayMs:0,reason:'startup persistence failed'});
+ assert.equal(released.status,'queued');assert.equal(released.owner,null);assert.equal(released.leaseUntil,null);
+ assert.equal(released.attempts,1);assert.equal(released.events.at(-1).type,'task.claim_released');
+ await assert.rejects(ledger.releaseClaim('task-release','worker-b'),/not claimed/);
+ const next=await ledger.claimNext('worker-b',{now:1002,leaseMs:5000});
+ assert.equal(next.owner,'worker-b');assert.equal(next.attempts,2);
+});
+test('claim release exhausts attempts instead of exceeding the retry limit',async t=>{
+ const ledger=await new TaskLedger(await tempFile(t)).open();
+ await ledger.create(task('task-release-limit',{maxAttempts:1}),{now:1000});
+ await ledger.claimNext('worker-a',{now:1000,leaseMs:5000});
+ const released=await ledger.releaseClaim('task-release-limit','worker-a',{now:1001});
+ assert.equal(released.status,'failed');assert.equal(released.owner,null);assert.equal(released.leaseUntil,null);
+});
