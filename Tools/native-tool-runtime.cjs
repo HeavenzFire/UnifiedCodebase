@@ -238,9 +238,10 @@ class ToolRuntime {
     if (encodedInput === undefined || Buffer.byteLength(encodedInput, 'utf8') > this.maxInputBytes) {
       throw Error('tool input is not JSON serializable or exceeds maxInputBytes');
     }
-    const errors = validateValue(input, tool.inputSchema);
+    const normalizedInput = JSON.parse(encodedInput);
+    const errors = validateValue(normalizedInput, tool.inputSchema);
     if (errors.length) throw Error('tool input validation failed: ' + errors.slice(0, 8).join('; '));
-    const inputHash = sha256(canonical(input));
+    const inputHash = sha256(canonical(normalizedInput));
 
     const authorization = await this.authorize({
       grantId: principal.grantId,
@@ -276,8 +277,8 @@ class ToolRuntime {
     const abortPromise = new Promise((resolve, reject) => {
       rejectAbort = reject;
       const abort = reason => {
-        if (!controller.signal.aborted) controller.abort(reason);
         reject(Error(reason || 'tool execution aborted'));
+        if (!controller.signal.aborted) controller.abort(reason);
       };
       externalAbort = () => abort('tool execution aborted by caller');
       if (signal) {
@@ -285,12 +286,11 @@ class ToolRuntime {
         else signal.addEventListener('abort', externalAbort, { once: true });
       }
       timer = setTimeout(() => abort('tool execution timed out'), tool.timeoutMs);
-      if (timer.unref) timer.unref();
     });
 
     try {
       const output = await Promise.race([
-        Promise.resolve().then(() => tool.handler(jsonClone(input, 'tool input'), Object.freeze({
+        Promise.resolve().then(() => tool.handler(jsonClone(normalizedInput, 'tool input'), Object.freeze({
           executionId,
           principal: Object.freeze({ agentId: principal.agentId, taskId: principal.taskId || null }),
           signal: controller.signal
@@ -301,7 +301,8 @@ class ToolRuntime {
       if (encodedOutput === undefined || Buffer.byteLength(encodedOutput, 'utf8') > this.maxOutputBytes) {
         throw Error('tool output is not JSON serializable or exceeds maxOutputBytes');
       }
-      const outputHash = sha256(canonical(output));
+      const normalizedOutput = JSON.parse(encodedOutput);
+      const outputHash = sha256(canonical(normalizedOutput));
       const completedAt = new Date().toISOString();
       await this._evidence({
         executionId, toolId: tool.id, toolVersion: tool.version,
@@ -310,7 +311,7 @@ class ToolRuntime {
         approvalEvidenceRef: authorization.approvalEvidenceRef || null,
         startedAt, completedAt
       });
-      return { executionId, status: 'succeeded', tool: { id: tool.id, version: tool.version }, output, evidence: { inputHash, outputHash } };
+      return { executionId, status: 'succeeded', tool: { id: tool.id, version: tool.version }, output: normalizedOutput, evidence: { inputHash, outputHash } };
     } catch (error) {
       const completedAt = new Date().toISOString();
       const message = String(error && error.message || error).slice(0, 512);
