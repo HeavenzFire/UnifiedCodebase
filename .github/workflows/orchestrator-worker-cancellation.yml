@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   cancellation-contract:
-    name: Cancellation contract (Node \${{ matrix.node }})
+    name: Cancellation contract (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: \${{ matrix.node }}
+          node-version: ${{ matrix.node }}
       - name: Syntax check
         run: node --check MicroFederation/ledger-orchestrator-worker.cjs
       - name: Run deterministic cancellation tests
