@@ -115,7 +115,7 @@ test('releases a claimed task immediately when ledger.start fails, then recovers
   };
   let calls = 0;
   const runtime = createGovernedRuntime({
-    ledger, workerId: 'runtime-worker', retryDelayMs: 0, clock: () => 1000,
+    ledger, workerId: 'runtime-worker', retryDelayMs: 0, clock: () => 9999,
     adapter: { async run() { calls++; return { recovered: true }; } }
   });
   const first = await runtime.runOnce({ now: 1000 });
