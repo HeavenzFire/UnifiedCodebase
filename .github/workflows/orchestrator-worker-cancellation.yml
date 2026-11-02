@@ -1,0 +1,41 @@
+name: Orchestrator worker cancellation contract
+
+on:
+  push:
+    branches: [main, "fix/**"]
+    paths:
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
+      - "MicroFederation/ORCHESTRATOR-WORKER-CANCELLATION.md"
+      - "MicroFederation/README.md"
+      - ".github/workflows/orchestrator-worker-cancellation.yml"
+  pull_request:
+    paths:
+      - "MicroFederation/ledger-orchestrator-worker.cjs"
+      - "MicroFederation/test-ledger-orchestrator-worker.cjs"
+      - "MicroFederation/ORCHESTRATOR-WORKER-CANCELLATION.md"
+      - "MicroFederation/README.md"
+      - ".github/workflows/orchestrator-worker-cancellation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cancellation-contract:
+    name: Cancellation contract (Node \${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: \${{ matrix.node }}
+      - name: Syntax check
+        run: node --check MicroFederation/ledger-orchestrator-worker.cjs
+      - name: Run deterministic cancellation tests
+        run: node --test MicroFederation/test-ledger-orchestrator-worker.cjs
