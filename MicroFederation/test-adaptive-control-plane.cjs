@@ -124,6 +124,11 @@ test('credential broker keeps raw credentials server-side and enforces HTTPS pat
   assert.equal(result.body.includes('super-secret-test-token'), false);
   await assert.rejects(broker.request({ providerId: 'test', path: '/v1/admin' }), /not allowlisted/);
   await assert.rejects(broker.request({ providerId: 'test', path: '/../secrets' }), /invalid/);
+  await assert.rejects(broker.request({ providerId: 'test', path: '/v1/%2e%2e/admin' }), /normalization|not allowlisted|invalid/);
+  await assert.rejects(broker.request({ providerId: 'test', path: '/v1/models%2F..%2Fadmin' }), /invalid/);
+  await assert.rejects(broker.request({ providerId: 'test', path: '/v1\\\\models' }), /invalid/);
+  const queried = await broker.request({ providerId: 'test', path: '/v1/models?limit=1' });
+  assert.equal(queried.ok, true);
 });
 
 test('capability gate requires independent trusted approval for high-impact actions', async () => {
