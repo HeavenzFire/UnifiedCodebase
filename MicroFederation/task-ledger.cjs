@@ -121,6 +121,18 @@ class TaskLedger{
    t.events.push({type:'task.started',at:t.updatedAt,actor:workerId,attempt:t.attempts});return t;
   });
  }
+ async releaseClaim(taskId,workerId,{now=Date.now(),retryDelayMs=0,reason='worker could not start task'}={}){
+  if(typeof reason!=='string'||!reason.trim()||reason.length>2048)throw Error('release reason is invalid');
+  if(!Number.isFinite(now)||!Number.isInteger(retryDelayMs)||retryDelayMs<0||retryDelayMs>86400000)throw Error('claim release policy is invalid');
+  return this._mutate(tasks=>{
+   const t=tasks.find(x=>x.id===taskId);if(!t)throw Error('unknown task: '+taskId);
+   if(t.status!=='claimed'||t.owner!==workerId)throw Error('task is not claimed by this worker');
+   const retry=t.attempts<t.maxAttempts;t.error=reason;t.owner=null;t.leaseUntil=null;t.updatedAt=iso(now);
+   if(retry){t.status='queued';t.nextAttemptAt=now+retryDelayMs;t.events.push({type:'task.claim_released',at:t.updatedAt,actor:workerId,attempt:t.attempts,nextAttemptAt:t.nextAttemptAt,error:reason})}
+   else{t.status='failed';t.completedAt=t.updatedAt;t.events.push({type:'task.failed',at:t.updatedAt,actor:workerId,attempt:t.attempts,error:reason})}
+   return t;
+  });
+ }
  async complete(taskId,workerId,result,{now=Date.now(),evidenceRef=null}={}){
   const safe=jsonValue(result,'task result');
   if(evidenceRef!==null&&(typeof evidenceRef!=='string'||!evidenceRef.trim()||evidenceRef.length>512))throw Error('evidenceRef is invalid');
