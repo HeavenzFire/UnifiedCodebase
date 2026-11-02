@@ -72,6 +72,18 @@ To roll back, stop the writer, restore the chosen backup, verify that it parses,
 
 The task ledger serializes writes within one Node.js process. It is **not** a multi-process or distributed lock/queue, and must not be shared concurrently by independent processes until cross-process coordination is implemented.
 
+## Governed supervised runtime
+
+`governed-runtime.cjs` adds an explicit, single-process polling supervisor around the durable TaskLedger and the existing `adapter.run()` contract. It is opt-in: importing the module starts no timers or workers. Call `start()` to begin polling and `stop()` to stop future claims and await the in-flight task.
+
+- Every declared task capability is checked through the injected CapabilityGate before the orchestrator adapter is invoked.
+- Capability-bearing tasks fail closed when the gate, agent identity, or grant identity is missing; policy denials are terminal and are not retried.
+- Transient adapter failures use the ledger's bounded retry policy. Successful results and evidence references are persisted through TaskLedger.
+- The supervisor exposes running/in-flight/completed/failed/blocked status and prevents overlapping polling cycles within the process.
+- This remains a single-process supervisor. It does not claim distributed locking, cross-process singleton enforcement, automatic service installation, or a configured production approval verifier.
+
+Run `node --test .\\test-governed-runtime.cjs` or use `verify-adaptive-control-plane.ps1`, which includes this suite.
+
 ## Durable capability and policy store
 
 `capability-store.cjs` persists scoped grants and revocations with atomic JSON replacement. It checks agent identity, optional task scope, capability membership, and expiry. High-impact capabilities (`repo.merge`, `deploy`, `credential.write`, `network.expose`, and `command.privileged`) require explicit `humanApproval: true` at evaluation time. Grant inputs reject undeclared fields such as raw API keys.
