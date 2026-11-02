@@ -449,15 +449,25 @@ class CredentialBroker {
   async request({ providerId, path: requestPath, method = 'GET', body = undefined } = {}) {
     const provider = this.providers.get(providerId);
     if (!provider) throw Error('unknown credential provider');
-    if (typeof requestPath !== 'string' || !requestPath.startsWith('/') || requestPath.includes('..')) {
+    if (typeof requestPath !== 'string' || !requestPath.startsWith('/') ||
+        requestPath.startsWith('//') || requestPath.includes('\\') || requestPath.includes('#')) {
       throw Error('request path is invalid');
     }
-    if (!provider.allowedPaths.some(prefix => requestPath === prefix || requestPath.startsWith(prefix.endsWith('/') ? prefix : prefix + '/'))) {
-      throw Error('request path is not allowlisted');
-    }
     if (!['GET', 'POST'].includes(method)) throw Error('credential broker method is not permitted');
+    const rawPath = requestPath.split('?')[0];
+    // Encoded separators can be interpreted differently by upstream servers;
+    // reject them rather than allowing a second path parser to widen the route.
+    if (!rawPath || /%(?:2f|5c)/i.test(rawPath)) throw Error('request path is invalid');
     const url = new URL(requestPath.slice(1), provider.baseUrl);
     if (url.origin !== new URL(provider.baseUrl).origin || url.protocol !== 'https:') throw Error('credential broker URL escaped its provider origin');
+    // WHATWG URL parsing removes literal and percent-encoded dot segments.
+    // Require the raw path to survive normalization unchanged, then authorize
+    // the normalized pathname (never the untrusted input string).
+    if (url.pathname !== rawPath) throw Error('request path is invalid after URL normalization');
+    if (!provider.allowedPaths.some(prefix => url.pathname === prefix ||
+        url.pathname.startsWith(prefix.endsWith('/') ? prefix : prefix + '/'))) {
+      throw Error('request path is not allowlisted');
+    }
     const secret = process.env[provider.credentialEnv];
     if (!secret) throw Error('provider credential is not configured in the broker environment');
     const headers = { accept: 'application/json', [provider.headerName]: provider.prefix + secret };
