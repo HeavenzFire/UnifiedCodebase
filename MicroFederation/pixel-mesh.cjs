@@ -51,7 +51,8 @@ function createPixelMesh({maxPeers=256,staleAfterMs=30000,clock=()=>Date.now()}=
  }
  function selectWorkers({capability,role=null,limit=8,now=clock(),exclude=[]}){
   if(typeof capability!=='string'||!ID.test(capability))throw Error('capability is invalid');
-  if(!Number.isInteger(limit)||limit<1||limit>256)throw Error('limit must be 1..256');
+  if(!Number.isInteger(limit)||limit<1||limit>4096)throw Error('limit must be 1..4096');
+  if(!Array.isArray(exclude)||exclude.some(x=>typeof x!=='string'))throw Error('exclude must be an array of peer IDs');
   const blocked=new Set(exclude);return [...peers.values()].filter(p=>live(p,now)&&!blocked.has(p.peerId)&&p.capabilities.includes(capability)&&(!role||p.roles.includes(role))).sort((a,b)=>(a.load??0)-(b.load??0)||a.peerId.localeCompare(b.peerId)).slice(0,limit).map(snapshotPeer);
  }
  function snapshot(now=clock()){return {peerCount:peers.size,livePeers:[...peers.values()].filter(p=>live(p,now)).length,edgeCount:edges.size,peers:[...peers.values()].map(snapshotPeer).sort((a,b)=>a.peerId.localeCompare(b.peerId)),edges:[...edges.values()].map(e=>({...e})).sort((a,b)=>a.a.localeCompare(b.a)||a.b.localeCompare(b.b))};}
