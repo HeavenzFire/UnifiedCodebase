@@ -179,7 +179,7 @@ node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs .\test-unified-f
  
 ## Independent human-protection gates (v0.2)
 
-The fabric now requires two trusted, process-injected policies: `authenticateProducer` verifies the submitting principal and returns a verified issuer/subject; `authorizeWorker` issues a grant for the exact task, workflow node, capability, and peer. Peer-advertised capabilities are routing metadata only and are not authorization. Do not implement either policy by trusting fields supplied in a task payload or by asking the worker/model being authorized.
+The fabric now requires two trusted, process-injected policies: the TaskLedger constructor receives `authenticateProducer` and verifies the submitting principal before persisting any task tagged for this fabric; `authorizeWorker` issues a grant for the exact task, workflow node, capability, and peer. Peer-advertised capabilities are routing metadata only and are not authorization. Do not implement either policy by trusting fields supplied in a task payload or by asking the worker/model being authorized.
 
 Nodes marked `approvalRequired: true` fail closed unless an independently configured `approvalGate` verifies a signed, short-lived approval bound to task ID, node ID, action, and subject. The approval gate accepts only configured trusted public keys. A provider, worker, model, or task payload cannot add its own trusted issuer. The optional `chooseBranchPolicy` is also injected by the host; conditional nodes fail closed if no policy is configured.
 
