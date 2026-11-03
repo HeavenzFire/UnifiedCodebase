@@ -4,7 +4,7 @@ const os=require('node:os');const path=require('node:path');const fs=require('no
 const {TaskLedger}=require('./task-ledger.cjs');
 const {createUnifiedFieldFabric}=require('./unified-field-fabric.cjs');
 const {createApprovalGate,canonicalApprovalPayload}=require('./approval-gate.cjs');
-const workerPolicy=async()=>({ok:true,issuer:'test-policy-engine',grantId:'test-grant-001'});
+const workerPolicy=async({taskId,nodeId,capability,peerId})=>({ok:true,issuer:'test-policy-engine',grantId:'test-grant-001',taskId,nodeId,capability,peerId,expiresAt:Date.now()+60000});
 async function setup(t,{producerVerifier=null,authorizeWorker=workerPolicy,approvalGate=null,workerAdapters={}}={}){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'hf-unified-fabric-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));
  const authenticateProducer=producerVerifier|| (async({principal})=>({ok:true,issuer:'test-identity-provider',subject:principal}));
