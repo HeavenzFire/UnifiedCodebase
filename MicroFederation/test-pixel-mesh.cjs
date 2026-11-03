@@ -17,3 +17,8 @@ test('fails closed for stale peers, unavailable links and missing capabilities',
 test('enforces peer and capacity limits and rejects invalid edges',()=>{
  const m=createPixelMesh({maxPeers:1});m.register({peerId:'a'});assert.throws(()=>m.register({peerId:'b'}),/limit/);assert.throws(()=>m.connect('a','a'),/self edges/);assert.throws(()=>m.heartbeat('a',{load:2}),/heartbeat/);
 });
+
+test('worker selection scans the full configured peer bound beyond the former 256 cap',()=>{
+ const m=createPixelMesh({maxPeers:300});for(let i=0;i<300;i++)m.register({peerId:'peer-'+String(i).padStart(3,'0'),capabilities:['build']});
+ assert.equal(m.selectWorkers({capability:'build',limit:4096}).length,300);
+});
