@@ -157,5 +157,7 @@ server.listen(PORT, HOST, () => {
   console.log('Repository: ' + REPO);
   console.log('Allowed actions: ' + Array.from(ALLOWED).join(', '));
   console.log('Bearer token (private): ' + TOKEN);
+  console.log('Opening local control panel...');
+  execFile('cmd.exe', ['/c', 'start', '', 'http://' + HOST + ':' + PORT], { windowsHide: true });
   console.log('Press Ctrl+C to stop.');
 });
