@@ -1,0 +1,47 @@
+name: Unified Field pixel mesh and nonlinear fabric
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "MicroFederation/pixel-mesh.cjs"
+      - "MicroFederation/nonlinear-workflow.cjs"
+      - "MicroFederation/unified-field-fabric.cjs"
+      - "MicroFederation/test-pixel-mesh.cjs"
+      - "MicroFederation/test-nonlinear-workflow.cjs"
+      - "MicroFederation/test-unified-field-fabric.cjs"
+      - ".github/workflows/pixel-mesh-fabric.yml"
+  pull_request:
+    paths:
+      - "MicroFederation/pixel-mesh.cjs"
+      - "MicroFederation/nonlinear-workflow.cjs"
+      - "MicroFederation/unified-field-fabric.cjs"
+      - "MicroFederation/test-pixel-mesh.cjs"
+      - "MicroFederation/test-nonlinear-workflow.cjs"
+      - "MicroFederation/test-unified-field-fabric.cjs"
+      - ".github/workflows/pixel-mesh-fabric.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mesh-fabric:
+    name: Pixel mesh fabric (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax checks
+        run: |
+          node --check MicroFederation/pixel-mesh.cjs
+          node --check MicroFederation/nonlinear-workflow.cjs
+          node --check MicroFederation/unified-field-fabric.cjs
+      - name: Run mesh and integration tests
+        run: |
+          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs

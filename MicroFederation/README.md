@@ -62,9 +62,9 @@ To roll back, stop the writer, restore the chosen backup, verify that it parses,
 ## Durable task ledger and orchestrator bridge
 
 `task-ledger.cjs` is an opt-in persistence primitive for the existing orchestrator, not a replacement runtime or an automatic worker launcher. It supports:
-- `queued → claimed → running → succeeded/failed/cancelled` task lifecycle.
+- `queued ? claimed ? running ? succeeded/failed/cancelled` task lifecycle.
 - Atomic JSON-file replacement, restart recovery, idempotent task creation, evidence references, and auditable transition events.
-- Exclusive claims within one ledger instance, worker ownership checks, expiring leases, lease reclamation, and bounded retries (1–10 attempts).
+- Exclusive claims within one ledger instance, worker ownership checks, expiring leases, lease reclamation, and bounded retries (1?10 attempts).
 - Strict task input fields; arbitrary credential fields such as `apiKey` are rejected.
 - Explicit cancellation and status/attempt statistics.
 
@@ -151,3 +151,27 @@ The adaptive layer extends this repository; it does not replace the root conduct
 The implementation is an integration layer, not a claim that all providers, model agents, containers, or production approval infrastructure are already connected. The JSON ledgers are single-process coordination primitives; do not share them between independent processes. Production deployments still require OS-enforced isolation, protected key storage, durable external audit anchoring, and cross-process/distributed coordination.
 
 Run the verifier above to syntax-check the module and run its new tests plus the existing MicroFederation regression suites. The verifier does not start workers, enqueue model tasks, modify live services, or merge/deploy code.
+
+## Pixel Mesh and nonlinear workflow engine (v0.1)
+
+The additive `pixel-mesh.cjs` module provides a bounded in-process peer registry, heartbeat freshness, capability-aware worker selection, and weighted shortest-path routing across explicit peer links. It does not open sockets, discover arbitrary devices, or claim a distributed transport; adapters must supply authenticated peer registration and messaging.
+
+The `nonlinear-workflow.cjs` module executes dependency graphs with parallel fan-out, join nodes, caller-defined branch predicates, cycle detection, bounded concurrency, and an auditable event trace. It is a workflow executor, not a probability-control mechanism: candidate scoring and branch selection must be grounded in measured outcomes and caller-provided policies.
+
+Run the focused tests:
+
+```powershell
+node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs
+```
+
+Both modules are additive and opt-in. They do not replace the durable task ledger, approval adapter, or live model runtime. Production multi-device operation still requires authenticated transport, cross-process leases, durable peer identity, and externalized audit anchoring.
+
+## Unified Field composition layer
+
+`unified-field-fabric.cjs` composes the durable `TaskLedger`, `PixelMesh` peer registry, nonlinear DAG executor, and caller-supplied worker adapters. `submit()` persists a workflow as a ledger task; `runOne()` claims it under a coordinator identity, dispatches each DAG node only to a live peer advertising the required capability, enforces each peer's declared local concurrency capacity, and persists the complete workflow result plus an evidence reference. Worker adapters are injected explicitly; no remote transport or model credential is fabricated.
+
+Run all new integration tests:
+
+```powershell
+node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs .\test-unified-field-fabric.cjs
+```
