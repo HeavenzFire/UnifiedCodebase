@@ -33,7 +33,7 @@ function decode(segment, label) {
 }
 
 function publicKeyFor(value) {
-  const key = crypto.createPublicKey(value);
+  const key = value && value.type === 'public' ? value : crypto.createPublicKey(value);
   if (key.asymmetricKeyType !== 'ed25519') throw Error('trusted key must be Ed25519');
   return key;
 }
@@ -65,7 +65,8 @@ function createAgentIdentity({
     throw Error('trustedIssuers must be an issuer-to-key map');
   }
 
-  const signingKey = crypto.createPrivateKey(privateKey);
+  const signingKey = privateKey && privateKey.type === 'private'
+    ? privateKey : crypto.createPrivateKey(privateKey);
   if (signingKey.asymmetricKeyType !== 'ed25519') throw Error('signing key must be Ed25519');
   const trusted = new Map();
   for (const [trustedIssuer, keys] of Object.entries(trustedIssuers)) {
