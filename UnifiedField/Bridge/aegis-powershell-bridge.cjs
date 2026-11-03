@@ -1,0 +1,138 @@
+'use strict';
+
+const http = require('node:http');
+const crypto = require('node:crypto');
+const { execFile } = require('node:child_process');
+
+const HOST = '127.0.0.1';
+const PORT = Number(process.env.HF_BRIDGE_PORT || 8787);
+const TOKEN = process.env.HF_BRIDGE_TOKEN || crypto.randomBytes(32).toString('hex');
+const REPO = process.env.HF_REPO || process.cwd();
+const MAX_BODY = 2048;
+const TIMEOUT_MS = 12000;
+
+const POWERSHELL_SCRIPT = [
+  "$ErrorActionPreference = 'Stop'",
+  "$ProgressPreference = 'SilentlyContinue'",
+  "switch ($env:HF_ACTION) {",
+  "  'health' {",
+  "    $result = [ordered]@{ status='online'; runtime='Windows PowerShell'; version=$PSVersionTable.PSVersion.ToString(); computer=$env:COMPUTERNAME; processId=$PID }",
+  "  }",
+  "  'system-info' {",
+  "    $os = Get-CimInstance -ClassName Win32_OperatingSystem",
+  "    $result = [ordered]@{ computer=$env:COMPUTERNAME; operatingSystem=$os.Caption; version=$os.Version; architecture=$env:PROCESSOR_ARCHITECTURE; freeMemoryMB=[math]::Round(($os.FreePhysicalMemory / 1024), 1) }",
+  "  }",
+  "  'git-status' {",
+  "    $repo = $env:HF_REPO",
+  "    if (-not (Test-Path -LiteralPath $repo -PathType Container)) { throw 'Repository directory not found' }",
+  "    $git = Get-Command git.exe -ErrorAction Stop",
+  "    $lines = @(& $git.Source -C $repo status --short --branch)",
+  "    if ($LASTEXITCODE -ne 0) { throw 'git status returned a non-zero exit code' }",
+  "    $result = [ordered]@{ repository=$repo; status=$lines }",
+  "  }",
+  "  default { throw 'Action is not allowlisted' }",
+  "}",
+  "ConvertTo-Json -InputObject $result -Depth 5 -Compress"
+].join('\n');
+
+const ALLOWED = new Set(['health', 'system-info', 'git-status']);
+
+function reply(res, status, value) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Vary': 'Origin'
+  });
+  res.end(JSON.stringify(value));
+}
+
+function isAuthorized(req) {
+  const supplied = req.headers.authorization || '';
+  const expected = 'Bearer ' + TOKEN;
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function runPowerShell(action) {
+  return new Promise((resolve, reject) => {
+    execFile('powershell.exe', [
+      '-NoLogo', '-NoProfile', '-NonInteractive',
+      '-ExecutionPolicy', 'RemoteSigned', '-Command', POWERSHELL_SCRIPT
+    ], {
+      windowsHide: true,
+      timeout: TIMEOUT_MS,
+      maxBuffer: 256 * 1024,
+      encoding: 'utf8',
+      env: { ...process.env, HF_ACTION: action, HF_REPO: REPO }
+    }, (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error((stderr || error.message || 'PowerShell failed').trim()));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout.trim()));
+      } catch {
+        reject(new Error('PowerShell returned invalid JSON: ' + stdout.slice(0, 500)));
+      }
+    });
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  if (req.headers.host !== HOST + ':' + PORT) {
+    return reply(res, 403, { error: 'Invalid Host header' });
+  }
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+      'Vary': 'Origin'
+    });
+    return res.end();
+  }
+  if (req.method !== 'POST' || req.url !== '/v1/execute') {
+    return reply(res, 404, { error: 'Not found' });
+  }
+  if (!isAuthorized(req)) return reply(res, 401, { error: 'Unauthorized' });
+  if (!String(req.headers['content-type'] || '').includes('application/json')) {
+    return reply(res, 415, { error: 'Content-Type must be application/json' });
+  }
+
+  let body = '';
+  let oversized = false;
+  req.on('data', chunk => {
+    body += chunk.toString('utf8');
+    if (Buffer.byteLength(body, 'utf8') > MAX_BODY) {
+      oversized = true;
+      req.destroy();
+    }
+  });
+  req.on('end', async () => {
+    if (oversized) return;
+    try {
+      const payload = JSON.parse(body || '{}');
+      if (!payload || typeof payload.action !== 'string' || !ALLOWED.has(payload.action)) {
+        return reply(res, 400, { error: 'Action not permitted', allowed: Array.from(ALLOWED) });
+      }
+      const result = await runPowerShell(payload.action);
+      reply(res, 200, { ok: true, action: payload.action, timestamp: new Date().toISOString(), result });
+    } catch (error) {
+      reply(res, 500, { ok: false, error: error.message });
+    }
+  });
+});
+
+server.on('clientError', (_error, socket) => socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'));
+
+server.listen(PORT, HOST, () => {
+  console.log('AEGIS PowerShell bridge: http://' + HOST + ':' + PORT);
+  console.log('Repository: ' + REPO);
+  console.log('Allowed actions: ' + Array.from(ALLOWED).join(', '));
+  console.log('Bearer token (private): ' + TOKEN);
+  console.log('Press Ctrl+C to stop.');
+});
