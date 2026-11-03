@@ -35,6 +35,25 @@ const POWERSHELL_SCRIPT = [
   "ConvertTo-Json -InputObject $result -Depth 5 -Compress"
 ].join('\n');
 
+const DASHBOARD = [
+  '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+  '<title>AEGIS Nexus Bridge</title><style>',
+  'body{font:16px system-ui;background:#0d1117;color:#e6edf3;max-width:760px;margin:40px auto;padding:0 20px}',
+  'h1{color:#00d7b0}button{padding:12px 16px;margin:6px;background:#161b22;color:#e6edf3;border:1px solid #00d7b0;border-radius:8px;cursor:pointer}',
+  'pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#161b22;padding:16px;border-radius:8px;min-height:120px}',
+  '</style></head><body><h1>AEGIS Nexus ↔ PowerShell</h1>',
+  '<p>Authenticated local bridge. Only allowlisted read-only actions are enabled.</p>',
+  '<button data-action="health">Health check</button><button data-action="system-info">Windows system info</button><button data-action="git-status">Git status</button>',
+  '<pre id="out">Bridge ready. Select an operation.</pre><script>',
+  'const token=' + JSON.stringify(TOKEN) + ';',
+  'document.querySelectorAll("button[data-action]").forEach(b=>b.addEventListener("click",async()=>{',
+  'const out=document.getElementById("out");out.textContent="Running "+b.dataset.action+"...";',
+  'try{const r=await fetch("/v1/execute",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action:b.dataset.action})});',
+  'const j=await r.json();out.textContent=JSON.stringify(j,null,2);}',
+  'catch(e){out.textContent="ERROR: "+e.message;}',
+  '}));</script></body></html>'
+].join('');
+
 const ALLOWED = new Set(['health', 'system-info', 'git-status']);
 
 function reply(res, status, value) {
@@ -85,6 +104,10 @@ function runPowerShell(action) {
 const server = http.createServer(async (req, res) => {
   if (req.headers.host !== HOST + ':' + PORT) {
     return reply(res, 403, { error: 'Invalid Host header' });
+  }
+  if (req.method === 'GET' && req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(DASHBOARD);
   }
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
