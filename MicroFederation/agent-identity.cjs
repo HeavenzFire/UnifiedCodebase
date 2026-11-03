@@ -140,7 +140,8 @@ function createAgentIdentity({
 
       const signingInput = headerPart + '.' + claimsPart;
       const signature = Buffer.from(signaturePart, 'base64url');
-      if (!crypto.verify(null, Buffer.from(signingInput, 'utf8'), publicKey, signature)) {
+      if (signature.toString('base64url') !== signaturePart ||
+          !crypto.verify(null, Buffer.from(signingInput, 'utf8'), publicKey, signature)) {
         return { ok: false, reason: 'token_signature_invalid' };
       }
 
