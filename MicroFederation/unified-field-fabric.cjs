@@ -33,7 +33,7 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
     for(const peer of candidates){
      if((active.get(peer.peerId)||0)>=peer.capacity||!Object.prototype.hasOwnProperty.call(workerAdapters,peer.peerId)||typeof workerAdapters[peer.peerId]!=='function')continue;
      const decision=await authorizeWorker({taskId:task.id,workflowId:payload.workflowId,nodeId:ctx.nodeId,capability,peerId:peer.peerId,producer:task.metadata.provenance});
-     if(decision&&decision.ok===true&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
+     if(decision&&decision.ok===true&&decision.taskId===task.id&&decision.nodeId===ctx.nodeId&&decision.capability===capability&&decision.peerId===peer.peerId&&Number.isFinite(decision.expiresAt)&&decision.expiresAt>clock()&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
     }
     if(!selected)throw Error('no independently authorized worker available for capability '+capability);
     if(node.approvalRequired===true){
@@ -43,7 +43,7 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
      if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
     }
     active.set(selected.peerId,(active.get(selected.peerId)||0)+1);
-    try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId}});}
+    try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId,expiresAt:grant.expiresAt}});}
     finally{const count=(active.get(selected.peerId)||1)-1;if(count)active.set(selected.peerId,count);else active.delete(selected.peerId);}
    },chooseBranch:chooseBranchPolicy});
    if(timer)clearInterval(timer);await renewal;if(leaseError)throw Error('task lease renewal failed');
