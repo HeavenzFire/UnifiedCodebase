@@ -28,6 +28,12 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
     if(leaseError)throw Error('task lease renewal failed');
     const node=payload.nodes[ctx.nodeId],capability=node.capability;
     if(typeof capability!=='string'||!capability.trim())throw Error('workflow node must declare a worker capability: '+ctx.nodeId);
+    if(node.approvalRequired===true){
+     if(!approvalGate||typeof approvalGate.verify!=='function')throw Error('independent approval gate is not configured');
+     const action=typeof node.action==='string'?node.action:capability,subject=typeof node.subject==='string'?node.subject:task.metadata.provenance.subject;
+     const approval=approvalGate.verify({approval:node.approval,taskId:task.id,nodeId:ctx.nodeId,action,subject});
+     if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
+    }
     const candidates=mesh.selectWorkers({capability,role:node.role||null,limit:4096,now:clock()});
     let selected=null,grant=null;
     for(const peer of candidates){
@@ -36,12 +42,6 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
      if(decision&&decision.ok===true&&decision.taskId===task.id&&decision.nodeId===ctx.nodeId&&decision.capability===capability&&decision.peerId===peer.peerId&&Number.isFinite(decision.expiresAt)&&decision.expiresAt>clock()&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
     }
     if(!selected)throw Error('no independently authorized worker available for capability '+capability);
-    if(node.approvalRequired===true){
-     if(!approvalGate||typeof approvalGate.verify!=='function')throw Error('independent approval gate is not configured');
-     const action=typeof node.action==='string'?node.action:capability,subject=typeof node.subject==='string'?node.subject:task.metadata.provenance.subject;
-     const approval=approvalGate.verify({approval:node.approval,taskId:task.id,nodeId:ctx.nodeId,action,subject});
-     if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
-    }
     active.set(selected.peerId,(active.get(selected.peerId)||0)+1);
     try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId,expiresAt:grant.expiresAt}});}
     finally{const count=(active.get(selected.peerId)||1)-1;if(count)active.set(selected.peerId,count);else active.delete(selected.peerId);}
