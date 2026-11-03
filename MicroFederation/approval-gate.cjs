@@ -6,22 +6,31 @@ function canonical(value){
  if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
  return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
 }
-function createApprovalGate({trustedIssuers={},clock=()=>Date.now(),maxApprovalTtlMs=15*60*1000}={}){
+function createApprovalGate({trustedIssuers={},clock=()=>Date.now(),maxApprovalTtlMs=15*60*1000,maxUsedNonces=10000}={}){
  if(!trustedIssuers||typeof trustedIssuers!=='object'||Array.isArray(trustedIssuers))throw Error('trustedIssuers must be a keyed public-key map');
  if(!Number.isInteger(maxApprovalTtlMs)||maxApprovalTtlMs<1000||maxApprovalTtlMs>24*60*60*1000)throw Error('maxApprovalTtlMs is invalid');
- const usedNonces=new Set();\n function verify({approval,taskId,nodeId,action,subject}={}){
+ if(!Number.isInteger(maxUsedNonces)||maxUsedNonces<1||maxUsedNonces>1000000)throw Error('maxUsedNonces is invalid');
+ // Process-local replay cache; production deployments must replace this with durable shared state.
+ const usedNonces=new Map();
+ function verify({approval,taskId,nodeId,action,subject}={}){
   if(!approval||typeof approval!=='object'||Array.isArray(approval))return {ok:false,reason:'approval_missing'};
   const {version,issuer,approvedTaskId,approvedNodeId,approvedAction,approvedSubject,issuedAt,expiresAt,nonce,signature}=approval;
   if(version!==1||typeof issuer!=='string'||!ID.test(issuer)||typeof nonce!=='string'||!ID.test(nonce)||typeof signature!=='string')return {ok:false,reason:'approval_malformed'};
   if(approvedTaskId!==taskId||approvedNodeId!==nodeId||approvedAction!==action||approvedSubject!==subject)return {ok:false,reason:'approval_scope_mismatch'};
-  if(!Number.isFinite(issuedAt)||!Number.isFinite(expiresAt)||expiresAt<=clock()||issuedAt>clock()+30000||expiresAt-issuedAt>maxApprovalTtlMs)return {ok:false,reason:'approval_expired_or_invalid_time'};
+  const now=clock();if(!Number.isFinite(now)||!Number.isFinite(issuedAt)||!Number.isFinite(expiresAt)||expiresAt<=now||issuedAt>now+30000||expiresAt-issuedAt>maxApprovalTtlMs)return {ok:false,reason:'approval_expired_or_invalid_time'};
   const publicKey=trustedIssuers[issuer];if(!publicKey)return {ok:false,reason:'untrusted_approval_issuer'};
   const unsigned={version,issuer,approvedTaskId,approvedNodeId,approvedAction,approvedSubject,issuedAt,expiresAt,nonce};
   try{
    const key=crypto.createPublicKey(publicKey);
    const algorithm=['ed25519','ed448'].includes(key.asymmetricKeyType)?null:'sha256';
    const valid=crypto.verify(algorithm,Buffer.from(canonical(unsigned)),key,Buffer.from(signature,'base64url'));
-   return valid?{ok:true,issuer,nonce,expiresAt}:{ok:false,reason:'approval_signature_invalid'};
+   if(!valid)return {ok:false,reason:'approval_signature_invalid'};
+   for(const [usedKey,usedExpiry] of usedNonces){if(usedExpiry<=now)usedNonces.delete(usedKey);}
+   const nonceKey=issuer+':'+nonce;
+   if(usedNonces.has(nonceKey))return {ok:false,reason:'approval_replayed'};
+   if(usedNonces.size>=maxUsedNonces)return {ok:false,reason:'approval_nonce_capacity_exceeded'};
+   usedNonces.set(nonceKey,expiresAt);
+   return {ok:true,issuer,nonce,expiresAt};
   }catch{return {ok:false,reason:'approval_signature_invalid'};}
  }
  return Object.freeze({verify});
