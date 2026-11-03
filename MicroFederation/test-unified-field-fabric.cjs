@@ -15,10 +15,11 @@ test('integrates ledger, mesh, nonlinear DAG and independently authorized adapte
  const persisted=await ledger.get('fabric-task-1');assert.equal(persisted.status,'succeeded');assert.equal(persisted.evidence[0].ref,'workflow:mesh-flow');assert.equal(persisted.metadata.provenance.issuer,'test-identity-provider');
 });
 test('fails closed when worker policy denies a peer even when its capability label matches',async t=>{
- let called=0;const {fabric}=await setup(t,{authorizeWorker:async()=>({ok:false,reason:'no grant'})});
+ let called=0;const {ledger,fabric}=await setup(t,{authorizeWorker:async()=>({ok:false,reason:'no grant'})});
  fabric.mesh.register({peerId:'worker-denied',capabilities:['artifact.build']});
- const wired=createUnifiedFieldFabric({ledger:fabricLedger(fabric),...trusted});
- function fabricLedger(){return null;}
+ const wired=createUnifiedFieldFabric({ledger,mesh:fabric.mesh,workerAdapters:{'worker-denied':async()=>{called++;return {ok:true};}},...trusted,authorizeWorker:async()=>({ok:false,reason:'no grant'})});
+ await submit(wired,{id:'denied-task',workflowId:'denied-flow',nodes:{build:{capability:'artifact.build'}}});
+ const result=await wired.runOne();assert.equal(result.status,'failed');assert.match(result.error,/no independently authorized worker/);assert.equal(called,0);
 });
 test('rejects producer without independently authenticated identity',async t=>{
  const {fabric}=await setup(t,{authenticateProducer:async()=>({ok:false})});
