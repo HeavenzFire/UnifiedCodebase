@@ -3,10 +3,11 @@ const {createPixelMesh}=require('./pixel-mesh.cjs');
 const {createNonlinearWorkflow}=require('./nonlinear-workflow.cjs');
 const FABRIC_CAPABILITY='unified-field-fabric.v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authenticateProducer,authorizeWorker,approvalGate=null,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
+function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authenticateProducer,authorizeWorker,approvalGate=null,chooseBranchPolicy,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
  if(!ledger||!['create','claimNext','start','complete','fail','renewLease'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger with lease renewal is required');
  if(typeof authenticateProducer!=='function')throw Error('trusted authenticateProducer policy is required');
  if(typeof authorizeWorker!=='function')throw Error('trusted authorizeWorker policy is required');
+ if(chooseBranchPolicy!==undefined&&typeof chooseBranchPolicy!=='function')throw Error('chooseBranchPolicy must be a trusted function');
  if(!workerAdapters||typeof workerAdapters!=='object'||Array.isArray(workerAdapters))throw Error('workerAdapters must be an object');
  if(typeof coordinatorId!=='string'||!ID.test(coordinatorId))throw Error('coordinatorId is invalid');
  if(!Number.isInteger(leaseMs)||leaseMs<1000||leaseMs>3600000)throw Error('leaseMs is invalid');
@@ -40,15 +41,14 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
     if(!selected)throw Error('no independently authorized worker available for capability '+capability);
     if(node.approvalRequired===true){
      if(!approvalGate||typeof approvalGate.verify!=='function')throw Error('independent approval gate is not configured');
-     const action=typeof node.action==='string'?node.action:capability;
-     const subject=typeof node.subject==='string'?node.subject:payload.subject;
+     const action=typeof node.action==='string'?node.action:capability,subject=typeof node.subject==='string'?node.subject:payload.subject;
      const approval=approvalGate.verify({approval:node.approval,taskId:task.id,nodeId:ctx.nodeId,action,subject});
      if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
     }
     active.set(selected.peerId,(active.get(selected.peerId)||0)+1);
     try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId}});}
     finally{const count=(active.get(selected.peerId)||1)-1;if(count)active.set(selected.peerId,count);else active.delete(selected.peerId);}
-   },chooseBranch:payload.chooseBranchPolicy});
+   },chooseBranch:chooseBranchPolicy});
    if(timer)clearInterval(timer);await renewal;if(leaseError)throw Error('task lease renewal failed');
    if(result.status!=='succeeded')throw Error('workflow execution failed: '+result.events.filter(e=>e.type==='node.failed').map(e=>e.detail.error).join('; '));
    const completed=await ledger.complete(task.id,coordinatorId,result,{now:clock(),evidenceRef:'workflow:'+payload.workflowId});
@@ -56,10 +56,8 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
   }catch(error){
    if(timer)clearInterval(timer);await renewal;
    const message=String(error&&error.message||error).slice(0,2048);
-   try{
-    const failed=started?await ledger.fail(task.id,coordinatorId,message,{now:clock(),retryable:false}):await ledger.releaseClaim(task.id,coordinatorId,{now:clock(),reason:message});
-    return {status:'failed',taskId:task.id,error:message,ledgerStatus:failed.status};
-   }catch(ledgerError){return {status:'recovery_required',taskId:task.id,error:message,recoveryError:String(ledgerError.message||ledgerError).slice(0,512)};}
+   try{const failed=started?await ledger.fail(task.id,coordinatorId,message,{now:clock(),retryable:false}):await ledger.releaseClaim(task.id,coordinatorId,{now:clock(),reason:message});return {status:'failed',taskId:task.id,error:message,ledgerStatus:failed.status};}
+   catch(ledgerError){return {status:'recovery_required',taskId:task.id,error:message,recoveryError:String(ledgerError.message||ledgerError).slice(0,512)};}
   }
  }
  return Object.freeze({mesh,submit,runOne,coordinatorId});
