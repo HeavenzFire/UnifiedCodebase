@@ -15,15 +15,17 @@ function createApprovalGate({trustedIssuers={},clock=()=>Date.now(),maxApprovalT
  function verify({approval,taskId,nodeId,action,subject}={}){
   if(!approval||typeof approval!=='object'||Array.isArray(approval))return {ok:false,reason:'approval_missing'};
   const {version,issuer,approvedTaskId,approvedNodeId,approvedAction,approvedSubject,issuedAt,expiresAt,nonce,signature}=approval;
-  if(version!==1||typeof issuer!=='string'||!ID.test(issuer)||typeof nonce!=='string'||!ID.test(nonce)||typeof signature!=='string')return {ok:false,reason:'approval_malformed'};
+  if(version!==1||typeof issuer!=='string'||!ID.test(issuer)||typeof nonce!=='string'||!ID.test(nonce)||typeof signature!=='string'||!/^[A-Za-z0-9_-]+$/.test(signature))return {ok:false,reason:'approval_malformed'};
   if(approvedTaskId!==taskId||approvedNodeId!==nodeId||approvedAction!==action||approvedSubject!==subject)return {ok:false,reason:'approval_scope_mismatch'};
   const now=clock();if(!Number.isFinite(now)||!Number.isFinite(issuedAt)||!Number.isFinite(expiresAt)||expiresAt<=now||issuedAt>now+30000||expiresAt-issuedAt>maxApprovalTtlMs)return {ok:false,reason:'approval_expired_or_invalid_time'};
   const publicKey=trustedIssuers[issuer];if(!publicKey)return {ok:false,reason:'untrusted_approval_issuer'};
   const unsigned={version,issuer,approvedTaskId,approvedNodeId,approvedAction,approvedSubject,issuedAt,expiresAt,nonce};
   try{
-   const key=crypto.createPublicKey(publicKey);
+   const key=publicKey&&publicKey.type==='public'?publicKey:crypto.createPublicKey(publicKey);
    const algorithm=['ed25519','ed448'].includes(key.asymmetricKeyType)?null:'sha256';
-   const valid=crypto.verify(algorithm,Buffer.from(canonical(unsigned)),key,Buffer.from(signature,'base64url'));
+   const signatureBytes=Buffer.from(signature,'base64url');
+   if(signatureBytes.toString('base64url')!==signature)return {ok:false,reason:'approval_signature_invalid'};
+   const valid=crypto.verify(algorithm,Buffer.from(canonical(unsigned)),key,signatureBytes);
    if(!valid)return {ok:false,reason:'approval_signature_invalid'};
    for(const [usedKey,usedExpiry] of usedNonces){if(usedExpiry<=now)usedNonces.delete(usedKey);}
    const nonceKey=issuer+':'+nonce;
