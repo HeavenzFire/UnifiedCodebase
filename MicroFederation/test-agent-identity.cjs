@@ -83,6 +83,10 @@ test('enforces token expiry, future issue time and configured maximum lifetime',
   const token = f.token({ ttlSeconds: 30 });
   f.setNow(1_800_000_031_000);
   assert.equal((await f.identity.verify(token)).reason, 'token_expired_or_time_invalid');
+  f.setNow(1_800_000_100_000);
+  const futureToken = f.token();
+  f.setNow(1_800_000_000_000);
+  assert.equal((await f.identity.verify(futureToken)).reason, 'token_expired_or_time_invalid');
   assert.throws(() => f.token({ ttlSeconds: 301 }), /configured token lifetime/);
 });
 
