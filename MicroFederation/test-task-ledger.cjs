@@ -104,7 +104,7 @@ test('capability-scoped claims isolate queue selection and expired-lease cleanup
  await ledger.create(task('unrelated-expired',{requiredCapabilities:['model.task'],maxAttempts:1}),{now:1000});
  await ledger.claimNext('unrelated-worker',{now:1000,leaseMs:1000});
  await ledger.create(task('unrelated-queued',{requiredCapabilities:['model.task']}),{now:1001});
- await ledger.create(task('fabric-task',{requiredCapabilities:['unified-field-fabric.v1']}),{now:1002});
+ await ledger.create(task('fabric-task',{requiredCapabilities:['unified-field-fabric.v1']}),{now:1002,principal:'test-producer',producerProof:'fixture'});
  const claimed=await ledger.claimNext('fabric-worker',{now:2000,leaseMs:1000,requiredCapabilities:['unified-field-fabric.v1']});
  assert.equal(claimed.id,'fabric-task');
  assert.equal((await ledger.get('unrelated-expired')).status,'claimed');
