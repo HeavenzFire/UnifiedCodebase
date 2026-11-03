@@ -22,3 +22,8 @@ test('renews only the live lease owned by the running worker',async t=>{
  await assert.rejects(ledger.renewLease('lease-task','worker-b',{now:2001,leaseMs:5000}),/not running under this worker/);
  await assert.rejects(ledger.renewLease('lease-task','worker-a',{now:7000,leaseMs:5000}),/lease has expired/);
 });
+
+test('rejects attempts to self-assign the fabric routing capability without a trusted verifier',async t=>{
+ const ledger=await makeLedger(t);
+ await assert.rejects(ledger.create({id:'self-authorized',payload:{task:'run'},requiredCapabilities:['unified-field-fabric.v1']}),/trusted task producer verifier is required/);
+});
