@@ -3,7 +3,7 @@ const {createPixelMesh}=require('./pixel-mesh.cjs');
 const {createNonlinearWorkflow}=require('./nonlinear-workflow.cjs');
 const FABRIC_CAPABILITY='unified-field-fabric.v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authenticateProducer,authorizeWorker,approvalGate=null,chooseBranchPolicy,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
+function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authorizeWorker,approvalGate=null,chooseBranchPolicy,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
  if(!ledger||!['create','claimNext','start','complete','fail','renewLease'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger with lease renewal is required');
  if(typeof authenticateProducer!=='function')throw Error('trusted authenticateProducer policy is required');
  if(typeof authorizeWorker!=='function')throw Error('trusted authorizeWorker policy is required');
@@ -41,7 +41,7 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
     if(!selected)throw Error('no independently authorized worker available for capability '+capability);
     if(node.approvalRequired===true){
      if(!approvalGate||typeof approvalGate.verify!=='function')throw Error('independent approval gate is not configured');
-     const action=typeof node.action==='string'?node.action:capability,subject=typeof node.subject==='string'?node.subject:payload.subject;
+     const action=typeof node.action==='string'?node.action:capability,subject=typeof node.subject==='string'?node.subject:task.metadata.provenance.subject;
      const approval=approvalGate.verify({approval:node.approval,taskId:task.id,nodeId:ctx.nodeId,action,subject});
      if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
     }
