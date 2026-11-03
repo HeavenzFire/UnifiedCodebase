@@ -22,7 +22,9 @@ function createApprovalGate({trustedIssuers={},clock=()=>Date.now(),maxApprovalT
    const key=crypto.createPublicKey(publicKey);
    const algorithm=['ed25519','ed448'].includes(key.asymmetricKeyType)?null:'sha256';
    const valid=crypto.verify(algorithm,Buffer.from(canonical(unsigned)),key,Buffer.from(signature,'base64url'));
-   return valid?{ok:true,issuer,nonce,expiresAt}:{ok:false,reason:'approval_signature_invalid'};
+   if(!valid)return {ok:false,reason:'approval_signature_invalid'};
+   if(usedNonces.has(issuer+':'+nonce))return {ok:false,reason:'approval_replayed'};
+   usedNonces.add(issuer+':'+nonce);return {ok:true,issuer,nonce,expiresAt};
   }catch{return {ok:false,reason:'approval_signature_invalid'};}
  }
  return Object.freeze({verify});
