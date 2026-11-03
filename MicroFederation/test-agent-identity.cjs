@@ -9,7 +9,7 @@ const {
 } = require('./agent-identity.cjs');
 
 function fixture(options = {}) {
-  const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519');
+  const { privateKey, publicKey } = options.keyPair || crypto.generateKeyPairSync('ed25519');
   let now = 1_800_000_000_000;
   const revoked = new Set();
   const issuer = options.issuer || 'heavenzfire-test-issuer';
@@ -53,12 +53,13 @@ test('issues and verifies a scoped Ed25519 agent token', async () => {
 });
 
 test('rejects wrong subject, task, audience and missing capability', async () => {
-  const f = fixture();
+  const keyPair = crypto.generateKeyPairSync('ed25519');
+  const f = fixture({ keyPair });
   const token = f.token();
   assert.equal((await f.identity.verify(token, { expectedSubject: 'agent-2' })).reason, 'subject_mismatch');
   assert.equal((await f.identity.verify(token, { expectedTaskId: 'task-2' })).reason, 'task_scope_mismatch');
   assert.equal((await f.identity.verify(token, { requiredCapability: 'repo.merge' })).reason, 'capability_not_in_token');
-  const wrongAudience = fixture({ audience: 'different-service' });
+  const wrongAudience = fixture({ audience: 'different-service', keyPair });
   assert.equal((await wrongAudience.identity.verify(token)).reason, 'audience_mismatch');
 });
 
