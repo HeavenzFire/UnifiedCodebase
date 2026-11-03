@@ -28,3 +28,17 @@ test('fails closed when a workflow node has no authorized mesh worker',async t=>
  const result=await fabric.runOne();assert.equal(result.status,'failed');assert.match(result.error,/no available authorized mesh worker/);
  assert.equal((await ledger.get('fabric-task-deny')).status,'failed');
 });
+
+test('fabric claims only its own tasks and leaves unrelated ledger work queued',async t=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'hf-unified-fabric-isolation-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));
+ const ledger=await new TaskLedger(path.join(dir,'tasks.json')).open();
+ await ledger.create({id:'unrelated-task',payload:{prompt:'owned by another worker'},requiredCapabilities:['model.task']});
+ const fabric=createUnifiedFieldFabric({ledger,workerAdapters:{'fabric-worker':async()=>({ok:true})}});
+ fabric.mesh.register({peerId:'fabric-worker',capabilities:['artifact.build']});
+ const submitted=await fabric.submit({id:'fabric-task-isolated',workflowId:'fabric-isolation',nodes:{build:{capability:'artifact.build'}}});
+ assert.deepEqual(submitted.requiredCapabilities,['unified-field-fabric.v1']);
+ const result=await fabric.runOne();
+ assert.equal(result.status,'succeeded');
+ assert.equal((await ledger.get('unrelated-task')).status,'queued');
+ assert.equal((await ledger.get('fabric-task-isolated')).status,'succeeded');
+});

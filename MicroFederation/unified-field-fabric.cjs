@@ -1,6 +1,7 @@
 'use strict';
 const {createPixelMesh}=require('./pixel-mesh.cjs');
 const {createNonlinearWorkflow}=require('./nonlinear-workflow.cjs');
+const FABRIC_CAPABILITY='unified-field-fabric.v1';
 function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
  if(!ledger||!['create','claimNext','start','complete','fail'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger is required');
  if(typeof coordinatorId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(coordinatorId))throw Error('coordinatorId is invalid');
@@ -8,10 +9,10 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
  const active=new Map();
  async function submit({id,workflowId,nodes,input={},idempotencyKey=null,maxAttempts=3}){
   if(!workflowId||!nodes||typeof nodes!=='object')throw Error('workflowId and nodes are required');
-  return ledger.create({id,payload:{workflowId,nodes,input},requiredCapabilities:[],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.1'}},{now:clock()});
+  return ledger.create({id,payload:{workflowId,nodes,input},requiredCapabilities:[FABRIC_CAPABILITY],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.1'}},{now:clock()});
  }
  async function runOne({now=clock()}={}){
-  const task=await ledger.claimNext(coordinatorId,{now,leaseMs});if(!task)return {status:'idle'};
+  const task=await ledger.claimNext(coordinatorId,{now,leaseMs,requiredCapabilities:[FABRIC_CAPABILITY]});if(!task)return {status:'idle'};
   await ledger.start(task.id,coordinatorId,{now:clock()});
   try{
    const payload=task.payload;if(!payload||typeof payload.workflowId!=='string'||!payload.nodes)throw Error('ledger task does not contain a valid workflow payload');

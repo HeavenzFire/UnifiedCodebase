@@ -98,3 +98,16 @@ test('claim release exhausts attempts instead of exceeding the retry limit',asyn
  const released=await ledger.releaseClaim('task-release-limit','worker-a',{now:1001});
  assert.equal(released.status,'failed');assert.equal(released.owner,null);assert.equal(released.leaseUntil,null);
 });
+
+test('capability-scoped claims isolate queue selection and expired-lease cleanup',async t=>{
+ const ledger=await new TaskLedger(await tempFile(t)).open();
+ await ledger.create(task('unrelated-expired',{requiredCapabilities:['model.task'],maxAttempts:1}),{now:1000});
+ await ledger.claimNext('unrelated-worker',{now:1000,leaseMs:1000});
+ await ledger.create(task('unrelated-queued',{requiredCapabilities:['model.task']}),{now:1001});
+ await ledger.create(task('fabric-task',{requiredCapabilities:['unified-field-fabric.v1']}),{now:1002});
+ const claimed=await ledger.claimNext('fabric-worker',{now:2000,leaseMs:1000,requiredCapabilities:['unified-field-fabric.v1']});
+ assert.equal(claimed.id,'fabric-task');
+ assert.equal((await ledger.get('unrelated-expired')).status,'claimed');
+ assert.equal((await ledger.get('unrelated-queued')).status,'queued');
+ await assert.rejects(ledger.claimNext('bad-worker',{requiredCapabilities:['Invalid Capability']}),/requiredCapabilities/);
+});
