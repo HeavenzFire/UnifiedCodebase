@@ -5,7 +5,6 @@ const FABRIC_CAPABILITY='unified-field-fabric.v1';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authorizeWorker,approvalGate=null,chooseBranchPolicy,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
  if(!ledger||!['create','claimNext','start','complete','fail','renewLease'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger with lease renewal is required');
- if(typeof authenticateProducer!=='function')throw Error('trusted authenticateProducer policy is required');
  if(typeof authorizeWorker!=='function')throw Error('trusted authorizeWorker policy is required');
  if(chooseBranchPolicy!==undefined&&typeof chooseBranchPolicy!=='function')throw Error('chooseBranchPolicy must be a trusted function');
  if(!workerAdapters||typeof workerAdapters!=='object'||Array.isArray(workerAdapters))throw Error('workerAdapters must be an object');
@@ -15,9 +14,7 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
  async function submit({id,workflowId,nodes,input={},idempotencyKey=null,maxAttempts=3,principal,producerProof}={}){
   if(typeof workflowId!=='string'||!ID.test(workflowId)||!nodes||typeof nodes!=='object'||Array.isArray(nodes))throw Error('workflowId and nodes are required');
   if(typeof principal!=='string'||!ID.test(principal))throw Error('authenticated producer principal is required');
-  const identity=await authenticateProducer({principal,producerProof,taskId:id,workflowId});
-  if(!identity||identity.ok!==true||typeof identity.issuer!=='string'||typeof identity.subject!=='string')throw Error('producer authentication denied');
-  return ledger.create({id,payload:{workflowId,nodes,input,subject:identity.subject},requiredCapabilities:[FABRIC_CAPABILITY],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.2',provenance:{issuer:identity.issuer,subject:identity.subject,verifiedAt:clock()}}},{now:clock()});
+  return ledger.create({id,payload:{workflowId,nodes,input},requiredCapabilities:[FABRIC_CAPABILITY],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.2'}},{now:clock(),principal,producerProof});
  }
  async function runOne({now=clock()}={}){
   const task=await ledger.claimNext(coordinatorId,{now,leaseMs,requiredCapabilities:[FABRIC_CAPABILITY]});if(!task)return {status:'idle'};
