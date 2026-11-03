@@ -46,9 +46,10 @@ function validRecord(t){
  return !!t&&typeof t==='object'&&!Array.isArray(t)&&ID.test(t.id||'')&&STATES.has(t.status)&&Number.isInteger(t.attempts)&&t.attempts>=0&&Number.isInteger(t.maxAttempts)&&t.maxAttempts>=1&&t.maxAttempts<=10&&t.attempts<=t.maxAttempts&&Array.isArray(t.requiredCapabilities)&&Array.isArray(t.evidence)&&Array.isArray(t.events)&&typeof t.createdAt==='string'&&typeof t.updatedAt==='string'&&(t.owner===null||typeof t.owner==='string'&&ID.test(t.owner))&&(t.leaseUntil===null||Number.isFinite(t.leaseUntil));
 }
 class TaskLedger{
- constructor(file){
+ constructor(file,{authenticateProducer=null}={}){
   if(typeof file!=='string'||!file.trim())throw Error('ledger file path is required');
-  this.file=path.resolve(file);this.tasks=[];this.loaded=false;this.opening=null;this.writeQueue=Promise.resolve();
+  if(authenticateProducer!==null&&typeof authenticateProducer!=='function')throw Error('authenticateProducer must be a trusted function');
+  this.authenticateProducer=authenticateProducer;this.file=path.resolve(file);this.tasks=[];this.loaded=false;this.opening=null;this.writeQueue=Promise.resolve();
  }
  async open(){
   if(this.loaded)return this;if(this.opening)return this.opening;
@@ -76,8 +77,15 @@ class TaskLedger{
   const op=this.writeQueue.then(async()=>{await this.open();const next=clone(this.tasks),result=change(next);if(result===NO_MUTATION)return null;await this._persist(next);this.tasks=next;return result===undefined?null:clone(result)});
   this.writeQueue=op.catch(()=>{});return op;
  }
- async create(input,{now=Date.now()}={}){
+ async create(input,{now=Date.now(),principal=null,producerProof=null}={}){
   const task=validateTaskInput(input);if(!Number.isFinite(now))throw Error('now must be a finite timestamp');
+  if(task.requiredCapabilities.includes('unified-field-fabric.v1')){
+   if(typeof this.authenticateProducer!=='function')throw Error('trusted task producer verifier is required for fabric tasks');
+   if(typeof principal!=='string'||!ID.test(principal))throw Error('authenticated producer principal is required');
+   const identity=await this.authenticateProducer({principal,producerProof,taskId:task.id,payloadHash:digest(task.payload)});
+   if(!identity||identity.ok!==true||typeof identity.issuer!=='string'||!ID.test(identity.issuer)||typeof identity.subject!=='string'||!ID.test(identity.subject))throw Error('producer authentication denied');
+   task.metadata.provenance={issuer:identity.issuer,subject:identity.subject,verifiedAt:now};
+  }
   return this._mutate(tasks=>{
    const existing=tasks.find(t=>t.id===task.id||(task.idempotencyKey&&t.idempotencyKey===task.idempotencyKey)),requestHash=digest(task);
    if(existing){if(existing.id!==task.id||existing.requestHash!==requestHash)throw Error('task id or idempotency key already exists with different input');return existing}
