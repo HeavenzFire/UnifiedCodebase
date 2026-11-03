@@ -7,7 +7,7 @@ const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const STATES=new Set(['queued','claimed','running','succeeded','failed','cancelled']);
 const TERMINAL=new Set(['succeeded','failed','cancelled']);
 const NO_MUTATION=Symbol('no mutation');
-const MAX_PAYLOAD_BYTES=256*1024,MAX_RESULT_BYTES=256*1024,MAX_METADATA_BYTES=32*1024;
+const MAX_PAYLOAD_BYTES=256*1024,MAX_RESULT_BYTES=256*1024,MAX_METADATA_BYTES=32*1024;\nconst FABRIC_CAPABILITY='unified-field-fabric.v1';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const digest=v=>crypto.createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const iso=ms=>new Date(ms).toISOString();
