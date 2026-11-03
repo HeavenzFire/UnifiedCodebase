@@ -9,7 +9,8 @@ function canonical(value){
 function createApprovalGate({trustedIssuers={},clock=()=>Date.now(),maxApprovalTtlMs=15*60*1000}={}){
  if(!trustedIssuers||typeof trustedIssuers!=='object'||Array.isArray(trustedIssuers))throw Error('trustedIssuers must be a keyed public-key map');
  if(!Number.isInteger(maxApprovalTtlMs)||maxApprovalTtlMs<1000||maxApprovalTtlMs>24*60*60*1000)throw Error('maxApprovalTtlMs is invalid');
- const usedNonces=new Set();\n function verify({approval,taskId,nodeId,action,subject}={}){
+ const usedNonces=new Set();
+ function verify({approval,taskId,nodeId,action,subject}={}){
   if(!approval||typeof approval!=='object'||Array.isArray(approval))return {ok:false,reason:'approval_missing'};
   const {version,issuer,approvedTaskId,approvedNodeId,approvedAction,approvedSubject,issuedAt,expiresAt,nonce,signature}=approval;
   if(version!==1||typeof issuer!=='string'||!ID.test(issuer)||typeof nonce!=='string'||!ID.test(nonce)||typeof signature!=='string')return {ok:false,reason:'approval_malformed'};
