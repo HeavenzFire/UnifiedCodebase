@@ -1,0 +1,34 @@
+name: Agent identity token contract
+
+on:
+  pull_request:
+    paths:
+      - "MicroFederation/agent-identity.cjs"
+      - "MicroFederation/test-agent-identity.cjs"
+      - "MicroFederation/AGENT-IDENTITY.md"
+      - ".github/workflows/agent-identity.yml"
+  push:
+    branches:
+      - "feat/agent-identity-token-plane-v0.1"
+    paths:
+      - "MicroFederation/agent-identity.cjs"
+      - "MicroFederation/test-agent-identity.cjs"
+      - "MicroFederation/AGENT-IDENTITY.md"
+      - ".github/workflows/agent-identity.yml"
+
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: \${{ matrix.node }}
+      - name: Syntax check
+        run: node --check MicroFederation/agent-identity.cjs
+      - name: Identity tests
+        run: node --test MicroFederation/test-agent-identity.cjs
