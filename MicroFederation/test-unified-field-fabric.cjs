@@ -3,8 +3,8 @@ const test=require('node:test');const assert=require('node:assert/strict');
 const os=require('node:os');const path=require('node:path');const fs=require('node:fs/promises');
 const {TaskLedger}=require('./task-ledger.cjs');
 const {createUnifiedFieldFabric}=require('./unified-field-fabric.cjs');
-const trusted={authenticateProducer:async({principal})=>({ok:true,issuer:'test-identity-provider',subject:principal}),authorizeWorker:async()=>({ok:true,issuer:'test-policy-engine',grantId:'test-grant-001'})};
-async function setup(t,options={}){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'hf-unified-fabric-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));const ledger=await new TaskLedger(path.join(dir,'tasks.json')).open();return {ledger,fabric:createUnifiedFieldFabric({ledger,...trusted,...options})};}
+const trusted={authorizeWorker:async()=>({ok:true,issuer:'test-policy-engine',grantId:'test-grant-001'})};
+async function setup(t,options={}){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'hf-unified-fabric-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));const authenticateProducer=options.authenticateProducer|| (async({principal})=>({ok:true,issuer:'test-identity-provider',subject:principal}));const {authenticateProducer:unused,...fabricOptions}=options;const ledger=await new TaskLedger(path.join(dir,'tasks.json'),{authenticateProducer}).open();return {ledger,fabric:createUnifiedFieldFabric({ledger,...trusted,...fabricOptions})};}
 const submit= (fabric,args)=>fabric.submit({...args,principal:'test-producer',producerProof:'fixture-proof'});
 test('integrates ledger, mesh, nonlinear DAG and independently authorized adapters',async t=>{
  const {ledger,fabric}=await setup(t);fabric.mesh.register({peerId:'builder-01',roles:['builder'],capabilities:['artifact.build'],capacity:2});fabric.mesh.register({peerId:'verifier-01',roles:['verifier'],capabilities:['artifact.verify'],capacity:1});
