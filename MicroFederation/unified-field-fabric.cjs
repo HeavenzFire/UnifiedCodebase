@@ -2,39 +2,66 @@
 const {createPixelMesh}=require('./pixel-mesh.cjs');
 const {createNonlinearWorkflow}=require('./nonlinear-workflow.cjs');
 const FABRIC_CAPABILITY='unified-field-fabric.v1';
-function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
- if(!ledger||!['create','claimNext','start','complete','fail'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger is required');
- if(typeof coordinatorId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(coordinatorId))throw Error('coordinatorId is invalid');
+const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=createNonlinearWorkflow(),workerAdapters={},authenticateProducer,authorizeWorker,approvalGate=null,coordinatorId='unified-field-coordinator',leaseMs=120000,clock=()=>Date.now()}={}){
+ if(!ledger||!['create','claimNext','start','complete','fail','renewLease'].every(k=>typeof ledger[k]==='function'))throw Error('durable TaskLedger with lease renewal is required');
+ if(typeof authenticateProducer!=='function')throw Error('trusted authenticateProducer policy is required');
+ if(typeof authorizeWorker!=='function')throw Error('trusted authorizeWorker policy is required');
+ if(!workerAdapters||typeof workerAdapters!=='object'||Array.isArray(workerAdapters))throw Error('workerAdapters must be an object');
+ if(typeof coordinatorId!=='string'||!ID.test(coordinatorId))throw Error('coordinatorId is invalid');
  if(!Number.isInteger(leaseMs)||leaseMs<1000||leaseMs>3600000)throw Error('leaseMs is invalid');
  const active=new Map();
- async function submit({id,workflowId,nodes,input={},idempotencyKey=null,maxAttempts=3}){
-  if(!workflowId||!nodes||typeof nodes!=='object')throw Error('workflowId and nodes are required');
-  return ledger.create({id,payload:{workflowId,nodes,input},requiredCapabilities:[FABRIC_CAPABILITY],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.1'}},{now:clock()});
+ async function submit({id,workflowId,nodes,input={},idempotencyKey=null,maxAttempts=3,principal,producerProof}={}){
+  if(typeof workflowId!=='string'||!ID.test(workflowId)||!nodes||typeof nodes!=='object'||Array.isArray(nodes))throw Error('workflowId and nodes are required');
+  if(typeof principal!=='string'||!ID.test(principal))throw Error('authenticated producer principal is required');
+  const identity=await authenticateProducer({principal,producerProof,taskId:id,workflowId});
+  if(!identity||identity.ok!==true||typeof identity.issuer!=='string'||typeof identity.subject!=='string')throw Error('producer authentication denied');
+  return ledger.create({id,payload:{workflowId,nodes,input,subject:identity.subject},requiredCapabilities:[FABRIC_CAPABILITY],idempotencyKey,maxAttempts,metadata:{source:'unified-field-fabric',version:'0.2',provenance:{issuer:identity.issuer,subject:identity.subject,verifiedAt:clock()}}},{now:clock()});
  }
  async function runOne({now=clock()}={}){
   const task=await ledger.claimNext(coordinatorId,{now,leaseMs,requiredCapabilities:[FABRIC_CAPABILITY]});if(!task)return {status:'idle'};
-  await ledger.start(task.id,coordinatorId,{now:clock()});
+  let started=false,timer=null,renewal=Promise.resolve(),leaseError=null;
   try{
-   const payload=task.payload;if(!payload||typeof payload.workflowId!=='string'||!payload.nodes)throw Error('ledger task does not contain a valid workflow payload');
+   await ledger.start(task.id,coordinatorId,{now:clock()});started=true;
+   timer=setInterval(()=>{renewal=renewal.then(()=>ledger.renewLease(task.id,coordinatorId,{now:clock(),leaseMs})).catch(error=>{leaseError=error;});},Math.max(250,Math.floor(leaseMs/3)));
+   if(timer.unref)timer.unref();
+   const payload=task.payload;if(!payload||typeof payload.workflowId!=='string'||!payload.nodes||typeof payload.nodes!=='object')throw Error('ledger task does not contain a valid workflow payload');
    const result=await workflow.run({workflowId:payload.workflowId,nodes:payload.nodes,input:payload.input||{},execute:async ctx=>{
+    if(leaseError)throw Error('task lease renewal failed');
     const node=payload.nodes[ctx.nodeId],capability=node.capability;
     if(typeof capability!=='string'||!capability.trim())throw Error('workflow node must declare a worker capability: '+ctx.nodeId);
-    const candidates=mesh.selectWorkers({capability,role:node.role||null,limit:256,now:clock()});
-    const peer=candidates.find(p=>(active.get(p.peerId)||0)<p.capacity&&typeof workerAdapters[p.peerId]==='function');
-    if(!peer)throw Error('no available authorized mesh worker for capability '+capability);
-    active.set(peer.peerId,(active.get(peer.peerId)||0)+1);
-    try{return await workerAdapters[peer.peerId]({...ctx,taskId:task.id,peerId:peer.peerId,capability});}
-    finally{const count=(active.get(peer.peerId)||1)-1;if(count)active.set(peer.peerId,count);else active.delete(peer.peerId);}
-   }});
+    const candidates=mesh.selectWorkers({capability,role:node.role||null,limit:4096,now:clock()});
+    let selected=null,grant=null;
+    for(const peer of candidates){
+     if((active.get(peer.peerId)||0)>=peer.capacity||!Object.prototype.hasOwnProperty.call(workerAdapters,peer.peerId)||typeof workerAdapters[peer.peerId]!=='function')continue;
+     const decision=await authorizeWorker({taskId:task.id,workflowId:payload.workflowId,nodeId:ctx.nodeId,capability,peerId:peer.peerId,producer:task.metadata.provenance});
+     if(decision&&decision.ok===true&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
+    }
+    if(!selected)throw Error('no independently authorized worker available for capability '+capability);
+    if(node.approvalRequired===true){
+     if(!approvalGate||typeof approvalGate.verify!=='function')throw Error('independent approval gate is not configured');
+     const action=typeof node.action==='string'?node.action:capability;
+     const subject=typeof node.subject==='string'?node.subject:payload.subject;
+     const approval=approvalGate.verify({approval:node.approval,taskId:task.id,nodeId:ctx.nodeId,action,subject});
+     if(!approval.ok)throw Error('independent approval denied: '+approval.reason);
+    }
+    active.set(selected.peerId,(active.get(selected.peerId)||0)+1);
+    try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId}});}
+    finally{const count=(active.get(selected.peerId)||1)-1;if(count)active.set(selected.peerId,count);else active.delete(selected.peerId);}
+   },chooseBranch:payload.chooseBranchPolicy});
+   if(timer)clearInterval(timer);await renewal;if(leaseError)throw Error('task lease renewal failed');
    if(result.status!=='succeeded')throw Error('workflow execution failed: '+result.events.filter(e=>e.type==='node.failed').map(e=>e.detail.error).join('; '));
    const completed=await ledger.complete(task.id,coordinatorId,result,{now:clock(),evidenceRef:'workflow:'+payload.workflowId});
    return {status:'succeeded',taskId:task.id,result:completed.result,workflowId:payload.workflowId};
   }catch(error){
+   if(timer)clearInterval(timer);await renewal;
    const message=String(error&&error.message||error).slice(0,2048);
-   const failed=await ledger.fail(task.id,coordinatorId,message,{now:clock(),retryable:false});
-   return {status:'failed',taskId:task.id,error:message,ledgerStatus:failed.status};
+   try{
+    const failed=started?await ledger.fail(task.id,coordinatorId,message,{now:clock(),retryable:false}):await ledger.releaseClaim(task.id,coordinatorId,{now:clock(),reason:message});
+    return {status:'failed',taskId:task.id,error:message,ledgerStatus:failed.status};
+   }catch(ledgerError){return {status:'recovery_required',taskId:task.id,error:message,recoveryError:String(ledgerError.message||ledgerError).slice(0,512)};}
   }
  }
  return Object.freeze({mesh,submit,runOne,coordinatorId});
 }
-module.exports={createUnifiedFieldFabric};
+module.exports={createUnifiedFieldFabric,FABRIC_CAPABILITY};
