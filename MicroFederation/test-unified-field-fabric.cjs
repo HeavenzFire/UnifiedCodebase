@@ -49,8 +49,9 @@ test('fabric denies consequential execution without valid independent approval',
  const crypto=require('node:crypto');const {privateKey,publicKey}=crypto.generateKeyPairSync('ed25519');
  const gate=createApprovalGate({trustedIssuers:{'human-review-board':publicKey}});
  const {ledger,fabric}=await setup(t,{approvalGate:gate});
- let calls=0;fabric.mesh.register({peerId:'deploy-worker',capabilities:['deployment.apply']});
- const wired=createUnifiedFieldFabric({ledger,mesh:fabric.mesh,workerAdapters:{'deploy-worker':async()=>{calls++;return {ok:true};}},authorizeWorker:workerPolicy,approvalGate:gate});
+ let calls=0,grantCalls=0;fabric.mesh.register({peerId:'deploy-worker',capabilities:['deployment.apply']});
+ const countPolicy=async args=>{grantCalls++;return workerPolicy(args);};
+ const wired=createUnifiedFieldFabric({ledger,mesh:fabric.mesh,workerAdapters:{'deploy-worker':async()=>{calls++;return {ok:true};}},authorizeWorker:countPolicy,approvalGate:gate});
  await submit(wired,{id:'approval-required-task',workflowId:'approval-flow',nodes:{deploy:{capability:'deployment.apply',approvalRequired:true}}});
- const result=await wired.runOne();assert.equal(result.status,'failed');assert.match(result.error,/approval_missing/);assert.equal(calls,0);
+ const result=await wired.runOne();assert.equal(result.status,'failed');assert.match(result.error,/approval_missing/);assert.equal(calls,0);assert.equal(grantCalls,0);
 });
