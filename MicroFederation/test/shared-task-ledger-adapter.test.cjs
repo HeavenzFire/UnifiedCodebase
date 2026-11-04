@@ -7,7 +7,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { TaskLedger } = require('../task-ledger.cjs');
 const { createGovernedRuntime } = require('../governed-runtime.cjs');
-const { createSharedTaskLedgerAdapter, recordHash } = require('../shared-task-ledger-adapter.cjs');
+const { createSharedTaskLedgerAdapter } = require('../shared-task-ledger-adapter.cjs');
+const { createOperatorApprovalAuthority } = require('../operator-approval.cjs');
 
 const contract = {
   SCHEMA: 'heavenzfire.shared-task.v1',
@@ -34,17 +35,17 @@ async function fixture() {
   let now = Date.parse('2026-11-04T12:00:00.000Z');
   let attestationChecks = 0;
   let executions = 0;
+  let nonceCounter = 0;
   const clock = () => now;
-  const verifyApproval = async ({ record, approvalProof, recordHash: hash }) => {
-    if (approvalProof !== 'operator-confirmed') return { ok: false };
-    return {
-      ok: true, approver: 'operator-zdh', evidenceRef: 'approval:' + record.taskId,
-      verifiedAt: new Date(now).toISOString(), recordHash: hash
-    };
-  };
-  const verifyAttestation = async ({ record, attestation }) => {
+  const authority = createOperatorApprovalAuthority({
+    secret: 'heavenzfire-operator-approval-test-key-32-bytes',
+    clock,
+    nonce: () => (++nonceCounter).toString(16).padStart(64, '0')
+  });
+  const verifyApproval = authority.verifyApproval;
+  const verifyAttestation = async input => {
     attestationChecks++;
-    return { ok: attestation.recordHash === recordHash(record) && attestation.approver === 'operator-zdh' && attestation.evidenceRef === 'approval:' + record.taskId };
+    return authority.verifyAttestation(input);
   };
   const execute = async ({ canonicalTaskId, prompt }) => {
     executions++;
@@ -62,13 +63,14 @@ async function fixture() {
     createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(),
     metadata: { purpose: 'adapter-test', agentId: 'agent-shared', grantId: 'grant-shared', role: 'research' }
   };
-  return { dir, ledger, adapter, record, setNow: value => { now = value; }, now: () => now,
+  return { dir, ledger, adapter, record, createProof: () => authority.createProof(record, { actor: 'operator-zdh' }),
+    setNow: value => { now = value; }, now: () => now,
     getAttestationChecks: () => attestationChecks, getExecutions: () => executions };
 }
 
 test('approved canonical record maps into ledger and projects back without losing identity or approval evidence', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   assert.equal(created.id, f.record.taskId);
   assert.equal(created.status, 'queued');
   const projected = await f.adapter.projectToCanonical(created);
@@ -89,7 +91,7 @@ test('pending and proposed canonical tasks are never admitted', async t => {
 test('missing, forged, or mismatched approval proof fails closed', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   await assert.rejects(f.adapter.createFromCanonical(f.record), /denied/);
-  await assert.rejects(f.adapter.createFromCanonical(f.record, { approvalProof: 'forged' }), /denied/);
+  await assert.rejects(f.adapter.createFromCanonical(f.record, { approvalProof: { schema: 'forged' } }), /proof/);
   const wrongActor = { ...f.record, evidence: [{ ...f.record.evidence[0], actor: 'other-user' }] };
   await assert.rejects(f.adapter.createFromCanonical(wrongActor, { approvalProof: 'operator-confirmed' }), /does not match/);
   assert.equal((await f.ledger.list()).length, 0);
