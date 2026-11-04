@@ -1,87 +1,83 @@
 # Federation startup operations v0.1
 
-This is the guarded launch path for the Windows receiver and Android/Termux submitter. The operator approval secret stays on Windows; Android receives only the signed, task-scoped approval package.
+This is the current guarded launch sequence: create and approve the task on Windows, grant one task-scoped capability on Windows, start the receiver, transfer the signed package to Android, then submit through an SSH local forward. The operator approval secret never leaves Windows.
 
-## 1. Windows — create, grant, approve, and start
+## 1. Windows — create and approve one task
 
-Run from the UnifiedCodebase repository root in PowerShell:
+From the UnifiedCodebase repository root, set the canonical contract module and the local operator approval secret. The approval secret must contain at least 32 UTF-8 bytes and must never be committed or sent to Android.
 
-```powershell
-$env:HF_UNIFIEDCODEBASE_ROOT = (Get-Location).Path
-$env:HF_SHARED_TASK_CONTRACT_MODULE = 'C:\PATH\TO\UnifiedField\FieldCore\shared-task-contract.cjs'
-$env:HF_OPERATOR_APPROVAL_SECRET = (Get-Content "$HOME\.heavenzfire\federation\operator-approval.secret" -Raw).Trim()
-$env:HF_FEDERATION_PEERS_JSON = '[{"nodeId":"android-a67l","secret":"<SAME_PEER_SECRET>","approved":true,"approvedAt":"<ENROLLMENT_TIMESTAMP>","allowedCapabilities":["task.submit","task.read"]}]'
-$env:HF_FEDERATION_AGENT_ID = 'agent-android-zdh'
-$env:HF_FEDERATION_GRANT_ID = 'grant-hf-task-001'
-$env:HF_FEDERATION_TASK_ID = 'hf-task-001'
-```
+    $env:HF_UNIFIEDCODEBASE_ROOT = (Get-Location).Path
+    $env:HF_SHARED_TASK_CONTRACT_MODULE = 'C:\PATH\TO\UnifiedField\FieldCore\shared-task-contract.cjs'
+    $env:HF_OPERATOR_APPROVAL_SECRET = (Get-Content "$HOME\.heavenzfire\federation\operator-approval.secret" -Raw).Trim()
 
-Use a random peer secret of at least 32 bytes, provisioned to both devices through a protected channel. The enrollment timestamp must be the same on both sides. Never put either secret in Git, task metadata, or issue comments.
+Create a proposed task. Use stable IDs and keep the goal bounded; this task's metadata is later matched to the Windows capability grant.
 
-Create a proposed canonical task. Use the same agent and grant IDs configured above:
+    node .\scripts\rd\create-federation-task.cjs "$HOME\.heavenzfire\federation\proposed-task.json" agent-android-zdh grant-hf-task-001 "Return a bounded read-only inference result"
 
-```powershell
-node .\scripts\rd\create-federation-task.cjs .\proposed-task.json $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID "Return the exact text HF_FEDERATION_TASK_OK"
-```
+Approve it using the operator identity. This invokes the canonical transition function, appends attributable approval evidence, and signs the exact record hash.
 
-Set the task ID printed by that command:
+    node .\scripts\rd\approve-federation-task.cjs "$HOME\.heavenzfire\federation\proposed-task.json" "$HOME\.heavenzfire\federation\approval-package.json" operator-zdh
 
-```powershell
-$env:HF_FEDERATION_TASK_ID = '<TASK_ID_FROM_CREATE_OUTPUT>'
-```
+Create the one-task capability grant. The script requires the operator to type the exact confirmation string.
 
-Create the narrow task-scoped capability grant. The command prints the grant and requires typing its exact ID:
+    node .\scripts\rd\grant-federation-task.cjs agent-android-zdh grant-hf-task-001 <TASK_ID> 60
 
-```powershell
-node .\scripts\rd\grant-federation-task.cjs $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID 60
-```
+Use the taskId printed by the create command. Then set the exact IDs for startup preflight:
 
-Approve the proposed record and create the signed approval package on Windows. The operator approval secret is not copied to Android:
+    $env:HF_FEDERATION_AGENT_ID = 'agent-android-zdh'
+    $env:HF_FEDERATION_GRANT_ID = 'grant-hf-task-001'
+    $env:HF_FEDERATION_TASK_ID = '<TASK_ID>'
 
-```powershell
-node .\scripts\rd\approve-federation-task.cjs .\proposed-task.json .\approval-package.json operator-zdh
-```
+## 2. Windows — configure and launch receiver
 
-Start the receiver. Its preflight verifies the task-scoped grant and local inference health before starting the foreground node:
+Set the approved Android peer enrollment. The peer HMAC secret is distinct from the operator approval secret. The same peer secret and approved timestamp must be configured on Android.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\rd\Start-Federation-Windows.ps1
-```
+    $peerSecret = (Get-Content "$HOME\.heavenzfire\federation\android-peer.secret" -Raw).Trim()
+    $approvedAt = '<ENROLLMENT_TIMESTAMP>'
+    $peer = @{ nodeId = 'android-a67l'; secret = $peerSecret; approved = $true; approvedAt = $approvedAt; allowedCapabilities = @('task.submit','task.read') }
+    $env:HF_FEDERATION_PEERS_JSON = ConvertTo-Json -InputObject @($peer) -Compress
 
-Keep this PowerShell process open. The service listens only on `127.0.0.1:18100`.
+The Windows config example creates the local TaskLedger, CapabilityStore, capability gate, and local inference adapter. Set the receiver identity and start the preflight launcher:
 
-## 2. Android / Termux — transfer the approval package and submit
+    $env:HF_NODE_ID = 'windows-zdh'
+    $env:HF_FEDERATION_NODE_CONFIG = (Join-Path (Get-Location) 'scripts\rd\federation-node-config.example.cjs')
+    powershell -ExecutionPolicy Bypass -File .\scripts\rd\Start-Federation-Windows.ps1
 
-Copy only the signed approval package to Termux over the existing SSH connection. Replace the Windows path with the actual repository path:
+The launcher verifies the task-scoped grant and local inference health before starting. It binds only to 127.0.0.1:18100. Keep this PowerShell process open.
 
-```bash
-export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
-export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
-scp -i "$HF_FEDERATION_SSH_KEY" "$HF_FEDERATION_SSH_TARGET:C:/Users/rucke/HeavenzFire-RD/approval-package.json" "$HOME/approval-package.json"
-```
+## 3. Transfer the signed package to Android
 
-Configure the peer identity and SSH key. The peer secret must match the Windows peer secret; the operator approval secret is not needed on Android:
+The package contains the approved canonical record and a signed, task-bound approval proof. It does not contain the operator approval secret.
 
-```bash
-export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
-export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
-export HF_FEDERATION_NODE_ID=android-a67l
-export HF_FEDERATION_PEER_ID=windows-zdh
-export HF_FEDERATION_PEER_SECRET='<SAME_PEER_SECRET>'
-export HF_FEDERATION_PEER_APPROVED=true
-export HF_FEDERATION_PEER_APPROVED_AT='<SAME_ENROLLMENT_TIMESTAMP>'
-```
+From Termux, copy it over the already-authorized SSH connection. The remote path is relative to the Windows SSH user's home directory:
 
-Run the combined SSH-tunnel and submitter launcher from the UnifiedCodebase checkout:
+    mkdir -p "$HOME/.heavenzfire/federation"
+    scp -i "$HOME/.ssh/heavenzfire_bridge" "rucke@<WINDOWS_TAILSCALE_IP>:.heavenzfire/federation/approval-package.json" "$HOME/.heavenzfire/federation/approval-package.json"
 
-```bash
-bash scripts/rd/start-federation-android.sh "$HOME/approval-package.json"
-```
+If your Windows SSH account uses a different home mapping, use the verified remote path for that account. Do not paste the package or secrets into GitHub issues.
 
-It opens a local-only forward from Termux port 18101 to Windows loopback port 18100, checks receiver health, authenticates the peer, submits the signed task, polls the authenticated task projection for up to 50 seconds, and closes the tunnel on exit.
+## 4. Android / Termux — establish tunnel and submit
 
-## 3. Acceptance criteria
+Set the Android node identity and the Windows peer enrollment. Android needs the peer secret, not the operator approval secret.
 
-A submission HTTP 202 is admission only. A successful live acceptance requires the Termux client to report `TASK_COMPLETED`, with canonical status `completed` and ledger status `succeeded`. Verify the same task ID in the Windows ledger. Repeat the same package to test idempotent delivery. Invalid approval, expired peer session, missing capability grant, and unauthorized scope must be rejected.
+    export HF_FEDERATION_NODE_ID=android-a67l
+    export HF_FEDERATION_PEER_ID=windows-zdh
+    export HF_FEDERATION_PEER_SECRET="$(cat "$HOME/.heavenzfire/federation/windows-peer.secret")"
+    export HF_FEDERATION_PEER_APPROVED=true
+    export HF_FEDERATION_PEER_APPROVED_AT='<SAME_ENROLLMENT_TIMESTAMP>'
+    export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
+    export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
 
-CI loopback tests are not physical-device acceptance. Record redacted output and exit codes separately. Never commit peer secrets, approval secrets, private addresses, or raw approval packages. Remove the approval package from Termux after acceptance.
+Run the combined tunnel, health-check, handshake, submit, and completion poll:
+
+    bash scripts/rd/start-federation-android.sh "$HOME/.heavenzfire/federation/approval-package.json"
+
+The script binds the local end of the SSH forward to 127.0.0.1:18101 and forwards to Windows 127.0.0.1:18100. It checks the receiver, submits the package, and polls for up to 50 seconds for canonical completed plus ledger succeeded. The tunnel is closed automatically when the script exits.
+
+## 5. Acceptance evidence
+
+A successful run must report TASK_COMPLETED with the exact task ID, canonicalStatus completed, and ledgerStatus succeeded. Also verify on Windows that the local TaskLedger contains the same task ID and a succeeded result.
+
+Repeat the same package to verify idempotent admission. Invalid approval proof, expired peer session, missing or mismatched grant, and unauthorized capability must be rejected.
+
+CI loopback tests are not physical-device acceptance. Keep the live output redacted and separate. Never commit peer secrets, operator secrets, private addresses, raw approval packages, or SSH private keys.
