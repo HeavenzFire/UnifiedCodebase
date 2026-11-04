@@ -42,7 +42,7 @@ if [ -n "${HF_FEDERATION_SSH_KEY:-}" ]; then
     echo "SSH key not found: $HF_FEDERATION_SSH_KEY" >&2
     exit 7
   fi
-  SSH_KEY_ARGS=(-i "$HF_FEDERATION_SSH_KEY")
+  SSH_KEY_ARGS=(-i "$HF_FEDERATION_SSH_KEY" -o IdentitiesOnly=yes)
 fi
 
 echo "Starting SSH local forward: 127.0.0.1:$LOCAL_PORT -> Windows loopback:$REMOTE_PORT"
@@ -54,7 +54,7 @@ ssh "${SSH_KEY_ARGS[@]}" -N \
   -o ExitOnForwardFailure=yes \
   -o ServerAliveInterval=5 \
   -o ServerAliveCountMax=2 \
-  -o StrictHostKeyChecking=accept-new \
+  -o StrictHostKeyChecking=yes \
   "$HF_FEDERATION_SSH_TARGET" &
 TUNNEL_PID=$!
 
