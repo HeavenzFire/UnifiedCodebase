@@ -33,7 +33,6 @@ function requireEvidence(record) {
 
 function validateApprovalResult(result, hash, evidence, taskId) {
   if (!result || result.ok !== true) throw new Error('trusted approval verifier denied execution');
-  if (result.schema !== 'heavenzfire.operator-approval.v1' || result.taskId !== taskId) throw new Error('approval verifier returned an invalid proof schema or task identity');
   if (typeof result.approver !== 'string' || !ID.test(result.approver)) throw new Error('approval verifier did not identify an approver');
   if (typeof result.evidenceRef !== 'string' || !result.evidenceRef.trim() || result.evidenceRef.length > 512) {
     throw new Error('approval verifier did not return a bounded evidence reference');
@@ -43,29 +42,23 @@ function validateApprovalResult(result, hash, evidence, taskId) {
     throw new Error('approval verifier returned an invalid verification time');
   }
   if (result.recordHash !== hash) throw new Error('approval verifier attested a different canonical record');
-  if (typeof result.issuedAt !== 'string' || !Number.isFinite(Date.parse(result.issuedAt)) ||
-      typeof result.expiresAt !== 'string' || !Number.isFinite(Date.parse(result.expiresAt)) ||
-      Date.parse(result.expiresAt) <= Date.parse(result.issuedAt)) throw new Error('approval verifier returned an invalid proof lifetime');
-  if (typeof result.signature !== 'string' || !/^[a-f0-9]{64}$/.test(result.signature)) throw new Error('approval verifier did not return a cryptographic proof signature');
-  if (!Number.isFinite(result.proofIssuedAt) || !Number.isFinite(result.proofExpiresAt) || result.proofExpiresAt <= result.proofIssuedAt ||
+  if (!Number.isFinite(result.proofIssuedAt) || !Number.isFinite(result.proofExpiresAt) ||
+      result.proofExpiresAt <= result.proofIssuedAt ||
       typeof result.proofNonce !== 'string' || !/^[a-f0-9]{64}$/.test(result.proofNonce) ||
       typeof result.proofSignature !== 'string' || !/^[a-f0-9]{64}$/.test(result.proofSignature)) {
     throw new Error('approval verifier did not return a complete signed proof envelope');
   }
   return Object.freeze({
-    schema: result.schema,
-    taskId: result.taskId,
+    schema: 'heavenzfire.operator-approval.v1',
+    taskId,
     approver: result.approver,
     evidenceRef: result.evidenceRef,
-    issuedAt: result.issuedAt,
-    expiresAt: result.expiresAt,
+    verifiedAt: result.verifiedAt,
+    recordHash: hash,
     proofIssuedAt: result.proofIssuedAt,
     proofExpiresAt: result.proofExpiresAt,
     proofNonce: result.proofNonce,
-    proofSignature: result.proofSignature,
-    verifiedAt: result.verifiedAt,
-    recordHash: hash,
-    signature: result.signature
+    proofSignature: result.proofSignature
   });
 }
 
@@ -164,9 +157,6 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     const attestation = envelope.approvalAttestation;
     if (!attestation || attestation.schema !== 'heavenzfire.operator-approval.v1' || attestation.taskId !== task.id || attestation.recordHash !== hash ||
         !evidence.some(item => item.actor === attestation.approver) ||
-        typeof attestation.signature !== 'string' || !/^[a-f0-9]{64}$/.test(attestation.signature) ||
-        typeof attestation.issuedAt !== 'string' || !Number.isFinite(Date.parse(attestation.issuedAt)) ||
-        typeof attestation.expiresAt !== 'string' || !Number.isFinite(Date.parse(attestation.expiresAt)) ||
         typeof attestation.evidenceRef !== 'string' || !attestation.evidenceRef.trim() ||
         typeof attestation.verifiedAt !== 'string' || !Number.isFinite(Date.parse(attestation.verifiedAt)) ||
         !Number.isFinite(attestation.proofIssuedAt) || !Number.isFinite(attestation.proofExpiresAt) ||
