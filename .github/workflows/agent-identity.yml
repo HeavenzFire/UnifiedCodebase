@@ -6,7 +6,6 @@ on:
       - "MicroFederation/agent-identity.cjs"
       - "MicroFederation/test-agent-identity.cjs"
       - "MicroFederation/test-agent-identity-fabric-integration.cjs"
-      - "MicroFederation/test-agent-identity-fabric-integration.cjs"
       - "MicroFederation/AGENT-IDENTITY.md"
       - ".github/workflows/agent-identity.yml"
   push:
@@ -14,8 +13,12 @@ on:
     paths:
       - "MicroFederation/agent-identity.cjs"
       - "MicroFederation/test-agent-identity.cjs"
+      - "MicroFederation/test-agent-identity-fabric-integration.cjs"
       - "MicroFederation/AGENT-IDENTITY.md"
       - ".github/workflows/agent-identity.yml"
+
+permissions:
+  contents: read
 
 jobs:
   node20:
@@ -27,7 +30,7 @@ jobs:
           node-version: "20"
       - name: Syntax check
         run: node --check MicroFederation/agent-identity.cjs
-      - name: Identity tests
+      - name: Identity and fabric integration tests
         run: node --test MicroFederation/test-agent-identity.cjs MicroFederation/test-agent-identity-fabric-integration.cjs
 
   node22:
@@ -39,5 +42,5 @@ jobs:
           node-version: "22"
       - name: Syntax check
         run: node --check MicroFederation/agent-identity.cjs
-      - name: Identity tests
-        run: node --test MicroFederation/test-agent-identity.cjs
+      - name: Identity and fabric integration tests
+        run: node --test MicroFederation/test-agent-identity.cjs MicroFederation/test-agent-identity-fabric-integration.cjs
