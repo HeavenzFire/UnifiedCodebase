@@ -5,35 +5,14 @@ on:
     branches:
       - research/cross-device-federation-rd-v0.1
     paths:
-      - 'MicroFederation/federation-protocol.cjs'
-      - 'MicroFederation/test/federation-protocol.test.cjs'
-      - 'MicroFederation/shared-task-ledger-adapter.cjs'
-      - 'MicroFederation/test/shared-task-ledger-adapter.test.cjs'
-      - 'MicroFederation/test/federation-http.test.cjs'
-      - 'MicroFederation/test/federation-http-transport.test.cjs'
-      - 'MicroFederation/federation-http-client.cjs'
-      - 'MicroFederation/federation-http-server.cjs'
-      - '.github/workflows/federation-protocol.yml'
-
-      - 'MicroFederation/federation-runtime.cjs'
-      - 'MicroFederation/federation-node.cjs'
-      - 'MicroFederation/openai-local-inference-adapter.cjs'
-      - 'MicroFederation/test/openai-local-inference-adapter.test.cjs'
-      - 'scripts/rd/federation-node-config.example.cjs'  pull_request:
-    paths:
-      - 'MicroFederation/federation-protocol.cjs'
-      - 'MicroFederation/test/federation-protocol.test.cjs'
-      - 'MicroFederation/shared-task-ledger-adapter.cjs'
-      - 'MicroFederation/test/shared-task-ledger-adapter.test.cjs'
-      - 'MicroFederation/federation-http-server.cjs'
-      - 'MicroFederation/federation-http-client.cjs'
-      - 'MicroFederation/test/federation-http-transport.test.cjs'
-      - '.github/workflows/federation-protocol.yml'
-      - 'MicroFederation/federation-runtime.cjs'
-      - 'MicroFederation/federation-node.cjs'
-      - 'MicroFederation/openai-local-inference-adapter.cjs'
-      - 'MicroFederation/test/openai-local-inference-adapter.test.cjs'
+      - 'MicroFederation/**'
       - 'scripts/rd/federation-node-config.example.cjs'
+      - '.github/workflows/federation-protocol.yml'
+  pull_request:
+    paths:
+      - 'MicroFederation/**'
+      - 'scripts/rd/federation-node-config.example.cjs'
+      - '.github/workflows/federation-protocol.yml'
 
 permissions:
   contents: read
@@ -50,5 +29,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - name: Run deterministic protocol tests
+      - name: Run deterministic federation suites
         run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http-transport.test.cjs MicroFederation/test/openai-local-inference-adapter.test.cjs
