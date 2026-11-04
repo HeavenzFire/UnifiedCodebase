@@ -45,3 +45,14 @@ test('ledger detects tampering',async t=>{
  rows[0].data.title='tampered'; await fs.writeFile(file,rows.map(JSON.stringify).join('\n')+'\n');
  await assert.rejects(new RemediationLedger(file).open(),/hash chain invalid/);
 });
+
+test('Command Center agent runner reuses the existing serialized orchestrator adapter',async()=>{
+ const {createCommandCenterAgentRunner}=require('./issue-remediation-pipeline.cjs');
+ const calls=[];
+ const runner=createCommandCenterAgentRunner({adapter:{async run(input){calls.push(input);return {response:input.role==='Synthesizer'?JSON.stringify({findings:'consensus',verdict:'pass',patch:'diff --git a/a b/a'}):'source-backed finding'};}},roles:require('./agent-roster.v1.json').agents});
+ const review=await runner.run('security-reviewer',{issue:{id:'1'},source:{repository:'owner/repo'},instruction:'review'});
+ assert.match(review.findings,/source-backed/);
+ const synthesis=await runner.run('synthesizer',{issue:{id:'1'},source:{repository:'owner/repo'},reviews:[review],instruction:'synthesize'});
+ assert.equal(synthesis.patch,'diff --git a/a b/a');
+ assert.equal(calls.length,2);
+});
