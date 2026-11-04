@@ -84,22 +84,22 @@ test('approved canonical record maps into ledger and projects back without losin
 test('pending and proposed canonical tasks are never admitted', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   const pending = { ...f.record, status: 'proposed', approvalState: 'pending' };
-  await assert.rejects(f.adapter.createFromCanonical(pending, { approvalProof: 'operator-confirmed' }), /only explicitly approved/);
+  await assert.rejects(f.adapter.createFromCanonical(pending, { approvalProof: f.createProof() }), /only explicitly approved/);
   assert.equal((await f.ledger.list()).length, 0);
 });
 
 test('missing, forged, or mismatched approval proof fails closed', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  await assert.rejects(f.adapter.createFromCanonical(f.record), /denied/);
+  await assert.rejects(f.adapter.createFromCanonical(f.record), /proof is required/);
   await assert.rejects(f.adapter.createFromCanonical(f.record, { approvalProof: { schema: 'forged' } }), /proof/);
   const wrongActor = { ...f.record, evidence: [{ ...f.record.evidence[0], actor: 'other-user' }] };
-  await assert.rejects(f.adapter.createFromCanonical(wrongActor, { approvalProof: 'operator-confirmed' }), /does not match/);
+  await assert.rejects(f.adapter.createFromCanonical(wrongActor, { approvalProof: f.createProof() }), /claims are invalid/);
   assert.equal((await f.ledger.list()).length, 0);
 });
 
 test('GovernedRuntime owns execution and adapter rechecks the trusted attestation', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   const runtime = createGovernedRuntime({
     ledger: f.ledger,
     workerId: 'worker-zdh',
@@ -116,7 +116,7 @@ test('GovernedRuntime owns execution and adapter rechecks the trusted attestatio
 
 test('tampered approval metadata is blocked by the governed runtime before execution', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   const raw = f.ledger.tasks.find(task => task.id === created.id);
   raw.metadata.heavenzfireSharedTaskAdapter.approvalAttestation.recordHash = '0'.repeat(64);
   await f.ledger._persist(f.ledger.tasks);
@@ -135,17 +135,17 @@ test('tampered approval metadata is blocked by the governed runtime before execu
 
 test('idempotent delivery returns the same task and rejects conflicting duplicate input', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  const first = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  const first = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   f.setNow(f.now() + 5000);
-  const second = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  const second = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   assert.equal(second.id, first.id);
   const changed = { ...f.record, goal: 'different goal' };
-  await assert.rejects(f.adapter.createFromCanonical(changed, { approvalProof: 'operator-confirmed' }), /already exists with a different or untrusted canonical record/);
+  await assert.rejects(f.adapter.createFromCanonical(changed, { approvalProof: f.createProof() }), /already exists with a different or untrusted canonical record/);
 });
 
 test('unsupported cancelled state is explicit rather than silently mapped', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
-  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
   const cancelled = { ...created, status: 'cancelled' };
   await assert.rejects(f.adapter.projectToCanonical(cancelled), /no lossless canonical mapping: cancelled/);
 });
