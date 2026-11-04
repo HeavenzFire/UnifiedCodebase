@@ -6,6 +6,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { TaskLedger } = require('../task-ledger.cjs');
+const { createGovernedRuntime } = require('../governed-runtime.cjs');
 const { createSharedTaskLedgerAdapter, recordHash } = require('../shared-task-ledger-adapter.cjs');
 
 const contract = {
@@ -31,6 +32,8 @@ async function fixture() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'hf-shared-task-'));
   const ledger = await new TaskLedger(path.join(dir, 'ledger.json')).open();
   let now = Date.parse('2026-11-04T12:00:00.000Z');
+  let attestationChecks = 0;
+  let executions = 0;
   const clock = () => now;
   const verifyApproval = async ({ record, approvalProof, recordHash: hash }) => {
     if (approvalProof !== 'operator-confirmed') return { ok: false };
@@ -39,11 +42,15 @@ async function fixture() {
       verifiedAt: new Date(now).toISOString(), recordHash: hash
     };
   };
-  const verifyAttestation = async ({ record, attestation }) => ({
-    ok: attestation.recordHash === recordHash(record) &&
-      attestation.approver === 'operator-zdh' && attestation.evidenceRef === 'approval:' + record.taskId
-  });
-  const adapter = createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verifyAttestation, clock });
+  const verifyAttestation = async ({ record, attestation }) => {
+    attestationChecks++;
+    return { ok: attestation.recordHash === recordHash(record) && attestation.approver === 'operator-zdh' && attestation.evidenceRef === 'approval:' + record.taskId };
+  };
+  const execute = async ({ canonicalTaskId, prompt }) => {
+    executions++;
+    return { ok: true, canonicalTaskId, prompt, result: 'HF_FEDERATION_TASK_OK' };
+  };
+  const adapter = createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verifyAttestation, execute, clock });
   const record = {
     schema: contract.SCHEMA, taskId: 'task-001', source: 'command-center',
     goal: 'Return the exact text HF_FEDERATION_TASK_OK',
@@ -53,9 +60,10 @@ async function fixture() {
       observedAt: new Date(now).toISOString(), actor: 'operator-zdh'
     }],
     createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(),
-    metadata: { purpose: 'adapter-test' }
+    metadata: { purpose: 'adapter-test', agentId: 'agent-shared', grantId: 'grant-shared', role: 'research' }
   };
-  return { dir, ledger, adapter, record, setNow: value => { now = value; }, now: () => now };
+  return { dir, ledger, adapter, record, setNow: value => { now = value; }, now: () => now,
+    getAttestationChecks: () => attestationChecks, getExecutions: () => executions };
 }
 
 test('approved canonical record maps into ledger and projects back without losing identity or approval evidence', async t => {
@@ -87,26 +95,40 @@ test('missing, forged, or mismatched approval proof fails closed', async t => {
   assert.equal((await f.ledger.list()).length, 0);
 });
 
-test('trusted attestation is rechecked before a worker can claim execution', async t => {
+test('GovernedRuntime owns execution and adapter rechecks the trusted attestation', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
-  const claim = await f.adapter.claimNextApproved('worker-zdh', { now: f.now(), leaseMs: 10000 });
-  assert.equal(claim.status, 'claimed');
-  assert.equal(claim.authorization.authorized, true);
-  assert.equal(claim.authorization.approver, 'operator-zdh');
+  const runtime = createGovernedRuntime({
+    ledger: f.ledger,
+    workerId: 'worker-zdh',
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: f.adapter
+  });
+  const result = await runtime.runOnce({ now: f.now() });
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.result.result, 'HF_FEDERATION_TASK_OK');
+  assert.equal(f.getAttestationChecks(), 1);
+  assert.equal(f.getExecutions(), 1);
+  assert.equal((await f.ledger.get(f.record.taskId)).status, 'succeeded');
 });
 
-test('tampered approval metadata is blocked and released before execution', async t => {
+test('tampered approval metadata is blocked by the governed runtime before execution', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   const created = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
-  created.metadata.heavenzfireSharedTaskAdapter.approvalAttestation.recordHash = '0'.repeat(64);
   const raw = f.ledger.tasks.find(task => task.id === created.id);
   raw.metadata.heavenzfireSharedTaskAdapter.approvalAttestation.recordHash = '0'.repeat(64);
   await f.ledger._persist(f.ledger.tasks);
-  const claim = await f.adapter.claimNextApproved('worker-zdh', { now: f.now(), leaseMs: 10000 });
-  assert.equal(claim.status, 'blocked');
-  assert.match(claim.reason, /attestation/);
-  assert.equal((await f.ledger.get(created.id)).status, 'queued');
+  const runtime = createGovernedRuntime({
+    ledger: f.ledger,
+    workerId: 'worker-zdh',
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: f.adapter
+  });
+  const result = await runtime.runOnce({ now: f.now() });
+  assert.equal(result.status, 'blocked');
+  assert.match(result.error, /attestation/);
+  assert.equal(f.getExecutions(), 0);
+  assert.equal((await f.ledger.get(created.id)).status, 'failed');
 });
 
 test('idempotent delivery returns the same task and rejects conflicting duplicate input', async t => {
