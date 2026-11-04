@@ -169,7 +169,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     return Object.freeze({ authorized: true, taskId: task.id, approver: attestation.approver, evidenceRef: attestation.evidenceRef, recordHash: hash });
   }
 
-  async function run({ taskId, role, prompt } = {}) {
+  async function run({ taskId, role, prompt, signal } = {}) {
     if (typeof taskId !== 'string' || !ID.test(taskId)) throw new Error('ledger taskId is invalid');
     const task = await ledger.get(taskId);
     if (!task || task.status !== 'running') {
@@ -182,7 +182,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
         role !== task.payload.role || task.payload.source !== record.source) {
       throw Object.assign(new Error('governed task payload does not match its approved canonical record'), { policyDenied: true });
     }
-    return execute({ taskId, canonicalTaskId: record.taskId, role, prompt, canonicalRecord: record, authorization });
+    return execute({ taskId, canonicalTaskId: record.taskId, role, prompt, canonicalRecord: record, authorization, signal });
   }
 
   async function projectToCanonical(taskOrId) {
