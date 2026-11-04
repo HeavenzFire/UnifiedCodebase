@@ -139,3 +139,33 @@ test('client refuses non-loopback and non-HTTP endpoints', async t => {
     protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'https://127.0.0.1:18100'
   }), /must use HTTP inside the SSH tunnel/);
 });
+
+test('client disables redirects for signed federation payloads', async () => {
+  const pair = protocolPair();
+  let requestOptions;
+  const client = createFederationHttpClient({
+    protocol: pair.client,
+    peerNodeId: 'windows-zdh',
+    baseUrl: 'http://127.0.0.1:18100',
+    fetchImpl: async (_url, options) => {
+      requestOptions = options;
+      return new Response(JSON.stringify({ ok: false, error: 'test-denied' }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+  });
+  await assert.rejects(client.handshake(['task.submit']), /test-denied/);
+  assert.equal(requestOptions.redirect, 'error');
+  assert.equal(requestOptions.cache, 'no-store');
+});
+
+test('client rejects localhost aliases and credential-bearing loopback URLs', async () => {
+  const f = await startServer(); t.after(() => f.runtime.close());
+  assert.throws(() => createFederationHttpClient({
+    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
+  }), /numeric loopback URLs only/);
+  assert.throws(() => createFederationHttpClient({
+    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://user:pass@127.0.0.1:18100'
+  }), /credentials are not allowed/);
+});
