@@ -27,3 +27,29 @@ test('rejects attempts to self-assign the fabric routing capability without a tr
  const ledger=await makeLedger(t);
  await assert.rejects(ledger.create({id:'self-authorized',payload:{task:'run'},requiredCapabilities:['unified-field-fabric.v1']}),/trusted task producer verifier is required/);
 });
+
+
+test('expired lease exhaustion is swept regardless of claimant capability filter',async t=>{
+ const ledger=await makeLedger(t);
+ await ledger.create({id:'expired-other-capability',payload:{ok:true},requiredCapabilities:['capability.alpha'],maxAttempts:1},{now:1000});
+ await ledger.claimNext('worker-alpha',{now:1000,leaseMs:1000,requiredCapabilities:['capability.alpha']});
+ assert.equal(await ledger.claimNext('worker-beta',{now:2000,leaseMs:1000,requiredCapabilities:['capability.beta']}),null);
+ const task=await ledger.get('expired-other-capability');
+ assert.equal(task.status,'failed');
+ assert.match(task.error,/lease expired/);
+});
+
+test('persists bounded structured failure evidence across ledger restart',async t=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'hf-ledger-failure-trace-'));
+ t.after(()=>fs.rm(dir,{recursive:true,force:true}));
+ const file=path.join(dir,'ledger.json');
+ const ledger=await new TaskLedger(file).open();
+ await ledger.create({id:'failure-trace',payload:{ok:true}},{now:1000});
+ await ledger.claimNext('worker-a',{now:1000,leaseMs:5000});
+ await ledger.start('failure-trace','worker-a',{now:1001});
+ const trace={schema:'heavenzfire.workflow-failure.v1',workflowId:'wf-failure',nodeStates:{build:{status:'succeeded'},verify:{status:'failed',error:'counterexample'}},events:[{seq:1,type:'node.failed'}]};
+ const failed=await ledger.fail('failure-trace','worker-a','workflow node failed',{now:1002,retryable:false,failureResult:trace});
+ assert.deepEqual(failed.result,trace);
+ const restored=await new TaskLedger(file).open();
+ assert.deepEqual((await restored.get('failure-trace')).result,trace);
+});
