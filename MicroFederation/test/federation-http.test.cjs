@@ -23,12 +23,12 @@ const nonce = () => (++nonceCounter).toString(16).padStart(64, '0');
 
 function protocolPair() {
   const windows = createFederationProtocol({
-    nodeId: 'windows-zdh', capabilities: ['task.submit'], clock, nonce,
-    peers: [{ nodeId: 'android-a67l', secret: SECRET, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit'] }]
+    nodeId: 'windows-zdh', capabilities: ['task.submit', 'task.read'], clock, nonce,
+    peers: [{ nodeId: 'android-a67l', secret: SECRET, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit', 'task.read'] }]
   });
   const android = createFederationProtocol({
-    nodeId: 'android-a67l', capabilities: ['task.submit'], clock, nonce,
-    peers: [{ nodeId: 'windows-zdh', secret: SECRET, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit'] }]
+    nodeId: 'android-a67l', capabilities: ['task.submit', 'task.read'], clock, nonce,
+    peers: [{ nodeId: 'windows-zdh', secret: SECRET, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit', 'task.read'] }]
   });
   return { windows, android };
 }
@@ -84,7 +84,7 @@ test('HTTP federation handshake and task submission work over a loopback endpoin
   const f = await withServer(t);
   const session = await f.client.handshake();
   assert.equal(session.state, 'AUTHENTICATED');
-  assert.deepEqual(session.grantedCapabilities, ['task.submit']);
+  assert.deepEqual(session.grantedCapabilities, ['task.read', 'task.submit']);
   const result = await f.client.submitTask(approvedRecord(), 'signed-operator-proof');
   assert.equal(result.ok, true);
   assert.equal(result.status, 202);
