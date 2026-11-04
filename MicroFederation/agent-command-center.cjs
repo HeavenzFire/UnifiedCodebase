@@ -162,7 +162,7 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
         const node = await registry.upsertNode(input, { actor: 'agent-command-center' });
         return send(201, { node });
       }
-      const heartbeatMatch = url.pathname.match(/^\\/api\\/registry\\/nodes\\/([A-Za-z0-9._:-]{1,128})\\/heartbeat$/);
+      const heartbeatMatch = url.pathname.match(/^\/api\/registry\/nodes\/([A-Za-z0-9._:-]{1,128})\/heartbeat$/);
       if (req.method === 'POST' && heartbeatMatch) {
         const input = await readJsonBody(req);
         const node = await registry.recordHeartbeat(decodeURIComponent(heartbeatMatch[1]), input, { actor: 'agent-command-center' });
