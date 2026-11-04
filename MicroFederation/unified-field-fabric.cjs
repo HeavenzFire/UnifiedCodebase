@@ -46,9 +46,14 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
      let sawBusy=false;
      for(const peer of candidates){
       if(denied.has(peer.peerId))continue;
-      if((active.get(peer.peerId)||0)>=peer.capacity){sawBusy=true;continue;}
-      const decision=await authorizeWorker({taskId:task.id,workflowId:payload.workflowId,nodeId:ctx.nodeId,capability,peerId:peer.peerId,producer:task.metadata.provenance});
+      const current=(active.get(peer.peerId)||0);
+      if(current>=peer.capacity){sawBusy=true;continue;}
+      active.set(peer.peerId,current+1);
+      let decision;
+      try{decision=await authorizeWorker({taskId:task.id,workflowId:payload.workflowId,nodeId:ctx.nodeId,capability,peerId:peer.peerId,producer:task.metadata.provenance});}
+      catch(error){const count=(active.get(peer.peerId)||1)-1;if(count)active.set(peer.peerId,count);else active.delete(peer.peerId);throw error;}
       if(decision&&decision.ok===true&&decision.taskId===task.id&&decision.nodeId===ctx.nodeId&&decision.capability===capability&&decision.peerId===peer.peerId&&Number.isFinite(decision.expiresAt)&&decision.expiresAt>clock()&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
+      const count=(active.get(peer.peerId)||1)-1;if(count)active.set(peer.peerId,count);else active.delete(peer.peerId);
       denied.add(peer.peerId);
      }
      if(selected)break;
@@ -57,7 +62,6 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
      const interval=Math.min(workerPollMs,workerWaitMs-waited);
      await delay(interval);waited+=interval;
     }
-    active.set(selected.peerId,(active.get(selected.peerId)||0)+1);
     try{return await workerAdapters[selected.peerId]({...ctx,taskId:task.id,peerId:selected.peerId,capability,authorization:{issuer:grant.issuer,grantId:grant.grantId,expiresAt:grant.expiresAt}});}
     finally{const count=(active.get(selected.peerId)||1)-1;if(count)active.set(selected.peerId,count);else active.delete(selected.peerId);}
    },chooseBranch:chooseBranchPolicy});
