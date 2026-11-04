@@ -132,3 +132,27 @@ test('command center exposes project and node registry CRUD through the same loc
   assert.equal(manifest.body.projects.length, 1);
   assert.equal(manifest.body.nodes[0].lastSeenAt !== null, true);
 });
+
+
+test('rejects DNS-rebinding hosts, foreign origins, and credential-bearing prompts', async t => {
+  const app = createCommandCenterServer({ stateDirectory: await stateDir(t), adapter: { run: async () => ({ response: 'ok' }) } });
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  t.after(() => app.close());
+  const base = 'http://127.0.0.1:' + address.port;
+  const hostAttack = await fetch(base + '/api/agents', { headers: { host: 'evil.example' } });
+  assert.equal(hostAttack.status, 403);
+  const originAttack = await fetch(base + '/api/agents', { headers: { origin: 'http://evil.example' } });
+  assert.equal(originAttack.status, 403);
+  const secretPrompt = await request(base, '/api/message', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ target: 'planner', content: 'credential ghp_' + 'A'.repeat(40) })
+  });
+  assert.equal(secretPrompt.status, 400);
+});
+
+test('message journal enforces its configured event bound', async t => {
+  const dir = await stateDir(t);
+  const store = await new AgentMessageStore(path.join(dir, 'bounded.jsonl'), { maxEvents: 1 }).open();
+  await store.appendMessage({ from: 'user', to: 'planner', conversationId: 'planner', kind: 'direct', content: 'one' });
+  await assert.rejects(store.appendMessage({ from: 'user', to: 'planner', conversationId: 'planner', kind: 'direct', content: 'two' }), /event bound/);
+});
