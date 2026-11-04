@@ -56,6 +56,7 @@ Copy only the signed approval package to Termux over the existing SSH connection
 
 ```bash
 export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
+export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
 scp -i "$HF_FEDERATION_SSH_KEY" "$HF_FEDERATION_SSH_TARGET:C:/Users/rucke/HeavenzFire-RD/approval-package.json" "$HOME/approval-package.json"
 ```
 
