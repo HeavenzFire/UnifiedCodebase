@@ -19,6 +19,9 @@ on:
       - 'MicroFederation/test/federation-protocol.test.cjs'
       - 'MicroFederation/shared-task-ledger-adapter.cjs'
       - 'MicroFederation/test/shared-task-ledger-adapter.test.cjs'
+      - 'MicroFederation/federation-http-server.cjs'
+      - 'MicroFederation/federation-http-client.cjs'
+      - 'MicroFederation/test/federation-http-transport.test.cjs'
       - '.github/workflows/federation-protocol.yml'
 
 permissions:
