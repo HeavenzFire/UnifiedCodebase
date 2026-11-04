@@ -36,7 +36,16 @@ function canonicalJson(value) {
   ).join(',') + '}';
 }
 function canonicalRecordSha256(record) {
-  return createHash('sha256').update(canonicalJson(record), 'utf8').digest('hex');
+  // Hash immutable approved task content, not lifecycle status or appended evidence.
+  const snapshot = {
+    schema: record.schema,
+    taskId: record.taskId,
+    source: record.source,
+    goal: record.goal,
+    approvalState: record.approvalState,
+    metadata: safeMetadata(record.metadata)
+  };
+  return createHash('sha256').update(canonicalJson(snapshot), 'utf8').digest('hex');
 }
 function validateRecord(record, contract) {
   if (!contract || typeof contract.validateTaskRecord !== 'function') {
@@ -169,14 +178,34 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
   }
 
 
-  function projectLedgerState(canonicalRecord, ledgerRecord, { actor } = {}) {
+  async function projectLedgerState(canonicalRecord, ledgerRecordRef) {
     validateRecord(canonicalRecord, contract);
-    if (!ledgerRecord || typeof ledgerRecord !== 'object' || Array.isArray(ledgerRecord)) {
-      throw new TypeError('ledgerRecord must be an object');
+    const ledgerTaskId = typeof ledgerRecordRef === 'string'
+      ? ledgerRecordRef
+      : ledgerRecordRef && ledgerRecordRef.id;
+    requireText(ledgerTaskId, 'ledger task ID', 128);
+
+    const expectedLedgerId = 'shared:' +
+      createHash('sha256').update(canonicalRecord.taskId, 'utf8').digest('hex');
+    if (ledgerTaskId !== expectedLedgerId) {
+      throw new Error('ledger task ID does not match canonical task identity');
     }
-    if (!ledgerRecord.metadata || ledgerRecord.metadata.canonicalTaskId !== canonicalRecord.taskId) {
-      throw new Error('canonical and ledger task identities do not match');
+
+    // Never trust caller-supplied status, owner, metadata, or events. Re-read
+    // the authoritative ledger record and derive the projection from it.
+    const authoritative = await ledger.get(ledgerTaskId);
+    if (!authoritative || authoritative.id !== ledgerTaskId) {
+      throw new Error('authoritative shared-task ledger record was not found');
     }
+    const metadata = authoritative.metadata || {};
+    if (metadata.adapter !== 'heavenzfire.shared-task.v1' ||
+        metadata.canonicalTaskId !== canonicalRecord.taskId) {
+      throw new Error('canonical and authoritative ledger task identities do not match');
+    }
+    if (metadata.canonicalRecordSha256 !== canonicalRecordSha256(canonicalRecord)) {
+      throw new Error('canonical task content changed after enqueue; refusing lifecycle projection');
+    }
+
     const mapping = {
       queued: 'approved',
       claimed: 'running',
@@ -185,28 +214,28 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
       failed: 'failed',
       cancelled: 'review_required'
     };
-    const target = mapping[ledgerRecord.status];
-    if (!target) throw new Error('unsupported ledger lifecycle status: ' + ledgerRecord.status);
+    const target = mapping[authoritative.status];
+    if (!target) throw new Error('unsupported ledger lifecycle status: ' + authoritative.status);
     if (canonicalRecord.approvalState !== 'approved' ||
         !['approved', 'running', 'completed', 'failed', 'review_required'].includes(canonicalRecord.status)) {
       throw new Error('canonical task is not in an approved lifecycle state');
     }
     if (target === 'approved') {
       if (canonicalRecord.status !== 'approved') throw new Error('queued ledger state conflicts with canonical state');
-      return Object.freeze({ status: 'unchanged', canonicalRecord, ledgerStatus: ledgerRecord.status });
+      return Object.freeze({ status: 'unchanged', canonicalRecord, ledgerStatus: authoritative.status });
     }
     if (canonicalRecord.status === target) {
-      return Object.freeze({ status: 'unchanged', canonicalRecord, ledgerStatus: ledgerRecord.status });
+      return Object.freeze({ status: 'unchanged', canonicalRecord, ledgerStatus: authoritative.status });
     }
     if (['completed', 'failed', 'review_required'].includes(canonicalRecord.status)) {
       throw new Error('terminal canonical state conflicts with ledger status');
     }
 
-    const lastEvent = Array.isArray(ledgerRecord.events)
-      ? [...ledgerRecord.events].reverse().find(event => event && event.actor)
+    const lastEvent = Array.isArray(authoritative.events)
+      ? [...authoritative.events].reverse().find(event => event && typeof event.actor === 'string' && event.actor.trim())
       : null;
-    const projectionActor = requireText(actor || ledgerRecord.owner || (lastEvent && lastEvent.actor),
-      'ledger projection actor', 128);
+    const projectionActor = requireText(authoritative.owner || (lastEvent && lastEvent.actor),
+      'authoritative ledger event actor', 128);
     const makeEvidence = summary => ({
       kind: 'ledger-lifecycle',
       summary,
@@ -224,7 +253,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
     };
 
     if (target === 'running') {
-      if (projected.status === 'approved') transition('running', 'Ledger task ' + ledgerRecord.status);
+      if (projected.status === 'approved') transition('running', 'Ledger task ' + authoritative.status);
     } else if (target === 'completed') {
       if (projected.status === 'approved') transition('running', 'Ledger task entered execution');
       if (projected.status !== 'running') throw new Error('ledger success cannot follow canonical status ' + projected.status);
@@ -240,7 +269,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
       transition('review_required', 'Ledger task cancelled; operator review required');
     }
 
-    return Object.freeze({ status: 'projected', canonicalRecord: projected, ledgerStatus: ledgerRecord.status });
+    return Object.freeze({ status: 'projected', canonicalRecord: projected, ledgerStatus: authoritative.status });
   }
 
 
