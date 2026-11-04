@@ -16,7 +16,7 @@ const canonical = value => value === null || typeof value !== 'object' ? JSON.st
 const digest = value => crypto.createHash('sha256').update(canonical(value)).digest('hex');
 const clone = value => JSON.parse(JSON.stringify(value));
 
-const SECRET_CONTENT = [/\bsk-[A-Za-z0-9_-]{20,}\b/, /\bgh[pousr]_[A-Za-z0-9]{20,}\b/, /\bgithub_pat_[A-Za-z0-9_]{20,}\b/, /\bAIza[0-9A-Za-z_-]{30,}\b/, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/];
+const SECRET_CONTENT = [/\bsk-[A-Za-z0-9_-]{20,}\b/, /\bgh[pousr]_[A-Za-z0-9]{20,}\b/, /\bgithub_pat_[A-Za-z0-9_]{20,}\b/, /\bAIza[0-9A-Za-z_-]{30,}\b/, /\bBearer\s+[A-Za-z0-9._~-]{20,}\b/i, /\bAKIA[0-9A-Z]{16}\b/, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/];
 
 class AgentMessageStore {
   constructor(file, { maxEvents = 100000 } = {}) {
@@ -130,7 +130,7 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
   }
   async function handle(req, res) {
     const send = (status, body, type = 'application/json; charset=utf-8') => {
-      res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
+      res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY', 'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'" });
       res.end(type.startsWith('application/json') ? JSON.stringify(body) : body);
     };
     try {
