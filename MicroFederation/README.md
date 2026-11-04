@@ -191,3 +191,20 @@ Focused verification:
 ```powershell
 node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs .\test-unified-field-fabric.cjs .\test-task-ledger.cjs .\test-human-protection.cjs .\test-approval-gate.cjs
 ```
+
+## Durable approval replay protection (v0.3)
+
+`approval-nonce-store.cjs` adds an optional file-backed nonce store for the signed human-approval gate. Configure `createApprovalGate({ trustedIssuers, nonceStore: createFileApprovalNonceStore({ directory }) })` with a stable absolute directory outside the Git checkout. The approval gate verifies the signature and exact task/node/action/subject scope before consuming the issuer/nonce pair.
+
+- Nonce consumption uses exclusive file creation (`open` with `wx`), so independent Node processes on the same local filesystem cannot both consume the same issuer/nonce pair.
+- The store records only the consumption timestamp and expiry; the signed approval, signature, and task payload are not written to the nonce files.
+- Expired entries are pruned during subsequent consume operations. The configured entry bound fails closed when reached.
+- The store directory must be writable only by the trusted control-plane identity. POSIX permissions are created as `0700` for the directory and `0600` for nonce files; enforce equivalent Windows ACLs on Windows.
+- Use a local filesystem with reliable exclusive-create semantics. Do not assume a network share or multi-host filesystem provides the same guarantees; distributed deployments should use a transactional shared nonce service.
+- If the durable store cannot be read or written, approval verification returns `approval_replay_store_unavailable` and the protected action must remain blocked.
+- The existing in-memory replay cache remains the compatibility default when no store is injected. Production deployments must explicitly configure the durable store.
+
+Verification:
+```powershell
+node --test .\test-approval-gate.cjs .\test-approval-nonce-store.cjs
+```
