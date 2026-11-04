@@ -69,7 +69,7 @@ function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1',
       if (request.method === 'GET' && url.pathname === '/health') {
         return json(response, 200, { ok: true, service: 'heavenzfire-federation-http', protocol: PROTOCOL, bind: '127.0.0.1' });
       }
-      if (request.method !== 'POST' || !['/v1/handshake', '/v1/tasks'].includes(url.pathname)) {
+      if (request.method !== 'POST' || !['/v1/handshake', '/v1/tasks', '/v1/tasks/get'].includes(url.pathname)) {
         return json(response, 404, { ok: false, error: 'not_found' });
       }
       if (!String(request.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
@@ -93,14 +93,25 @@ function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1',
 
       const session = sessions.get(body.sessionNonce);
       if (!session || session.expiresAt <= now) return json(response, 401, { ok: false, error: 'session_missing_or_expired' });
-      if (!session.capabilities.includes('task.submit')) return json(response, 403, { ok: false, error: 'capability_denied' });
       if (!protocol.verifyPeerMessage(session.peerId, body)) return json(response, 401, { ok: false, error: 'message_authentication_failed' });
-      if (body.protocol !== PROTOCOL || body.type !== 'task_submit' || body.sessionNonce !== session.nonce ||
-          !body.taskRecord || typeof body.taskRecord !== 'object') {
-        return json(response, 400, { ok: false, error: 'invalid_task_message' });
+      if (body.protocol !== PROTOCOL || body.sessionNonce !== session.nonce) {
+        return json(response, 400, { ok: false, error: 'invalid_session_message' });
       }
-      const created = await taskAdapter.createFromCanonical(body.taskRecord, { approvalProof: body.approvalProof });
-      return json(response, 202, { ok: true, taskId: created.id, status: created.status });
+      if (url.pathname === '/v1/tasks') {
+        if (!session.capabilities.includes('task.submit')) return json(response, 403, { ok: false, error: 'capability_denied' });
+        if (body.type !== 'task_submit' || !body.taskRecord || typeof body.taskRecord !== 'object') {
+          return json(response, 400, { ok: false, error: 'invalid_task_message' });
+        }
+        const created = await taskAdapter.createFromCanonical(body.taskRecord, { approvalProof: body.approvalProof });
+        return json(response, 202, { ok: true, taskId: created.id, status: created.status });
+      }
+      if (!session.capabilities.includes('task.read')) return json(response, 403, { ok: false, error: 'capability_denied' });
+      if (body.type !== 'task_get' || typeof body.taskId !== 'string' || typeof taskAdapter.projectToCanonical !== 'function') {
+        return json(response, 400, { ok: false, error: 'invalid_task_query' });
+      }
+      const projection = await taskAdapter.projectToCanonical(body.taskId);
+      if (!projection) return json(response, 404, { ok: false, error: 'task_not_found' });
+      return json(response, 200, { ok: true, projection });
     } catch (error) {
       const status = Number.isInteger(error.statusCode) ? error.statusCode : 400;
       if (!response.headersSent) json(response, status, { ok: false, error: String(error.message || 'request_failed').slice(0, 512) });
