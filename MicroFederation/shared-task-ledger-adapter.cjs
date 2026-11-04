@@ -148,9 +148,14 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     if (!ID.test(task.metadata.agentId || '') || !ID.test(task.metadata.grantId || '')) throw new Error('governed task is missing agentId or grantId metadata');
     const record = envelope.canonicalRecord;
     contract.validateTaskRecord(record);
+    const canonicalMetadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+      ? record.metadata : {};
     if (record.schema !== CANONICAL_SCHEMA || record.taskId !== task.id ||
-        record.status !== 'approved' || record.approvalState !== 'approved') {
-      throw new Error('canonical approval state or task identity is invalid');
+        record.status !== 'approved' || record.approvalState !== 'approved' ||
+        task.metadata.agentId !== canonicalMetadata.agentId ||
+        task.metadata.grantId !== canonicalMetadata.grantId ||
+        !Array.isArray(task.requiredCapabilities) || !task.requiredCapabilities.includes('shared-task.v1')) {
+      throw new Error('canonical approval state, identity, or required capability binding is invalid');
     }
     const evidence = requireEvidence(record);
     const hash = recordHash(record);
