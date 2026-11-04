@@ -77,3 +77,23 @@ test('override delegates non-local requests and refuses to overwrite a later pat
   gapi.load = () => {};
   assert.throws(() => uninstall(), /refusing to overwrite/);
 });
+
+
+test('high-impact capabilities require a trusted host approval verifier', async () => {
+  const definition = { id: 'external.bridge', version: '1.0.0', description: 'External bridge', riskClass: 'external_network' };
+  const fabric = new CapabilityFabric({ definitions: [definition], adapters: { 'external.bridge': async () => {} } });
+  await assert.rejects(fabric.load(['external.bridge']), /explicit host approval required/);
+  const denied = new CapabilityFabric({
+    definitions: [definition],
+    adapters: { 'external.bridge': async () => {} },
+    approvalVerifier: async () => false
+  });
+  await assert.rejects(denied.load(['external.bridge']), /explicit host approval required/);
+  const approved = new CapabilityFabric({
+    definitions: [definition],
+    adapters: { 'external.bridge': async () => {} },
+    approvalVerifier: async ({ capability }) => capability.id === 'external.bridge'
+  });
+  const result = await approved.load(['external.bridge']);
+  assert.equal(result.states[0].state, 'ready');
+});
