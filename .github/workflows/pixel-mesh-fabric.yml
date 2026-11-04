@@ -31,6 +31,7 @@ jobs:
           node --check MicroFederation/pixel-mesh.cjs
           node --check MicroFederation/nonlinear-workflow.cjs
           node --check MicroFederation/unified-field-fabric.cjs
+          node --check MicroFederation/shared-task-adapter.cjs
       - name: Run human-protection and regression tests
         run: |
-          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs MicroFederation/test-task-ledger.cjs MicroFederation/test-human-protection.cjs MicroFederation/test-approval-gate.cjs
+          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs MicroFederation/test-task-ledger.cjs MicroFederation/test-human-protection.cjs MicroFederation/test-approval-gate.cjs MicroFederation/test-shared-task-adapter-fabric-isolation.cjs
