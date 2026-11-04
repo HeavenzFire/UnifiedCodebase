@@ -5,6 +5,7 @@
 // variables or an OS-protected secret store; never commit them.
 const path = require('node:path');
 const os = require('node:os');
+const fs = require('node:fs');
 const root = process.env.HF_UNIFIEDCODEBASE_ROOT;
 if (!root) throw new Error('HF_UNIFIEDCODEBASE_ROOT is required');
 
@@ -40,7 +41,10 @@ module.exports = {
   ledger: new TaskLedger(process.env.HF_LEDGER_PATH || path.join(os.homedir(), '.heavenzfire', 'federation', 'task-ledger.json')),
   capabilityStore,
   bootstrapGrant: process.env.HF_FEDERATION_BOOTSTRAP_GRANT_JSON
-    ? JSON.parse(process.env.HF_FEDERATION_BOOTSTRAP_GRANT_JSON) : null,
+    ? JSON.parse(process.env.HF_FEDERATION_BOOTSTRAP_GRANT_JSON)
+    : process.env.HF_FEDERATION_BOOTSTRAP_GRANT_FILE
+      ? JSON.parse(fs.readFileSync(path.resolve(process.env.HF_FEDERATION_BOOTSTRAP_GRANT_FILE), 'utf8'))
+      : null,
   contract,
   verifyApproval: approvalAuthority.verifyApproval,
   verifyAttestation: approvalAuthority.verifyAttestation,
