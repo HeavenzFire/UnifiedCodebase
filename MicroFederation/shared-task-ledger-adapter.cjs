@@ -47,6 +47,11 @@ function validateApprovalResult(result, hash, evidence, taskId) {
       typeof result.expiresAt !== 'string' || !Number.isFinite(Date.parse(result.expiresAt)) ||
       Date.parse(result.expiresAt) <= Date.parse(result.issuedAt)) throw new Error('approval verifier returned an invalid proof lifetime');
   if (typeof result.signature !== 'string' || !/^[a-f0-9]{64}$/.test(result.signature)) throw new Error('approval verifier did not return a cryptographic proof signature');
+  if (!Number.isFinite(result.proofIssuedAt) || !Number.isFinite(result.proofExpiresAt) || result.proofExpiresAt <= result.proofIssuedAt ||
+      typeof result.proofNonce !== 'string' || !/^[a-f0-9]{64}$/.test(result.proofNonce) ||
+      typeof result.proofSignature !== 'string' || !/^[a-f0-9]{64}$/.test(result.proofSignature)) {
+    throw new Error('approval verifier did not return a complete signed proof envelope');
+  }
   return Object.freeze({
     schema: result.schema,
     taskId: result.taskId,
@@ -54,6 +59,10 @@ function validateApprovalResult(result, hash, evidence, taskId) {
     evidenceRef: result.evidenceRef,
     issuedAt: result.issuedAt,
     expiresAt: result.expiresAt,
+    proofIssuedAt: result.proofIssuedAt,
+    proofExpiresAt: result.proofExpiresAt,
+    proofNonce: result.proofNonce,
+    proofSignature: result.proofSignature,
     verifiedAt: result.verifiedAt,
     recordHash: hash,
     signature: result.signature
