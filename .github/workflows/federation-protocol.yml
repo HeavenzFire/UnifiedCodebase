@@ -1,0 +1,33 @@
+name: Federation protocol core
+
+on:
+  push:
+    branches:
+      - research/cross-device-federation-rd-v0.1
+    paths:
+      - 'MicroFederation/federation-protocol.cjs'
+      - 'MicroFederation/test/federation-protocol.test.cjs'
+      - '.github/workflows/federation-protocol.yml'
+  pull_request:
+    paths:
+      - 'MicroFederation/federation-protocol.cjs'
+      - 'MicroFederation/test/federation-protocol.test.cjs'
+      - '.github/workflows/federation-protocol.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  protocol-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run deterministic protocol tests
+        run: node --test MicroFederation/test/federation-protocol.test.cjs
