@@ -2,9 +2,17 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const { createFederationProtocol } = require('../federation-protocol.cjs');
 const { createFederationHttpServer } = require('../federation-http-server.cjs');
 const { createFederationHttpClient } = require('../federation-http-client.cjs');
+const { TaskLedger } = require('../task-ledger.cjs');
+const { createGovernedRuntime } = require('../governed-runtime.cjs');
+const { createSharedTaskLedgerAdapter } = require('../shared-task-ledger-adapter.cjs');
+const { createOperatorApprovalAuthority } = require('../operator-approval.cjs');
 
 const SECRET = 'heavenzfire-http-integration-secret-32-bytes-minimum';
 const APPROVED_AT = '2026-11-04T00:00:00.000Z';
@@ -148,4 +156,86 @@ test('unapproved or incorrectly keyed peers cannot complete the handshake', asyn
     baseUrl: 'http://127.0.0.1:' + address.port
   });
   await assert.rejects(client.handshake(), /federation request failed/);
+});
+
+
+test('loopback federation performs an approved task round-trip through the governed ledger', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'hf-federation-roundtrip-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const ledger = await new TaskLedger(path.join(directory, 'tasks.json')).open();
+  const taskContract = {
+    SCHEMA: 'heavenzfire.shared-task.v1',
+    validateTaskRecord(record) {
+      if (!record || record.schema !== this.SCHEMA || typeof record.taskId !== 'string' ||
+          typeof record.source !== 'string' || typeof record.goal !== 'string' ||
+          !['proposed', 'approved', 'running', 'completed', 'failed', 'review_required', 'rejected'].includes(record.status) ||
+          !['pending', 'approved', 'rejected'].includes(record.approvalState) || !Array.isArray(record.evidence)) {
+        throw new Error('invalid canonical task record');
+      }
+      if (['approved', 'running', 'completed'].includes(record.status) && record.approvalState !== 'approved') {
+        throw new Error('execution status requires explicit approval state');
+      }
+      return true;
+    }
+  };
+  const authority = createOperatorApprovalAuthority({
+    secret: 'heavenzfire-roundtrip-operator-key-32-bytes',
+    clock,
+    nonce: () => crypto.randomBytes(32).toString('hex')
+  });
+  const taskRecord = {
+    schema: taskContract.SCHEMA,
+    taskId: 'hf-live-shape-roundtrip-001',
+    source: 'android-termux',
+    goal: 'Return the exact text HF_FEDERATION_TASK_OK',
+    status: 'approved',
+    approvalState: 'approved',
+    evidence: [{
+      kind: 'approval',
+      summary: 'Operator approved this bounded round-trip test',
+      actor: 'operator-zdh',
+      observedAt: new Date(now).toISOString()
+    }],
+    createdAt: new Date(now).toISOString(),
+    updatedAt: new Date(now).toISOString(),
+    metadata: { agentId: 'agent-shared', grantId: 'grant-shared', role: 'research' }
+  };
+  let executions = 0;
+  const taskAdapter = createSharedTaskLedgerAdapter({
+    ledger,
+    contract: taskContract,
+    verifyApproval: authority.verifyApproval,
+    verifyAttestation: authority.verifyAttestation,
+    execute: async ({ canonicalTaskId, prompt }) => {
+      executions++;
+      return { canonicalTaskId, output: 'HF_FEDERATION_TASK_OK', prompt };
+    },
+    clock
+  });
+  const { windows, android } = protocolPair();
+  const server = createFederationHttpServer({ protocol: windows, taskAdapter, port: 0, clock });
+  const address = await server.listen();
+  t.after(() => server.close());
+  const client = createFederationHttpClient({
+    protocol: android, peerNodeId: 'windows-zdh',
+    baseUrl: 'http://127.0.0.1:' + address.port
+  });
+  const approvalProof = authority.createProof(taskRecord, { actor: 'operator-zdh' });
+  await client.handshake();
+  const accepted = await client.submitTask(taskRecord, approvalProof);
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.taskId, taskRecord.taskId);
+  const runtime = createGovernedRuntime({
+    ledger,
+    workerId: 'windows-governed-worker',
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: taskAdapter
+  });
+  const completed = await runtime.runOnce({ now: now });
+  assert.equal(completed.status, 'succeeded');
+  assert.equal(completed.result.output, 'HF_FEDERATION_TASK_OK');
+  assert.equal(executions, 1);
+  const projection = await taskAdapter.projectToCanonical(taskRecord.taskId);
+  assert.equal(projection.canonicalRecord.status, 'completed');
+  assert.equal(projection.ledger.status, 'succeeded');
 });
