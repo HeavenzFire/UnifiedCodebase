@@ -40,14 +40,16 @@ function createUnifiedFieldFabric({ledger,mesh=createPixelMesh(),workflow=create
     const candidates=mesh.selectWorkers({capability,role:node.role||null,limit:4096,now:clock()})
      .filter(peer=>Object.prototype.hasOwnProperty.call(workerAdapters,peer.peerId)&&typeof workerAdapters[peer.peerId]==='function');
     if(!candidates.length)throw Error('no worker adapter available for capability '+capability);
-    let selected=null,grant=null,waited=0;
+    let selected=null,grant=null,waited=0;const denied=new Set();
     while(!selected){
      if(leaseError)throw Error('task lease renewal failed');
      let sawBusy=false;
      for(const peer of candidates){
+      if(denied.has(peer.peerId))continue;
       if((active.get(peer.peerId)||0)>=peer.capacity){sawBusy=true;continue;}
       const decision=await authorizeWorker({taskId:task.id,workflowId:payload.workflowId,nodeId:ctx.nodeId,capability,peerId:peer.peerId,producer:task.metadata.provenance});
       if(decision&&decision.ok===true&&decision.taskId===task.id&&decision.nodeId===ctx.nodeId&&decision.capability===capability&&decision.peerId===peer.peerId&&Number.isFinite(decision.expiresAt)&&decision.expiresAt>clock()&&typeof decision.issuer==='string'&&typeof decision.grantId==='string'){selected=peer;grant=decision;break;}
+      denied.add(peer.peerId);
      }
      if(selected)break;
      if(!sawBusy)throw Error('no independently authorized worker available for capability '+capability);
