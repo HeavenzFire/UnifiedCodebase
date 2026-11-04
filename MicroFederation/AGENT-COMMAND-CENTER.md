@@ -58,7 +58,7 @@ Override with \`HEAVENZFIRE_STATE\`. The service never writes into the registere
 
 ## Important boundaries
 
-- The default roster contains five starter roles, not the full 16-role roster. Supply the existing 16 role definitions through the \`roles\` option when embedding \`createCommandCenterServer()\`.
+- The default roster is the canonical 16-role roster loaded from `agent-roster.v1.json`; callers may inject a different validated roster through the `roles` option when embedding `createCommandCenterServer()`.
 - Voice descriptors are currently text/personality profiles. Actual synthesized speech, voice assignment, and playback are not implemented in this slice.
 - The journal is append-only by application behavior and hash-chained. It is not administrator-proof, signed, or externally anchored.
 - The journal is single-process-writer. Do not run multiple Command Center processes against the same state directory.
