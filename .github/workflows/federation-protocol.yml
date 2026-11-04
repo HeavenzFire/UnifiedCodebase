@@ -14,7 +14,12 @@ on:
       - 'MicroFederation/federation-http-client.cjs'
       - 'MicroFederation/federation-http-server.cjs'
       - '.github/workflows/federation-protocol.yml'
-  pull_request:
+
+      - 'MicroFederation/federation-runtime.cjs'
+      - 'MicroFederation/federation-node.cjs'
+      - 'MicroFederation/openai-local-inference-adapter.cjs'
+      - 'MicroFederation/test/openai-local-inference-adapter.test.cjs'
+      - 'scripts/rd/federation-node-config.example.cjs'  pull_request:
     paths:
       - 'MicroFederation/federation-protocol.cjs'
       - 'MicroFederation/test/federation-protocol.test.cjs'
@@ -24,6 +29,11 @@ on:
       - 'MicroFederation/federation-http-client.cjs'
       - 'MicroFederation/test/federation-http-transport.test.cjs'
       - '.github/workflows/federation-protocol.yml'
+      - 'MicroFederation/federation-runtime.cjs'
+      - 'MicroFederation/federation-node.cjs'
+      - 'MicroFederation/openai-local-inference-adapter.cjs'
+      - 'MicroFederation/test/openai-local-inference-adapter.test.cjs'
+      - 'scripts/rd/federation-node-config.example.cjs'
 
 permissions:
   contents: read
@@ -41,4 +51,4 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Run deterministic protocol tests
-        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http.test.cjs MicroFederation/test/federation-http-transport.test.cjs
+        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http-transport.test.cjs MicroFederation/test/openai-local-inference-adapter.test.cjs
