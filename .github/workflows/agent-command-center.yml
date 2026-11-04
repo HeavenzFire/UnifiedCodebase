@@ -8,7 +8,9 @@ on:
       - "MicroFederation/agent-roster.v1.json"
       - "MicroFederation/agent-command-center.cjs"
       - "MicroFederation/test-agent-command-center.cjs"
+      - "MicroFederation/agent-roster.v1.json"
       - "MicroFederation/live-orchestrator-adapter.cjs"
+      - "MicroFederation/test-live-orchestrator-adapter.cjs"
       - "MicroFederation/test-live-orchestrator-adapter.cjs"
       - ".github/workflows/agent-command-center.yml"
   push:
