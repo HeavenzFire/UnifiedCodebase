@@ -113,7 +113,7 @@ $('send').onclick=send;$('prompt').addEventListener('keydown',e=>{if(e.key==='En
 (async()=>{try{agents=(await api('/api/agents')).agents;renderAgents();$('title').textContent='Planner';await loadRegistry();await loadThread()}catch(e){$('state').textContent='ERROR: '+e.message}})();
 </script></body></html>`;
 
-function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null, registry: suppliedRegistry = null, maxMessageEvents = 20000 } = {}) {
+function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null, registry: suppliedRegistry = null, maxMessageEvents = 20000, remediationPipeline = null } = {}) {
   if (!stateDirectory) throw Error('stateDirectory is required');
   if (!Array.isArray(roles) || !roles.length) throw Error('at least one agent role is required');
   const byId = new Map(roles.map(role => [role.id, role]));
@@ -161,6 +161,14 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
       const url = new URL(req.url, 'http://127.0.0.1');
       if (req.method === 'GET' && url.pathname === '/') return send(200, PAGE, 'text/html; charset=utf-8');
       if (req.method === 'GET' && url.pathname === '/api/agents') return send(200, { agents: roles.map(({ id, name, role, voice }) => ({ id, name, role, voice })) });
+      const remediationMatch = url.pathname.match(/^\/api\/remediation\/issues\/(\d{1,20})$/);
+      if (req.method === 'POST' && remediationMatch) {
+        if (!remediationPipeline || typeof remediationPipeline.process !== 'function') {
+          return send(503, { error: 'remediation_pipeline_not_configured' });
+        }
+        const result = await remediationPipeline.process(remediationMatch[1]);
+        return send(202, result);
+      }
       if (req.method === 'GET' && url.pathname === '/api/registry') {
         const manifest = await registry.read();
         return send(200, { revision: manifest.revision, projects: manifest.projects, nodes: manifest.nodes, updatedAt: manifest.updatedAt });
@@ -235,6 +243,7 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
   return {
     store,
     registry,
+    remediationPipeline,
     server,
     async listen({ host = '127.0.0.1', port = 8789 } = {}) {
       if (host !== '127.0.0.1' && host !== '::1') throw Error('Command Center binds to loopback only');
