@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { AgentMessageStore, createCommandCenterServer } = require('./agent-command-center.cjs');
+const { AgentMessageStore, createCommandCenterServer, DEFAULT_ROLES } = require('./agent-command-center.cjs');
 
 async function stateDir(t) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'hf-agent-command-'));
@@ -15,6 +15,21 @@ async function request(base, route, options) {
   const response = await fetch(base + route, options);
   return { status: response.status, body: await response.json() };
 }
+
+test('canonical 16-agent roster is complete, unique, and tool-free', () => {
+  assert.equal(DEFAULT_ROLES.length, 16);
+  assert.equal(new Set(DEFAULT_ROLES.map(role => role.id)).size, 16);
+  for (const role of DEFAULT_ROLES) {
+    assert.ok(role.name && role.role && role.voice && role.system, 'complete role contract: ' + role.id);
+    assert.doesNotMatch(role.system, /execute shell|arbitrary filesystem|unrestricted browser/i);
+  }
+  assert.deepEqual(DEFAULT_ROLES.map(role => role.id), [
+    'planner', 'architect', 'implementer', 'test-engineer', 'security-reviewer',
+    'adversarial-reviewer', 'browser-integration', 'runtime-integrator',
+    'reliability-engineer', 'data-integrity', 'privacy-reviewer', 'windows-operator',
+    'network-reviewer', 'documentation', 'independent-verifier', 'synthesizer'
+  ]);
+});
 
 test('message journal is append-only, hash-chained, and survives restart', async t => {
   const dir = await stateDir(t), file = path.join(dir, 'messages.jsonl');
@@ -48,7 +63,8 @@ test('local command center supports direct agent conversation and broadcast', as
   const base = 'http://127.0.0.1:' + address.port;
   const agents = await request(base, '/api/agents');
   assert.equal(agents.status, 200);
-  assert.ok(agents.body.agents.some(a => a.id === 'security-reviewer'));
+  assert.equal(agents.body.agents.length, 16);
+  assert.ok(agents.body.agents.some(a => a.id === 'independent-verifier'));
   const direct = await request(base, '/api/message', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ target: 'architect', content: 'Review the registry boundary' }) });
   assert.equal(direct.status, 200);
@@ -58,10 +74,10 @@ test('local command center supports direct agent conversation and broadcast', as
   const broadcast = await request(base, '/api/message', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ target: 'broadcast', content: 'Identify the top integration risk' }) });
   assert.equal(broadcast.status, 200);
-  assert.equal(broadcast.body.responses.length, 5);
-  assert.equal(calls.length, 6);
+  assert.equal(broadcast.body.responses.length, 16);
+  assert.equal(calls.length, 17);
   const shared = await request(base, '/api/thread/broadcast');
-  assert.equal(shared.body.messages.filter(m => m.kind === 'response').length, 5);
+  assert.equal(shared.body.messages.filter(m => m.kind === 'response').length, 16);
 });
 
 test('refuses non-loopback binding and oversized or unknown agent messages', async t => {
