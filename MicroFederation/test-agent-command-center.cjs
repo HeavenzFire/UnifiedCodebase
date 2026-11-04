@@ -171,3 +171,13 @@ test('serves the local UI with restrictive security headers', async t => {
   assert.equal(response.headers.get('x-frame-options'), 'DENY');
   assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
+
+test('POSIX message journal uses owner-only directory and file permissions', async t => {
+  if (process.platform === 'win32') return t.skip('Windows ACLs are deployment-controlled.');
+  const dir = await stateDir(t);
+  const file = path.join(dir, 'private.jsonl');
+  const store = await new AgentMessageStore(file).open();
+  await store.appendMessage({ from: 'user', to: 'planner', conversationId: 'planner', kind: 'direct', content: 'private' });
+  assert.equal((await fs.stat(dir)).mode & 0o777, 0o700);
+  assert.equal((await fs.stat(file)).mode & 0o777, 0o600);
+});
