@@ -61,3 +61,28 @@ The existing Command Center accepts an optional remediationPipeline at construct
 Construct the pipeline with the adapters above, then pass it to createCommandCenterServer({ stateDirectory, adapter: inference, remediationPipeline: pipeline }). The endpoint is an explicit user-triggered intake action, not a background poller. The service does not automatically scan or claim issues.
 
 The current repository includes the lifecycle, adapter contracts, HTTP injection point, and tests. It still does not include a live authenticated Google Issue Tracker intake adapter, maintained-source resolver, sandbox implementation, or GitHub branch/PR writer. Those host adapters must be built and tested before any real issue can be processed end-to-end.
+
+
+## Continuous engineering control plane
+
+`engineering-control-plane.cjs` generalizes the same evidence-gated lifecycle to registered repositories and both defects and features. The host injects:
+- inventory.list(): registered targets, each with stable id and repository context
+- scanner.scan(target): defect/feature work items with explicit acceptance criteria and target repositories
+- triager.triage(item): actionable, duplicate, not_a_defect, or needs_human
+- planner.plan(item, triage): implementation steps and allowlisted test commands
+- implementer.implement(item, plan): isolated workspace patch result
+- tester.test(item, plan, patch): regression evidence
+- verifier.verify(...): independent code verification and, for features, separate acceptance verification
+- ledger.append(...): durable lifecycle evidence
+
+`cycle()` performs one bounded pass over the registered inventory. It does not silently treat a planned feature as implemented: feature items reach instantiated only after both code verification and acceptance verification pass. Defects and features that cannot be safely reproduced, mapped to maintained source, or verified are recorded as blocked with a reason. The current module is an orchestration kernel; it is not yet wired to live repository scanners, sandboxes, test execution, or deployment systems.
+
+Suggested operating model:
+1. Inventory every owned repository and application; record maintainership, default branch, language, build/test commands, deployment target, owners, and allowed automation scope.
+2. Discover defects from CI failures, test failures, runtime telemetry, dependency/security scans, issue trackers, and user-reported incidents.
+3. Discover feature gaps from an explicit product/capability registry with acceptance criteria; never infer a feature is required merely because a codebase lacks it.
+4. Route each work item through triage, root-cause analysis, implementation, regression, independent verification, and draft PR.
+5. Reconcile open work every cycle; deduplicate by stable fingerprints; retry only transient failures with bounded backoff; escalate missing access, ambiguous requirements, and unsafe changes.
+6. Publish a dashboard from the ledger: discovered, in progress, blocked, verified, instantiated, CI failing, and awaiting review.
+
+No automatic production deployment, destructive data migration, permission changes, issue closure, or PR merge is enabled by this control plane.
