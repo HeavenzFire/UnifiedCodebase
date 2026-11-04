@@ -39,6 +39,8 @@ module.exports = {
   peers: JSON.parse(peersJson),
   ledger: new TaskLedger(process.env.HF_LEDGER_PATH || path.join(os.homedir(), '.heavenzfire', 'federation', 'task-ledger.json')),
   capabilityStore,
+  bootstrapGrant: process.env.HF_FEDERATION_BOOTSTRAP_GRANT_JSON
+    ? JSON.parse(process.env.HF_FEDERATION_BOOTSTRAP_GRANT_JSON) : null,
   contract,
   verifyApproval: approvalAuthority.verifyApproval,
   verifyAttestation: approvalAuthority.verifyAttestation,
