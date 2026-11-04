@@ -100,7 +100,7 @@ class TaskLedger{
   if(!Array.isArray(requiredCapabilities)||requiredCapabilities.length>32||requiredCapabilities.some(x=>typeof x!=='string'||!/^[a-z][a-z0-9._-]{0,63}$/.test(x)))throw Error('requiredCapabilities must contain up to 32 capability slugs');
   return this._mutate(tasks=>{
    const matches=t=>requiredCapabilities.every(cap=>t.requiredCapabilities.includes(cap));let expired=false;
-   for(const t of tasks.filter(x=>matches(x)&&['claimed','running'].includes(x.status)&&x.leaseUntil!==null&&x.leaseUntil<=now&&x.attempts>=x.maxAttempts)){
+   for(const t of tasks.filter(x=>['claimed','running'].includes(x.status)&&x.leaseUntil!==null&&x.leaseUntil<=now&&x.attempts>=x.maxAttempts)){
     expired=true;t.status='failed';t.owner=null;t.leaseUntil=null;t.completedAt=iso(now);t.updatedAt=t.completedAt;t.error='worker lease expired after maximum attempts';t.events.push({type:'task.failed',at:t.updatedAt,actor:'system',attempt:t.attempts,error:t.error});
    }
    const candidate=tasks.filter(t=>matches(t)&&((t.status==='queued'&&t.nextAttemptAt<=now)||(['claimed','running'].includes(t.status)&&t.leaseUntil!==null&&t.leaseUntil<=now&&t.attempts<t.maxAttempts))).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))[0];
@@ -124,9 +124,10 @@ class TaskLedger{
   const safe=jsonValue(result,'task result',MAX_RESULT_BYTES);if(evidenceRef!==null&&(typeof evidenceRef!=='string'||!evidenceRef.trim()||evidenceRef.length>512))throw Error('evidenceRef is invalid');
   return this._mutate(tasks=>{const t=tasks.find(x=>x.id===taskId);if(!t)throw Error('unknown task: '+taskId);if(t.status!=='running'||t.owner!==workerId)throw Error('task is not running under this worker');if(t.leaseUntil!==null&&t.leaseUntil<=now)throw Error('task lease has expired');t.status='succeeded';t.result=safe;t.error=null;t.leaseUntil=null;t.completedAt=iso(now);t.updatedAt=t.completedAt;if(evidenceRef)t.evidence.push({ref:evidenceRef,at:t.updatedAt,actor:workerId});t.events.push({type:'task.succeeded',at:t.updatedAt,actor:workerId,attempt:t.attempts});return t});
  }
- async fail(taskId,workerId,error,{now=Date.now(),retryable=true,retryDelayMs=0}={}){
-  if(typeof error!=='string'||!error.trim()||error.length>2048)throw Error('error is invalid');if(typeof retryable!=='boolean'||!Number.isInteger(retryDelayMs)||retryDelayMs<0||retryDelayMs>86400000)throw Error('retry policy is invalid');
-  return this._mutate(tasks=>{const t=tasks.find(x=>x.id===taskId);if(!t)throw Error('unknown task: '+taskId);if(t.status!=='running'||t.owner!==workerId)throw Error('task is not running under this worker');if(t.leaseUntil!==null&&t.leaseUntil<=now)throw Error('task lease has expired');const retry=retryable&&t.attempts<t.maxAttempts;t.error=error;t.owner=null;t.leaseUntil=null;t.updatedAt=iso(now);
+ async fail(taskId,workerId,error,{now=Date.now(),retryable=true,retryDelayMs=0,failureResult=undefined}={}){
+  if(typeof error!=='string'||!error.trim()||error.length>2048)throw Error('error is invalid');
+  const safeFailureResult=failureResult===undefined?undefined:jsonValue(failureResult,'task failure result',MAX_RESULT_BYTES);if(typeof retryable!=='boolean'||!Number.isInteger(retryDelayMs)||retryDelayMs<0||retryDelayMs>86400000)throw Error('retry policy is invalid');
+  return this._mutate(tasks=>{const t=tasks.find(x=>x.id===taskId);if(!t)throw Error('unknown task: '+taskId);if(t.status!=='running'||t.owner!==workerId)throw Error('task is not running under this worker');if(t.leaseUntil!==null&&t.leaseUntil<=now)throw Error('task lease has expired');const retry=retryable&&t.attempts<t.maxAttempts;t.error=error;if(safeFailureResult!==undefined)t.result=safeFailureResult;t.owner=null;t.leaseUntil=null;t.updatedAt=iso(now);
    if(retry){t.status='queued';t.nextAttemptAt=now+retryDelayMs;t.events.push({type:'task.retry_scheduled',at:t.updatedAt,actor:workerId,attempt:t.attempts,nextAttemptAt:t.nextAttemptAt,error})}else{t.status='failed';t.completedAt=t.updatedAt;t.events.push({type:'task.failed',at:t.updatedAt,actor:workerId,attempt:t.attempts,error})}return t});
  }
  async cancel(taskId,reason,{now=Date.now(),actor='operator'}={}){
