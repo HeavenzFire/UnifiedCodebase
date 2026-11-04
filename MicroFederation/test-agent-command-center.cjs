@@ -204,3 +204,27 @@ test('refuses a symlink as the persistent message journal', async t => {
   await fs.symlink(target, link);
   await assert.rejects(new AgentMessageStore(link).open(), /regular non-symlink/);
 });
+
+test('remediation endpoint is opt-in and delegates numeric issue IDs to the injected pipeline', async t => {
+  const dir = await stateDir(t);
+  const seen = [];
+  const app = createCommandCenterServer({ stateDirectory: dir, adapter: { run: async () => ({ response: 'ok' }) },
+    remediationPipeline: { async process(id) { seen.push(id); return { issueId: id, status: 'blocked', reason: 'fixture' }; } } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const base = 'http://127.0.0.1:' + address.port;
+  const result = await request(base, '/api/remediation/issues/123456', { method: 'POST' });
+  assert.equal(result.status, 202);
+  assert.equal(result.body.issueId, '123456');
+  assert.deepEqual(seen, ['123456']);
+  const invalid = await fetch(base + '/api/remediation/issues/not-a-number', { method: 'POST' });
+  assert.equal(invalid.status, 404);
+});
+test('remediation endpoint fails closed when no pipeline is configured', async t => {
+  const app = createCommandCenterServer({ stateDirectory: await stateDir(t), adapter: { run: async () => ({ response: 'ok' }) } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const result = await request('http://127.0.0.1:' + address.port, '/api/remediation/issues/123456', { method: 'POST' });
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, 'remediation_pipeline_not_configured');
+});
