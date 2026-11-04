@@ -11,6 +11,8 @@ const { createFederationHttpServer } = require('../federation-http-server.cjs');
 const { createFederationHttpClient } = require('../federation-http-client.cjs');
 const { TaskLedger } = require('../task-ledger.cjs');
 const { createGovernedRuntime } = require('../governed-runtime.cjs');
+const { CapabilityStore } = require('../capability-store.cjs');
+const { CapabilityGate } = require('../adaptive-control-plane.cjs');
 const { createSharedTaskLedgerAdapter } = require('../shared-task-ledger-adapter.cjs');
 const { createOperatorApprovalAuthority } = require('../operator-approval.cjs');
 
@@ -201,6 +203,15 @@ test('loopback federation performs an approved task round-trip through the gover
     metadata: { agentId: 'agent-shared', grantId: 'grant-shared', role: 'research' }
   };
   let executions = 0;
+  const capabilityStore = await new CapabilityStore(path.join(directory, 'capabilities.json')).open();
+  await capabilityStore.grant({
+    grantId: 'grant-shared', agentId: 'agent-shared', taskId: 'hf-live-shape-roundtrip-001',
+    capabilities: ['shared-task.v1'], expiresAt: Date.now() + 3600000
+  });
+  const capabilityGate = new CapabilityGate({
+    capabilityStore,
+    approvalVerifier: async () => ({ verified: false })
+  });
   const taskAdapter = createSharedTaskLedgerAdapter({
     ledger,
     contract: taskContract,
@@ -228,7 +239,7 @@ test('loopback federation performs an approved task round-trip through the gover
   const runtime = createGovernedRuntime({
     ledger,
     workerId: 'windows-governed-worker',
-    capabilityGate: { async authorize() { return { allow: true }; } },
+    capabilityGate,
     adapter: taskAdapter
   });
   const completed = await runtime.runOnce({ now: now });
@@ -238,4 +249,17 @@ test('loopback federation performs an approved task round-trip through the gover
   const projection = await taskAdapter.projectToCanonical(taskRecord.taskId);
   assert.equal(projection.canonicalRecord.status, 'completed');
   assert.equal(projection.ledger.status, 'succeeded');
+
+  const deniedRecord = {
+    ...taskRecord,
+    taskId: 'hf-live-shape-roundtrip-denied',
+    evidence: taskRecord.evidence.map(item => ({ ...item })),
+    metadata: { ...taskRecord.metadata, grantId: 'grant-missing' }
+  };
+  const deniedProof = authority.createProof(deniedRecord, { actor: 'operator-zdh' });
+  await client.submitTask(deniedRecord, deniedProof);
+  const denied = await runtime.runOnce({ now: now + 1 });
+  assert.equal(denied.status, 'blocked');
+  assert.equal(executions, 1);
+  assert.equal((await ledger.get(deniedRecord.taskId)).status, 'failed');
 });
