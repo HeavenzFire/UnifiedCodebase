@@ -210,3 +210,12 @@ Verification:
 ```powershell
 node --test .\\test-approval-gate.cjs .\\test-approval-nonce-store.cjs
 ```
+
+
+## Project/Node Registry + Agent Command Center
+
+\`project-node-registry.cjs\` stores versioned project and node metadata in an atomic, hash-chained manifest outside the workspace. It supports project registration/update/archive, node registration, validated heartbeats, and an append-only audit event chain. It does not scan or execute workspace files.
+
+\`agent-command-center.cjs\` provides a loopback-only 16-role UI and persistent conversation journal. The same service exposes \`/api/registry\` read and metadata mutation routes, displays registry revision/counts, rejects known credential formats before message persistence, enforces a journal event bound, and validates Host/Origin headers. The live orchestrator adapter is restricted to HTTP loopback and supports bounded transient retries and cancellation.
+
+Operational boundaries: the conversation journal is single-process and hash-chained but not a signed external audit anchor; registry lock recovery is same-host only; the registry records metadata rather than proving node liveness; remote/multi-host execution requires a separate authenticated transport and shared lease service. Hosted model use is only through an operator-configured local gateway.
