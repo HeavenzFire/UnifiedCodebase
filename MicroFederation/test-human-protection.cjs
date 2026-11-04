@@ -53,3 +53,10 @@ test('persists bounded structured failure evidence across ledger restart',async 
  const restored=await new TaskLedger(file).open();
  assert.deepEqual((await restored.get('failure-trace')).result,trace);
 });
+
+
+test('AEGIS bridge explicitly emits UTF-8 without a byte-order mark',async()=>{
+ const bridge=await fs.readFile(path.join(__dirname,'..','UnifiedField','Bridge','aegis-powershell-bridge.cjs'),'utf8');
+ assert.match(bridge,/\\[Console\\]::OutputEncoding = \\[System\\.Text\\.UTF8Encoding\\]::new\\(\\$false\\)/);
+ assert.match(bridge,/\\$OutputEncoding = \\[Console\\]::OutputEncoding/);
+});
