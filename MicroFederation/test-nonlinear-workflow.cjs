@@ -17,3 +17,14 @@ test('detects dependency cycles before calling workers and contains failures',as
  const r=await w.run({workflowId:'fail',nodes:{a:{},b:{dependsOn:['a']}},execute:async()=>{throw Error('controlled failure');}});
  assert.equal(r.status,'failed');assert.equal(r.nodeStates.b.status,'pending');
 });
+
+test('fails closed when a conditional node has no explicit host branch policy',async()=>{
+ const w=createNonlinearWorkflow();await assert.rejects(w.run({workflowId:'implicit-branch',nodes:{constructor:{when:'allow'}},execute:async()=>true}),/explicit branch policy/);
+});
+test('uses prototype-safe output storage for constructor-named nodes',async()=>{
+ const w=createNonlinearWorkflow();const r=await w.run({workflowId:'prototype-safe',nodes:{constructor:{},next:{dependsOn:['constructor']}},execute:async({nodeId,dependencies})=>nodeId==='constructor'?'safe':dependencies[0].result});
+ assert.equal(r.status,'succeeded');assert.equal(r.outputs.constructor,'safe');assert.equal(r.outputs.next,'safe');
+});
+test('rejects non-boolean branch policy decisions',async()=>{
+ const w=createNonlinearWorkflow();await assert.rejects(w.run({workflowId:'bad-policy',nodes:{conditional:{when:'allow'}},chooseBranch:()=> 'yes',execute:async()=>true}),/must return a boolean/);
+});

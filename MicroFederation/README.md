@@ -62,9 +62,9 @@ To roll back, stop the writer, restore the chosen backup, verify that it parses,
 ## Durable task ledger and orchestrator bridge
 
 `task-ledger.cjs` is an opt-in persistence primitive for the existing orchestrator, not a replacement runtime or an automatic worker launcher. It supports:
-- `queued ? claimed ? running ? succeeded/failed/cancelled` task lifecycle.
+- `queued → claimed → running → succeeded/failed/cancelled` task lifecycle.
 - Atomic JSON-file replacement, restart recovery, idempotent task creation, evidence references, and auditable transition events.
-- Exclusive claims within one ledger instance, worker ownership checks, expiring leases, lease reclamation, and bounded retries (1?10 attempts).
+- Exclusive claims within one ledger instance, worker ownership checks, expiring leases, lease reclamation, and bounded retries (1–10 attempts).
 - Strict task input fields; arbitrary credential fields such as `apiKey` are rejected.
 - Explicit cancellation and status/attempt statistics.
 
@@ -174,4 +174,39 @@ Run all new integration tests:
 
 ```powershell
 node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs .\test-unified-field-fabric.cjs
+```
+
+ 
+## Independent human-protection gates (v0.2)
+
+The fabric now requires two trusted, process-injected policies: the TaskLedger constructor receives `authenticateProducer` and verifies the submitting principal before persisting any task tagged for this fabric; `authorizeWorker` issues a grant for the exact task, workflow node, capability, and peer. Peer-advertised capabilities are routing metadata only and are not authorization. Do not implement either policy by trusting fields supplied in a task payload or by asking the worker/model being authorized.
+
+Nodes marked `approvalRequired: true` fail closed unless an independently configured `approvalGate` verifies a signed, short-lived approval bound to task ID, node ID, action, and subject. The approval gate accepts only configured trusted public keys. A provider, worker, model, or task payload cannot add its own trusted issuer. The optional `chooseBranchPolicy` is also injected by the host; conditional nodes fail closed if no policy is configured.
+
+The task ledger rejects nested credential-shaped keys and bounds serialized payloads/results to 256 KiB and metadata to 32 KiB. These checks reduce accidental persistence but are not a substitute for a dedicated secret manager, encryption at rest, access control, or a retention/deletion policy. Lease renewal is recorded in the ledger while a fabric workflow is active. Capacity accounting remains process-local; multi-process deployments still require an external atomic reservation/lease service.
+
+The AEGIS local bridge no longer embeds or prints its bearer token. It requires an operator-supplied `HF_BRIDGE_TOKEN` of at least 32 characters, prompts for it in the dashboard, rejects cross-origin POSTs, removes permissive CORS headers, and adds basic response security headers and an accessible status region. This remains a local read-only bridge, not a production authentication system.
+
+Focused verification:
+```powershell
+node --test .\test-pixel-mesh.cjs .\test-nonlinear-workflow.cjs .\test-unified-field-fabric.cjs .\test-task-ledger.cjs .\test-human-protection.cjs .\test-approval-gate.cjs
+```
+
+
+## Durable approval replay protection (v0.3)
+
+`approval-nonce-store.cjs` adds an optional file-backed nonce store for the signed human-approval gate. Configure `createApprovalGate({ trustedIssuers, nonceStore: createFileApprovalNonceStore({ directory }) })` with a stable absolute directory outside the Git checkout. The gate verifies the canonical signature and exact task/node/action/subject scope before consuming the issuer/nonce pair.
+
+- Nonce consumption uses exclusive file creation (`open` with `wx`), so independent Node processes on the same local filesystem cannot both consume the same issuer/nonce pair.
+- The store records only consumption time and expiry; the signed approval, signature, task payload, and credentials are not written to nonce files.
+- The file and containing directory are synchronized where the platform supports directory fsync. POSIX directory/file permissions are enforced as `0700`/`0600`; Windows deployments must enforce equivalent ACLs.
+- Expired entries are pruned during subsequent consume operations. The configured entry bound fails closed when reached.
+- Use a local filesystem with reliable exclusive-create semantics. Do not assume a network share or multi-host filesystem provides the same guarantees; distributed deployments should use a transactional shared nonce service.
+- If the durable store cannot be read or written, approval verification returns `approval_replay_store_unavailable` and the protected action must remain blocked.
+- The entry bound is checked before exclusive creation; simultaneous admissions of distinct nonces may briefly exceed the configured threshold by concurrent contenders.
+- The in-memory replay cache remains the compatibility default when no store is injected. Production deployments must explicitly configure the durable store.
+
+Verification:
+```powershell
+node --test .\\test-approval-gate.cjs .\\test-approval-nonce-store.cjs
 ```

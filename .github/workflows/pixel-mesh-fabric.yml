@@ -1,32 +1,19 @@
 name: Unified Field pixel mesh and nonlinear fabric
-
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "fix/**"]
     paths:
-      - "MicroFederation/pixel-mesh.cjs"
-      - "MicroFederation/nonlinear-workflow.cjs"
-      - "MicroFederation/unified-field-fabric.cjs"
-      - "MicroFederation/test-pixel-mesh.cjs"
-      - "MicroFederation/test-nonlinear-workflow.cjs"
-      - "MicroFederation/test-unified-field-fabric.cjs"
+      - "MicroFederation/**"
       - ".github/workflows/pixel-mesh-fabric.yml"
   pull_request:
     paths:
-      - "MicroFederation/pixel-mesh.cjs"
-      - "MicroFederation/nonlinear-workflow.cjs"
-      - "MicroFederation/unified-field-fabric.cjs"
-      - "MicroFederation/test-pixel-mesh.cjs"
-      - "MicroFederation/test-nonlinear-workflow.cjs"
-      - "MicroFederation/test-unified-field-fabric.cjs"
+      - "MicroFederation/**"
       - ".github/workflows/pixel-mesh-fabric.yml"
-
 permissions:
   contents: read
-
 jobs:
   mesh-fabric:
-    name: Pixel mesh fabric (Node ${{ matrix.node }})
+    name: Human-protection fabric (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,9 +26,13 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Syntax checks
         run: |
+          node --check MicroFederation/approval-gate.cjs
+          node --check MicroFederation/approval-nonce-store.cjs
+          node --check MicroFederation/task-ledger.cjs
           node --check MicroFederation/pixel-mesh.cjs
           node --check MicroFederation/nonlinear-workflow.cjs
           node --check MicroFederation/unified-field-fabric.cjs
-      - name: Run mesh and integration tests
+          node --check MicroFederation/shared-task-adapter.cjs
+      - name: Run human-protection and regression tests
         run: |
-          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs
+          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs MicroFederation/test-task-ledger.cjs MicroFederation/test-human-protection.cjs MicroFederation/test-approval-gate.cjs MicroFederation/test-shared-task-adapter-fabric-isolation.cjs MicroFederation/test-approval-nonce-store.cjs
