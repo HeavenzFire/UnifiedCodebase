@@ -52,3 +52,12 @@ node --test MicroFederation/test-issue-remediation-pipeline.cjs
 \`\`\`
 
 The tests use injected fixtures to verify lifecycle gates, component isolation, repository allowlisting, draft-only PR behavior, and ledger integrity. They do not claim a live Google issue was repaired.
+
+
+## Command Center HTTP integration
+
+The existing Command Center accepts an optional remediationPipeline at construction. When configured, POST /api/remediation/issues/{numericIssueId} delegates to pipeline.process(issueId) and returns HTTP 202 with the pipeline result. Without a configured pipeline it returns HTTP 503. The route inherits the Command Center's loopback-only Host/Origin checks; it is not exposed over LAN or the public internet.
+
+Construct the pipeline with the adapters above, then pass it to createCommandCenterServer({ stateDirectory, adapter: inference, remediationPipeline: pipeline }). The endpoint is an explicit user-triggered intake action, not a background poller. The service does not automatically scan or claim issues.
+
+The current repository includes the lifecycle, adapter contracts, HTTP injection point, and tests. It still does not include a live authenticated Google Issue Tracker intake adapter, maintained-source resolver, sandbox implementation, or GitHub branch/PR writer. Those host adapters must be built and tested before any real issue can be processed end-to-end.
