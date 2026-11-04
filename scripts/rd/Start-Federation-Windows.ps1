@@ -1,5 +1,5 @@
 param(
-    [string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
+    [string]$RepoRoot = (Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..\\..')).Path
 )
 
 $ErrorActionPreference = 'Stop'
