@@ -6,7 +6,7 @@ on:
       - research/cross-device-federation-rd-v0.1
     paths:
       - 'MicroFederation/**'
-      - 'scripts/rd/federation-node-config.example.cjs'
+      - 'scripts/rd/**'
       - '.github/workflows/federation-protocol.yml'
   pull_request:
     paths:
