@@ -1,60 +1,86 @@
 # Federation startup operations v0.1
 
-This is the current guarded launch path for the Windows receiver and Android/Termux submitter. It supersedes the earlier optional-grant wording in the first launch note.
+This is the guarded launch path for the Windows receiver and Android/Termux submitter. The operator approval secret stays on Windows; Android receives only the signed, task-scoped approval package.
 
-## Windows — prepare and start the receiver
+## 1. Windows — create, grant, approve, and start
 
-Set these variables in the PowerShell session that will run the service:
+Run from the UnifiedCodebase repository root in PowerShell:
 
-    $env:HF_UNIFIEDCODEBASE_ROOT = (Get-Location).Path
-    $env:HF_SHARED_TASK_CONTRACT_MODULE = 'C:\PATH\TO\UnifiedField\FieldCore\shared-task-contract.cjs'
-    $env:HF_OPERATOR_APPROVAL_SECRET = (Get-Content "$HOME\.heavenzfire\federation\operator-approval.secret" -Raw).Trim()
-    $env:HF_FEDERATION_PEERS_JSON = '[{"nodeId":"android-a67l","secret":"<SAME_PEER_SECRET>","approved":true,"approvedAt":"<ENROLLMENT_TIMESTAMP>","allowedCapabilities":["task.submit"]}]'
-    $env:HF_FEDERATION_AGENT_ID = 'agent-android-zdh'
-    $env:HF_FEDERATION_GRANT_ID = 'grant-hf-task-001'
-    $env:HF_FEDERATION_TASK_ID = 'hf-task-001'
+```powershell
+$env:HF_UNIFIEDCODEBASE_ROOT = (Get-Location).Path
+$env:HF_SHARED_TASK_CONTRACT_MODULE = 'C:\PATH\TO\UnifiedField\FieldCore\shared-task-contract.cjs'
+$env:HF_OPERATOR_APPROVAL_SECRET = (Get-Content "$HOME\.heavenzfire\federation\operator-approval.secret" -Raw).Trim()
+$env:HF_FEDERATION_PEERS_JSON = '[{"nodeId":"android-a67l","secret":"<SAME_PEER_SECRET>","approved":true,"approvedAt":"<ENROLLMENT_TIMESTAMP>","allowedCapabilities":["task.submit","task.read"]}]'
+$env:HF_FEDERATION_AGENT_ID = 'agent-android-zdh'
+$env:HF_FEDERATION_GRANT_ID = 'grant-hf-task-001'
+$env:HF_FEDERATION_TASK_ID = 'hf-task-001'
+```
 
-Use the same peer secret and operator approval secret on the corresponding Android side. Do not place either secret in Git, task metadata, or issue comments.
+Use a random peer secret of at least 32 bytes, provisioned to both devices through a protected channel. The enrollment timestamp must be the same on both sides. Never put either secret in Git, task metadata, or issue comments.
 
-Before service startup, create the task-scoped grant. The command displays the exact grant and requires typed confirmation:
+Create a proposed canonical task. Use the same agent and grant IDs configured above:
 
-    node .\scripts\rd\grant-federation-task.cjs $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID 60
+```powershell
+node .\scripts\rd\create-federation-task.cjs .\proposed-task.json $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID "Return the exact text HF_FEDERATION_TASK_OK"
+```
 
-Then launch the receiver. Its preflight verifies the grant and local inference health before starting the foreground node:
+Set the task ID printed by that command:
 
-    powershell -ExecutionPolicy Bypass -File .\scripts\rd\Start-Federation-Windows.ps1
+```powershell
+$env:HF_FEDERATION_TASK_ID = '<TASK_ID_FROM_CREATE_OUTPUT>'
+```
 
-Keep this PowerShell process open. The service listens only on 127.0.0.1:18100.
+Create the narrow task-scoped capability grant. The command prints the grant and requires typing its exact ID:
 
-## Android / Termux — approve and submit
+```powershell
+node .\scripts\rd\grant-federation-task.cjs $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID 60
+```
 
-The canonical proposed task must contain the exact taskId, metadata.agentId, and metadata.grantId used above. Set the contract path and same operator approval secret:
+Approve the proposed record and create the signed approval package on Windows. The operator approval secret is not copied to Android:
 
-    export HF_SHARED_TASK_CONTRACT_MODULE="$HOME/HeavenzFire/UnifiedField/FieldCore/shared-task-contract.cjs"
-    export HF_OPERATOR_APPROVAL_SECRET="$(cat "$HOME/.heavenzfire/federation/operator-approval.secret")"
+```powershell
+node .\scripts\rd\approve-federation-task.cjs .\proposed-task.json .\approval-package.json operator-zdh
+```
 
-Create the signed approval package:
+Start the receiver. Its preflight verifies the task-scoped grant and local inference health before starting the foreground node:
 
-    node scripts/rd/approve-federation-task.cjs proposed-task.json approval-package.json operator-zdh
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\rd\Start-Federation-Windows.ps1
+```
 
-Configure the Windows SSH target and key, then the approved peer identity:
+Keep this PowerShell process open. The service listens only on `127.0.0.1:18100`.
 
-    export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
-    export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
-    export HF_FEDERATION_NODE_ID=android-a67l
-    export HF_FEDERATION_PEER_ID=windows-zdh
-    export HF_FEDERATION_PEER_SECRET="$(cat "$HOME/.heavenzfire/federation/windows-peer.secret")"
-    export HF_FEDERATION_PEER_APPROVED=true
-    export HF_FEDERATION_PEER_APPROVED_AT='<ENROLLMENT_TIMESTAMP>'
+## 2. Android / Termux — transfer the approval package and submit
 
-Run the combined SSH-tunnel and submitter launcher:
+Copy only the signed approval package to Termux over the existing SSH connection. Replace the Windows path with the actual repository path:
 
-    bash scripts/rd/start-federation-android.sh approval-package.json
+```bash
+export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
+scp "$HF_FEDERATION_SSH_TARGET:C:/Users/rucke/HeavenzFire-RD/approval-package.json" "$HOME/approval-package.json"
+```
 
-It opens a local-only forward to Windows loopback, checks the receiver health endpoint, performs the authenticated handshake, submits the approved task, and closes the tunnel on exit. The script defaults to local port 18101 and remote port 18100.
+Configure the peer identity and SSH key. The peer secret must match the Windows peer secret; the operator approval secret is not needed on Android:
 
-## Required live acceptance
+```bash
+export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
+export HF_FEDERATION_SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
+export HF_FEDERATION_NODE_ID=android-a67l
+export HF_FEDERATION_PEER_ID=windows-zdh
+export HF_FEDERATION_PEER_SECRET='<SAME_PEER_SECRET>'
+export HF_FEDERATION_PEER_APPROVED=true
+export HF_FEDERATION_PEER_APPROVED_AT='<SAME_ENROLLMENT_TIMESTAMP>'
+```
 
-A submitter HTTP 202 is admission only. Confirm on Windows that the TaskLedger reaches succeeded and that the task projection reports canonical completed plus ledger succeeded. Repeat the same task package to verify idempotency. Then verify invalid approval, expired peer session, missing grant, and unauthorized scope are rejected.
+Run the combined SSH-tunnel and submitter launcher from the UnifiedCodebase checkout:
 
-The CI loopback round-trip is not physical-device acceptance. Record redacted output and exit codes separately. Never commit peer secrets, approval secrets, private addresses, or raw approval packages.
+```bash
+bash scripts/rd/start-federation-android.sh "$HOME/approval-package.json"
+```
+
+It opens a local-only forward from Termux port 18101 to Windows loopback port 18100, checks receiver health, authenticates the peer, submits the signed task, polls the authenticated task projection for up to 50 seconds, and closes the tunnel on exit.
+
+## 3. Acceptance criteria
+
+A submission HTTP 202 is admission only. A successful live acceptance requires the Termux client to report `TASK_COMPLETED`, with canonical status `completed` and ledger status `succeeded`. Verify the same task ID in the Windows ledger. Repeat the same package to test idempotent delivery. Invalid approval, expired peer session, missing capability grant, and unauthorized scope must be rejected.
+
+CI loopback tests are not physical-device acceptance. Record redacted output and exit codes separately. Never commit peer secrets, approval secrets, private addresses, or raw approval packages. Remove the approval package from Termux after acceptance.
