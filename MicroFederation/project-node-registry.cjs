@@ -276,7 +276,7 @@ class ProjectNodeRegistry {
   async _readDisk() {
     let parsed;
     try { parsed = JSON.parse(await fs.readFile(this.file, 'utf8')); }
-    catch (error) { throw Error('registry manifest is unreadable: ' + error.message, { cause: error }); }
+    catch (error) { if (error.code === 'ENOENT') throw error; throw Error('registry manifest is unreadable: ' + error.message, { cause: error }); }
     return clone(validateManifest(parsed));
   }
 
