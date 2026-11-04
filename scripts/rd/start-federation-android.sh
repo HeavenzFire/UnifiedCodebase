@@ -36,8 +36,17 @@ if [ ! -f "$PACKAGE_PATH" ]; then
   exit 5
 fi
 
+SSH_KEY_ARGS=()
+if [ -n "${HF_FEDERATION_SSH_KEY:-}" ]; then
+  if [ ! -f "$HF_FEDERATION_SSH_KEY" ]; then
+    echo "SSH key not found: $HF_FEDERATION_SSH_KEY" >&2
+    exit 7
+  fi
+  SSH_KEY_ARGS=(-i "$HF_FEDERATION_SSH_KEY")
+fi
+
 echo "Starting SSH local forward: 127.0.0.1:$LOCAL_PORT -> Windows loopback:$REMOTE_PORT"
-ssh -N \
+ssh "${SSH_KEY_ARGS[@]}" -N \
   -L "127.0.0.1:$LOCAL_PORT:127.0.0.1:$REMOTE_PORT" \
   -o BatchMode=yes \
   -o ConnectTimeout=8 \
