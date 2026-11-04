@@ -32,7 +32,7 @@ function createFederationHttpClient({ protocol, peerNodeId, baseUrl, fetchImpl =
     return data;
   }
 
-  async function handshake(capabilities = ['task.submit']) {
+  async function handshake(capabilities = ['task.submit', 'task.read']) {
     const hello = protocol.createHello(peerNodeId, capabilities);
     const result = await post('/v1/handshake', hello);
     const authenticated = protocol.verifyAck(result.ack, peerNodeId, hello);
@@ -53,7 +53,20 @@ function createFederationHttpClient({ protocol, peerNodeId, baseUrl, fetchImpl =
     return post('/v1/tasks', body);
   }
 
-  return Object.freeze({ handshake, submitTask, getSession: () => session });
+  async function getTask(taskId) {
+    if (!session) throw new Error('federation handshake is required before task retrieval');
+    if (!session.authenticated.grantedCapabilities.includes('task.read')) throw new Error('authenticated session lacks task.read capability');
+    if (typeof taskId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(taskId)) throw new Error('taskId is invalid');
+    const body = protocol.signPeerMessage(peerNodeId, {
+      protocol: PROTOCOL,
+      type: 'task_get',
+      sessionNonce: session.nonce,
+      taskId
+    });
+    return post('/v1/tasks/get', body);
+  }
+
+  return Object.freeze({ handshake, submitTask, getTask, getSession: () => session });
 }
 
 module.exports = { createFederationHttpClient };
