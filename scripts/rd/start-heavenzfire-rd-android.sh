@@ -34,7 +34,7 @@ if [ -s "$SSH_KEY" ]; then
   SSH_STATE='KEY_PRESENT'
   REMOTE_OUTPUT=$(ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new \
     "rucke@$WINDOWS_HOST" \
-    'powershell.exe -NoLogo -NoProfile -NonInteractive -Command "try { $h=Invoke-RestMethod http://127.0.0.1:11820/health -TimeoutSec 5; if ($h.status -eq ''ok'') { ''FACADE_OK'' } else { ''FACADE_NOT_OK''; exit 2 } } catch { ''FACADE_UNREACHABLE''; exit 3 }"' 2>&1)
+    'powershell.exe -NoLogo -NoProfile -NonInteractive -Command "try { $h=Invoke-RestMethod http://127.0.0.1:11820/health -TimeoutSec 5; if ($h.status -eq "ok") { "FACADE_OK" } else { "FACADE_NOT_OK"; exit 2 } } catch { "FACADE_UNREACHABLE"; exit 3 }"' 2>&1)
   SSH_EXIT=$?
   if [ "$SSH_EXIT" -eq 0 ] && printf '%s' "$REMOTE_OUTPUT" | grep -q 'FACADE_OK'; then
     SSH_STATE='AUTHENTICATED'
@@ -42,6 +42,7 @@ if [ -s "$SSH_KEY" ]; then
   else
     SSH_STATE='FAILED'
     REMOTE_HEALTH="FAIL:$SSH_EXIT"
+    printf '%s\n' "$REMOTE_OUTPUT"
   fi
 fi
 
