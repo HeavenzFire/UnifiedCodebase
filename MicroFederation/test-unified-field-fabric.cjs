@@ -55,3 +55,51 @@ test('fabric denies consequential execution without valid independent approval',
  await submit(wired,{id:'approval-required-task',workflowId:'approval-flow',nodes:{deploy:{capability:'deployment.apply',approvalRequired:true}}});
  const result=await wired.runOne();assert.equal(result.status,'failed');assert.match(result.error,/approval_missing/);assert.equal(calls,0);assert.equal(grantCalls,0);
 });
+
+
+test('waits for an eligible peer capacity slot instead of failing a parallel DAG node',async t=>{
+ const {ledger,fabric}=await setup(t);
+ fabric.mesh.register({peerId:'single-slot-worker',capabilities:['artifact.build'],capacity:1});
+ let active=0,peak=0,calls=0;
+ const wired=createUnifiedFieldFabric({
+  ledger,mesh:fabric.mesh,authorizeWorker:workerPolicy,workerWaitMs:1000,workerPollMs:5,
+  workerAdapters:{'single-slot-worker':async({nodeId})=>{
+   active++;peak=Math.max(peak,active);calls++;
+   await new Promise(resolve=>setTimeout(resolve,35));
+   active--;return {nodeId,ok:true};
+  }}
+ });
+ await submit(wired,{id:'capacity-wait-task',workflowId:'capacity-wait-flow',nodes:{
+  buildA:{capability:'artifact.build'},buildB:{capability:'artifact.build'}
+ }});
+ const result=await wired.runOne();
+ assert.equal(result.status,'succeeded');
+ assert.equal(calls,2);
+ assert.equal(peak,1);
+ assert.equal((await ledger.get('capacity-wait-task')).status,'succeeded');
+});
+
+test('persists node states, event trace, and output digests when a workflow node fails',async t=>{
+ const {ledger,fabric}=await setup(t);
+ fabric.mesh.register({peerId:'trace-worker',capabilities:['artifact.build','artifact.verify'],capacity:1});
+ const wired=createUnifiedFieldFabric({
+  ledger,mesh:fabric.mesh,authorizeWorker:workerPolicy,
+  workerAdapters:{'trace-worker':async({nodeId})=>{
+   if(nodeId==='verify')throw new Error('reproduced verification failure');
+   return {artifact:'built'};
+  }}
+ });
+ await submit(wired,{id:'trace-failure-task',workflowId:'trace-failure-flow',nodes:{
+  build:{capability:'artifact.build'},
+  verify:{capability:'artifact.verify',dependsOn:['build']}
+ }});
+ const result=await wired.runOne();
+ assert.equal(result.status,'failed');
+ const persisted=await ledger.get('trace-failure-task');
+ assert.equal(persisted.status,'failed');
+ assert.equal(persisted.result.schema,'heavenzfire.workflow-failure.v1');
+ assert.equal(persisted.result.nodeStates.build.status,'succeeded');
+ assert.equal(persisted.result.nodeStates.verify.status,'failed');
+ assert.ok(persisted.result.outputDigests.build.sha256);
+ assert.ok(persisted.result.events.some(event=>event.type==='node.failed'));
+});
