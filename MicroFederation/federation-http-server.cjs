@@ -84,6 +84,7 @@ function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1',
         const ack = protocol.acceptHello(body);
         sessions.set(body.nonce, {
           peerId: body.from,
+          nonce: body.nonce,
           capabilities: ack.grantedCapabilities,
           expiresAt: ack.expiresAt
         });
@@ -94,7 +95,7 @@ function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1',
       if (!session || session.expiresAt <= now) return json(response, 401, { ok: false, error: 'session_missing_or_expired' });
       if (!session.capabilities.includes('task.submit')) return json(response, 403, { ok: false, error: 'capability_denied' });
       if (!protocol.verifyPeerMessage(session.peerId, body)) return json(response, 401, { ok: false, error: 'message_authentication_failed' });
-      if (body.protocol !== PROTOCOL || body.type !== 'task_submit' || body.sessionNonce !== body.sessionNonce ||
+      if (body.protocol !== PROTOCOL || body.type !== 'task_submit' || body.sessionNonce !== session.nonce ||
           !body.taskRecord || typeof body.taskRecord !== 'object') {
         return json(response, 400, { ok: false, error: 'invalid_task_message' });
       }
