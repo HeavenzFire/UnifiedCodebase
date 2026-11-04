@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const http = require('node:http');
 const { AgentMessageStore, createCommandCenterServer, DEFAULT_ROLES } = require('./agent-command-center.cjs');
 
 async function stateDir(t) {
@@ -11,6 +12,18 @@ async function stateDir(t) {
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   return dir;
 }
+
+function rawRequest(port, route, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ hostname: '127.0.0.1', port, path: route, method: 'GET', headers }, response => {
+      response.resume();
+      response.on('end', () => resolve({ status: response.statusCode }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 async function request(base, route, options) {
   const response = await fetch(base + route, options);
   return { status: response.status, body: await response.json() };
@@ -139,7 +152,7 @@ test('rejects DNS-rebinding hosts, foreign origins, and credential-bearing promp
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
   t.after(() => app.close());
   const base = 'http://127.0.0.1:' + address.port;
-  const hostAttack = await fetch(base + '/api/agents', { headers: { host: 'evil.example' } });
+  const hostAttack = await rawRequest(address.port, '/api/agents', { Host: 'evil.example' });
   assert.equal(hostAttack.status, 403);
   const originAttack = await fetch(base + '/api/agents', { headers: { origin: 'http://evil.example' } });
   assert.equal(originAttack.status, 403);
