@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { AgentMessageStore, createCommandCenterServer, DEFAULT_ROLES } = require('./agent-command-center.cjs');
+const { CapabilityFabric } = require('./capability-fabric.cjs');
 
 async function stateDir(t) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'hf-agent-command-'));
@@ -203,4 +204,80 @@ test('refuses a symlink as the persistent message journal', async t => {
   await fs.writeFile(target, '');
   await fs.symlink(target, link);
   await assert.rejects(new AgentMessageStore(link).open(), /regular non-symlink/);
+});
+
+test('remediation endpoint is opt-in and delegates numeric issue IDs to the injected pipeline', async t => {
+  const dir = await stateDir(t);
+  const seen = [];
+  const app = createCommandCenterServer({ stateDirectory: dir, adapter: { run: async () => ({ response: 'ok' }) },
+    remediationPipeline: { async process(id) { seen.push(id); return { issueId: id, status: 'blocked', reason: 'fixture' }; } } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const base = 'http://127.0.0.1:' + address.port;
+  const result = await request(base, '/api/remediation/issues/123456', { method: 'POST' });
+  assert.equal(result.status, 202);
+  assert.equal(result.body.issueId, '123456');
+  assert.deepEqual(seen, ['123456']);
+  const invalid = await fetch(base + '/api/remediation/issues/not-a-number', { method: 'POST' });
+  assert.equal(invalid.status, 404);
+});
+test('remediation endpoint fails closed when no pipeline is configured', async t => {
+  const app = createCommandCenterServer({ stateDirectory: await stateDir(t), adapter: { run: async () => ({ response: 'ok' }) } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const result = await request('http://127.0.0.1:' + address.port, '/api/remediation/issues/123456', { method: 'POST' });
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, 'remediation_pipeline_not_configured');
+});
+
+
+test('Command Center exposes capability inventory and dependency plans without activating adapters', async t => {
+  const dir = await stateDir(t);
+  let activated = 0;
+  const capabilityFabric = new CapabilityFabric({
+    definitions: [
+      { id: 'runtime.core', version: '1.0.0', description: 'Local runtime' },
+      { id: 'browser.bridge', version: '1.0.0', description: 'Browser bridge', dependencies: ['runtime.core'] }
+    ],
+    adapters: {
+      'runtime.core': async () => { activated++; },
+      'browser.bridge': async () => { activated++; }
+    }
+  });
+  const app = createCommandCenterServer({
+    stateDirectory: dir,
+    adapter: { run: async () => ({ response: 'ok' }) },
+    capabilityFabric
+  });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const base = 'http://127.0.0.1:' + address.port;
+  const inventory = await request(base, '/api/capabilities');
+  assert.equal(inventory.status, 200);
+  assert.equal(inventory.body.capabilities.length, 2);
+  const plan = await request(base, '/api/capabilities/plan', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ capabilities: ['browser.bridge'] })
+  });
+  assert.equal(plan.status, 200);
+  assert.deepEqual(plan.body.order, ['runtime.core', 'browser.bridge']);
+  assert.equal(activated, 0);
+  const unknown = await request(base, '/api/capabilities/plan', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ capabilities: ['not.registered'] })
+  });
+  assert.equal(unknown.status, 400);
+});
+
+test('capability endpoints fail closed when no fabric is injected', async t => {
+  const app = createCommandCenterServer({ stateDirectory: await stateDir(t), adapter: { run: async () => ({ response: 'ok' }) } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const base = 'http://127.0.0.1:' + address.port;
+  assert.equal((await request(base, '/api/capabilities')).status, 503);
+  const result = await request(base, '/api/capabilities/plan', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ capabilities: ['x'] })
+  });
+  assert.equal(result.status, 503);
 });
