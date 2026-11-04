@@ -148,6 +148,9 @@ test('rejects DNS-rebinding hosts, foreign origins, and credential-bearing promp
     body: JSON.stringify({ target: 'planner', content: 'credential ghp_' + 'A'.repeat(40) })
   });
   assert.equal(secretPrompt.status, 400);
+  const bearerPrompt = await request(base, '/api/message', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ target: 'planner', content: 'Authorization: Bearer ' + 'A'.repeat(32) }) });
+  assert.equal(bearerPrompt.status, 400);
 });
 
 test('message journal enforces its configured event bound', async t => {
@@ -155,4 +158,16 @@ test('message journal enforces its configured event bound', async t => {
   const store = await new AgentMessageStore(path.join(dir, 'bounded.jsonl'), { maxEvents: 1 }).open();
   await store.appendMessage({ from: 'user', to: 'planner', conversationId: 'planner', kind: 'direct', content: 'one' });
   await assert.rejects(store.appendMessage({ from: 'user', to: 'planner', conversationId: 'planner', kind: 'direct', content: 'two' }), /event bound/);
+});
+
+
+test('serves the local UI with restrictive security headers', async t => {
+  const app = createCommandCenterServer({ stateDirectory: await stateDir(t), adapter: { run: async () => ({ response: 'ok' }) } });
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  t.after(() => app.close());
+  const response = await fetch('http://127.0.0.1:' + address.port + '/');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
