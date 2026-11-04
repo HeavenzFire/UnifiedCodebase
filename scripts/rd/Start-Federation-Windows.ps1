@@ -51,7 +51,7 @@ if ($env:HF_OPERATOR_APPROVAL_SECRET.Length -lt 32) {
     throw 'HF_OPERATOR_APPROVAL_SECRET must contain at least 32 characters.'
 }
 
-$GrantVerifier = Join-Path $RepoRoot 'scripts\\rd\\verify-federation-grant.cjs'
+$GrantVerifier = Join-Path $RepoRoot 'scripts\rd\verify-federation-grant.cjs'
 & $Node.Source $GrantVerifier $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID
 if ($LASTEXITCODE -ne 0) {
     throw 'Task-scoped capability grant verification failed. Federation node was not started.'
