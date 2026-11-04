@@ -32,6 +32,10 @@ async function startServer(options = {}) {
       received.push({ record, opts });
       if (opts.approvalProof !== 'explicit-test-approval') throw new Error('approval denied');
       return { id: record.taskId, status: 'queued' };
+    },
+    async projectToCanonical(taskId) {
+      const item = received.find(entry => entry.record.taskId === taskId);
+      return item ? { schema: 'heavenzfire.shared-task-ledger-adapter.v1', canonicalRecord: item.record, ledger: { status: 'queued' } } : null;
     }
   };
   const runtime = createFederationHttpServer({ protocol: pair.server, taskAdapter });
@@ -107,6 +111,23 @@ test('task submission still passes explicit approval proof to the canonical adap
   await assert.rejects(f.client.submitTask(record, 'not-approved'), /approval denied/);
   assert.equal(f.received.length, 1);
   assert.equal(f.received[0].opts.approvalProof, 'not-approved');
+});
+
+
+test('authenticated task.read returns a canonical projection after submission', async t => {
+  const f = await startServer(); t.after(() => f.runtime.close());
+  await f.client.handshake(['task.submit', 'task.read']);
+  await f.client.submitTask(record, 'explicit-test-approval');
+  const result = await f.client.getTask(record.taskId);
+  assert.equal(result.ok, true);
+  assert.equal(result.projection.canonicalRecord.taskId, record.taskId);
+  assert.equal(result.projection.ledger.status, 'queued');
+});
+
+test('task retrieval is denied without task.read capability', async t => {
+  const f = await startServer(); t.after(() => f.runtime.close());
+  await f.client.handshake(['task.submit']);
+  await assert.rejects(f.client.getTask(record.taskId), /lacks task.read/);
 });
 
 test('client refuses non-loopback and non-HTTP endpoints', async t => {
