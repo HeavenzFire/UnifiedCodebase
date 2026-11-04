@@ -161,6 +161,19 @@ function createFederationProtocol({ nodeId, capabilities = [], peers = [], clock
     });
   }
 
+  function signPeerMessage(targetNodeId, body) {
+    const peer = getActivePeer(targetNodeId);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.prototype.hasOwnProperty.call(body, 'signature')) {
+      throw new Error('peer message body must be an unsigned object');
+    }
+    return signed(peer.secret, body);
+  }
+
+  function verifyPeerMessage(sourceNodeId, message) {
+    const peer = getActivePeer(sourceNodeId);
+    return verifySignature(peer.secret, message);
+  }
+
   function revokePeer(peerNodeId, revokedAt = new Date(clock()).toISOString()) {
     const peer = peerMap.get(peerNodeId);
     if (!peer) throw new Error('unknown peer identity');
@@ -168,7 +181,7 @@ function createFederationProtocol({ nodeId, capabilities = [], peers = [], clock
     return Object.freeze({ nodeId: peerNodeId, state: 'REVOKED', revokedAt });
   }
 
-  return Object.freeze({ nodeId, capabilities: Object.freeze(localCapabilities), createHello, acceptHello, verifyAck, revokePeer });
+  return Object.freeze({ nodeId, capabilities: Object.freeze(localCapabilities), createHello, acceptHello, verifyAck, signPeerMessage, verifyPeerMessage, revokePeer });
 }
 
 module.exports = { PROTOCOL, createFederationProtocol };
