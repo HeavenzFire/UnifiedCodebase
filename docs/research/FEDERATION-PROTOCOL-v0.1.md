@@ -28,7 +28,7 @@ The replay cache is in-memory and bounded (4,096 entries / five-minute retention
 `MicroFederation/federation-http-server.cjs` and `federation-http-client.cjs` provide a narrow HTTP binding intended to be reached only through an operator-managed SSH local-forward tunnel.
 
 - Server binding is hard-restricted to `127.0.0.1`; attempts to bind to `0.0.0.0` fail at construction.
-- Client accepts loopback HTTP URLs only; remote hosts and HTTPS URLs are rejected. HTTP is acceptable here only inside the SSH-encrypted tunnel.
+- Client accepts numeric loopback HTTP URLs only; host aliases, credentials, paths, queries, remote hosts, and HTTPS URLs are rejected. Requests use `redirect: error` and `cache: no-store` so signed task and approval payloads cannot be forwarded by an unexpected redirect. HTTP is acceptable here only inside the SSH-encrypted tunnel.
 - `GET /health` reports local process health without exposing peer topology.
 - `POST /v1/handshake` accepts the authenticated hello and stores a bounded, process-local session.
 - `POST /v1/tasks` requires a live session with `task.submit`, verifies an HMAC-signed message bound to the session nonce, and forwards the canonical record plus approval proof to the fail-closed task adapter.
