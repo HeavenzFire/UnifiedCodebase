@@ -11,6 +11,7 @@ The Capability Fabric is a host-controlled registry, dependency resolver, lifecy
 - Adapters are supplied by the trusted host process. Registry data cannot name a filesystem path, JavaScript expression, executable, or arbitrary script URL.
 - Optional origins must be bare HTTPS origins and explicitly allowlisted.
 - Activation is idempotent for capabilities already in the ready state.
+- Privileged, destructive, credential-sensitive, security-sensitive, and external-network capabilities require a host-injected approvalVerifier that returns true; caller-supplied booleans are not treated as approval.
 - If activation fails, newly activated dependencies are disposed in reverse order when their adapter exposes a dispose function.
 - The GAPI compatibility override is opt-in. It intercepts only names prefixed with hf.; all other GAPI module names are delegated to the original gapi.load.
 - Uninstall restores the original method only if no other integration has replaced the wrapper in the meantime.
