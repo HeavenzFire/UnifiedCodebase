@@ -26,6 +26,7 @@ function createGovernedRuntime({
   let stopping = false;
   let timer = null;
   let inFlight = null;
+  let activeController = null;
   let completed = 0;
   let failed = 0;
   let blocked = 0;
@@ -60,6 +61,7 @@ function createGovernedRuntime({
     const claimed = await ledger.claimNext(workerId, { now, leaseMs });
     if (!claimed) return { status: 'idle' };
     let started = false;
+    let controller = null;
     try {
       await ledger.start(claimed.id, workerId, { now });
       started = true;
@@ -68,10 +70,13 @@ function createGovernedRuntime({
       if (!payload || typeof payload.prompt !== 'string' || !payload.prompt.trim()) {
         throw Object.assign(Error('task payload must contain a non-empty prompt'), { policyDenied: true });
       }
+      controller = new AbortController();
+      activeController = controller;
       const result = await adapter.run({
         taskId: claimed.id,
         role: payload.role || 'worker',
-        prompt: payload.prompt
+        prompt: payload.prompt,
+        signal: controller.signal
       });
       const saved = await ledger.complete(claimed.id, workerId, result, {
         now: clock(), evidenceRef: 'governed-runtime:' + claimed.id
@@ -104,6 +109,8 @@ function createGovernedRuntime({
         status: policyDenied ? 'blocked' : saved.status === 'queued' ? 'retry-scheduled' : 'failed',
         taskId: claimed.id, error: message, ledgerStatus: saved.status
       };
+    } finally {
+      if (controller && activeController === controller) activeController = null;
     }
   }
 
@@ -129,6 +136,9 @@ function createGovernedRuntime({
     },
     async stop() {
       stopping = true;
+      if (activeController && !activeController.signal.aborted) {
+        activeController.abort(new Error('governed worker is stopping'));
+      }
       if (timer) clearTimeout(timer);
       timer = null;
       if (inFlight) await inFlight;
