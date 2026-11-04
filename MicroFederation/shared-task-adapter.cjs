@@ -170,7 +170,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
 
   async function runOne({ workerId, now = Date.now(), leaseMs = 120000 } = {}) {
     requireText(workerId, 'workerId', 128);
-    const claimed = await ledger.claimNext(workerId, { now, leaseMs });
+    const claimed = await ledger.claimNext(workerId, { now, leaseMs, requiredCapabilities: ['shared-task.v1'] });
     if (!claimed) return { status: 'idle' };
     await ledger.start(claimed.id, workerId, { now });
 
