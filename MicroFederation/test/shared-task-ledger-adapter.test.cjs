@@ -112,6 +112,7 @@ test('tampered approval metadata is blocked and released before execution', asyn
 test('idempotent delivery returns the same task and rejects conflicting duplicate input', async t => {
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   const first = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
+  f.setNow(f.now() + 5000);
   const second = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
   assert.equal(second.id, first.id);
   const changed = { ...f.record, goal: 'different goal' };
