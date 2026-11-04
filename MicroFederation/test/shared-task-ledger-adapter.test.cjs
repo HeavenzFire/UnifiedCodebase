@@ -116,7 +116,7 @@ test('idempotent delivery returns the same task and rejects conflicting duplicat
   const second = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
   assert.equal(second.id, first.id);
   const changed = { ...f.record, goal: 'different goal' };
-  await assert.rejects(f.adapter.createFromCanonical(changed, { approvalProof: 'operator-confirmed' }), /already exists with different input/);
+  await assert.rejects(f.adapter.createFromCanonical(changed, { approvalProof: 'operator-confirmed' }), /already exists with a different or untrusted canonical record/);
 });
 
 test('unsupported cancelled state is explicit rather than silently mapped', async t => {
