@@ -14,6 +14,7 @@ function createFederationRuntime({
   verifyApproval,
   verifyAttestation,
   capabilityGate,
+  bootstrapGrant = null,
   inferenceBaseUrl = 'http://127.0.0.1:11820',
   inferenceModel = 'heavenzfire-qwen-0.5b',
   workerId = nodeId + '-worker',
@@ -72,6 +73,22 @@ function createFederationRuntime({
     await ledger.open();
     if (capabilityGate.store && typeof capabilityGate.store.open === 'function') {
       await capabilityGate.store.open();
+    }
+    if (bootstrapGrant) {
+      if (!capabilityGate.store || typeof capabilityGate.store.grant !== 'function' ||
+          typeof capabilityGate.store.get !== 'function') {
+        throw new Error('bootstrapGrant requires a writable CapabilityStore');
+      }
+      const existing = await capabilityGate.store.get(bootstrapGrant.grantId);
+      if (existing) {
+        const same = existing.agentId === bootstrapGrant.agentId &&
+          existing.taskId === bootstrapGrant.taskId &&
+          JSON.stringify(existing.capabilities) === JSON.stringify([...new Set(bootstrapGrant.capabilities)].sort()) &&
+          existing.expiresAt === bootstrapGrant.expiresAt && existing.revoked !== true;
+        if (!same) throw new Error('existing capability grant conflicts with bootstrapGrant');
+      } else {
+        await capabilityGate.store.grant(bootstrapGrant);
+      }
     }
     const address = await server.listen();
     const workerState = worker.start();
