@@ -35,7 +35,7 @@ test('creates a versioned manifest outside the workspace and preserves repositor
   const manifest = await registry.read();
   assert.equal(manifest.schema, SCHEMA);
   assert.equal(manifest.revision, 1);
-  assert.equal(manifest.projects[0].workspacePath, workspace);
+  assert.equal(manifest.projects[0].workspacePath, path.normalize(workspace));
   assert.deepEqual(await fs.readFile(source), before);
   assert.equal(await fs.access(path.join(state, 'registry.json')).then(() => true), true);
 });
