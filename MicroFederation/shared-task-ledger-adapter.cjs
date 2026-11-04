@@ -61,7 +61,7 @@ function ledgerStatusToCanonical(status) {
   }
 }
 
-function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verifyAttestation, clock = () => Date.now() }) {
+function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verifyAttestation, execute, clock = () => Date.now() }) {
   if (!ledger || typeof ledger.create !== 'function' || typeof ledger.get !== 'function' ||
       typeof ledger.claimNext !== 'function' || typeof ledger.releaseClaim !== 'function') {
     throw new Error('compatible task ledger is required');
@@ -72,6 +72,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
   if (typeof verifyApproval !== 'function' || typeof verifyAttestation !== 'function') {
     throw new Error('trusted verifyApproval and verifyAttestation callbacks are required');
   }
+  if (typeof execute !== 'function') throw new Error('bounded task execute callback is required');
   if (typeof clock !== 'function') throw new Error('clock must be a function');
 
   async function createFromCanonical(record, { approvalProof, requiredCapabilities = [], maxAttempts = 3, idempotencyKey = record && record.taskId } = {}) {
@@ -97,7 +98,21 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     const now = clock();
     if (!Number.isFinite(now)) throw new Error('clock returned an invalid timestamp');
 
+    const canonicalMetadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+      ? record.metadata : {};
+    if (!ID.test(canonicalMetadata.agentId || '') || !ID.test(canonicalMetadata.grantId || '')) {
+      throw new Error('canonical metadata.agentId and metadata.grantId are required for governed execution');
+    }
+    if (!Array.isArray(requiredCapabilities) || requiredCapabilities.length > 31 ||
+        requiredCapabilities.some(cap => typeof cap !== 'string' || !/^[a-z][a-z0-9._-]{0,63}$/.test(cap))) {
+      throw new Error('requiredCapabilities must contain up to 31 capability slugs');
+    }
+    if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 10) throw new Error('maxAttempts must be 1..10');
     const metadata = {
+      agentId: canonicalMetadata.agentId,
+      grantId: canonicalMetadata.grantId,
+      action: typeof canonicalMetadata.action === 'string' ? canonicalMetadata.action : 'shared-task.execute',
+      approvalRequestId: typeof canonicalMetadata.approvalRequestId === 'string' ? canonicalMetadata.approvalRequestId : null,
       heavenzfireSharedTaskAdapter: {
         schema: ADAPTER_SCHEMA,
         canonicalRecord: record,
@@ -106,8 +121,8 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     };
     return ledger.create({
       id: record.taskId,
-      payload: { prompt: record.goal, source: record.source },
-      requiredCapabilities,
+      payload: { prompt: record.goal, source: record.source, role: typeof canonicalMetadata.role === 'string' ? canonicalMetadata.role : 'research' },
+      requiredCapabilities: [...new Set(['shared-task.v1', ...requiredCapabilities])],
       maxAttempts,
       idempotencyKey,
       metadata
@@ -118,6 +133,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     if (!task || typeof task !== 'object' || !ID.test(task.id || '')) throw new Error('ledger task is malformed');
     const envelope = task.metadata && task.metadata.heavenzfireSharedTaskAdapter;
     if (!envelope || envelope.schema !== ADAPTER_SCHEMA) throw new Error('task was not created by the canonical adapter');
+    if (!ID.test(task.metadata.agentId || '') || !ID.test(task.metadata.grantId || '')) throw new Error('governed task is missing agentId or grantId metadata');
     const record = envelope.canonicalRecord;
     contract.validateTaskRecord(record);
     if (record.schema !== CANONICAL_SCHEMA || record.taskId !== task.id ||
@@ -138,19 +154,20 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     return Object.freeze({ authorized: true, taskId: task.id, approver: attestation.approver, evidenceRef: attestation.evidenceRef, recordHash: hash });
   }
 
-  async function claimNextApproved(workerId, options = {}) {
-    const task = await ledger.claimNext(workerId, options);
-    if (!task) return { status: 'idle' };
-    try {
-      const authorization = await authorizeExecution(task);
-      return { status: 'claimed', task, authorization };
-    } catch (error) {
-      await ledger.releaseClaim(task.id, workerId, {
-        now: Number.isFinite(options.now) ? options.now : clock(),
-        reason: 'canonical approval gate denied: ' + String(error.message || error).slice(0, 400)
-      });
-      return { status: 'blocked', taskId: task.id, reason: String(error.message || error) };
+  async function run({ taskId, role, prompt } = {}) {
+    if (typeof taskId !== 'string' || !ID.test(taskId)) throw new Error('ledger taskId is invalid');
+    const task = await ledger.get(taskId);
+    if (!task || task.status !== 'running') {
+      throw Object.assign(new Error('shared task must be running under GovernedRuntime'), { policyDenied: true });
     }
+    const authorization = await authorizeExecution(task);
+    const envelope = task.metadata.heavenzfireSharedTaskAdapter;
+    const record = envelope.canonicalRecord;
+    if (prompt !== task.payload.prompt || prompt !== record.goal ||
+        role !== task.payload.role || task.payload.source !== record.source) {
+      throw Object.assign(new Error('governed task payload does not match its approved canonical record'), { policyDenied: true });
+    }
+    return execute({ taskId, canonicalTaskId: record.taskId, role, prompt, canonicalRecord: record, authorization });
   }
 
   async function projectToCanonical(taskOrId) {
@@ -192,7 +209,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     });
   }
 
-  return Object.freeze({ createFromCanonical, authorizeExecution, claimNextApproved, projectToCanonical });
+  return Object.freeze({ createFromCanonical, authorizeExecution, run, projectToCanonical });
 }
 
 module.exports = { ADAPTER_SCHEMA, createSharedTaskLedgerAdapter, recordHash };
