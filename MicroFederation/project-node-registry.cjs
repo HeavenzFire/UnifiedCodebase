@@ -37,8 +37,8 @@ function requireText(value, label, max = 256) {
 }
 function normalizeWorkspacePath(value) {
   const raw = requireText(value, 'workspacePath', 1024);
-  if (path.win32.isAbsolute(raw)) return path.win32.normalize(raw);
   if (path.posix.isAbsolute(raw)) return path.posix.normalize(raw);
+  if (path.win32.isAbsolute(raw)) return path.win32.normalize(raw);
   throw Error('workspacePath must be an absolute Windows or POSIX path');
 }
 function validateRemote(value) {
