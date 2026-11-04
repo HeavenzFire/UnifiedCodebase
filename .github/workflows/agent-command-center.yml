@@ -12,6 +12,8 @@ on:
       - "MicroFederation/test-live-orchestrator-adapter.cjs"
       - "MicroFederation/issue-remediation-pipeline.cjs"
       - "MicroFederation/test-issue-remediation-pipeline.cjs"
+      - "MicroFederation/engineering-control-plane.cjs"
+      - "MicroFederation/test-engineering-control-plane.cjs"
       - ".github/workflows/agent-command-center.yml"
   push:
     branches: ["main"]
@@ -47,6 +49,7 @@ jobs:
           node --check MicroFederation/agent-command-center.cjs
           node --check MicroFederation/live-orchestrator-adapter.cjs
           node --check MicroFederation/issue-remediation-pipeline.cjs
+          node --check MicroFederation/engineering-control-plane.cjs
           node -e "JSON.parse(require('node:fs').readFileSync('MicroFederation/agent-roster.v1.json', 'utf8'))"
       - name: Project and node registry tests
         run: node --test MicroFederation/test-project-node-registry.cjs
@@ -56,3 +59,5 @@ jobs:
         run: node --test MicroFederation/test-live-orchestrator-adapter.cjs
       - name: Issue remediation pipeline tests
         run: node --test MicroFederation/test-issue-remediation-pipeline.cjs
+      - name: Engineering control plane tests
+        run: node --test MicroFederation/test-engineering-control-plane.cjs
