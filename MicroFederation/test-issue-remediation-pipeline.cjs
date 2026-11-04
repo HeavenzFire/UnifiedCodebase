@@ -19,7 +19,9 @@ async function fixture(t,overrides={}) {
 test('16-role repair flow creates draft PR only after tests and independent verification',async t=>{
  const {pipeline,calls}=await fixture(t); const r=await pipeline.process('123456');
  assert.equal(r.status,'draft_pr_created'); assert.equal(r.agentReviews,16);
- assert.equal(calls.agents.filter(x=>ROLE_IDS.includes(x)).length,17);
+ assert.equal(calls.agents.length,16);
+ assert.deepEqual(calls.agents,ROLE_IDS);
+ assert.equal(calls.agents.filter(x=>x==='synthesizer').length,1);
  assert.equal(calls.tests.length,1); assert.equal(calls.verification.length,1); assert.equal(calls.pr.length,1); assert.equal(calls.pr[0].draft,true);
 });
 test('blocks repository outside explicit allowlist',async t=>{
