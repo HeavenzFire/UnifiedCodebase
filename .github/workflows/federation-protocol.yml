@@ -7,6 +7,8 @@ on:
     paths:
       - 'MicroFederation/federation-protocol.cjs'
       - 'MicroFederation/test/federation-protocol.test.cjs'
+      - 'MicroFederation/shared-task-ledger-adapter.cjs'
+      - 'MicroFederation/test/shared-task-ledger-adapter.test.cjs'
       - '.github/workflows/federation-protocol.yml'
   pull_request:
     paths:
@@ -30,4 +32,4 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Run deterministic protocol tests
-        run: node --test MicroFederation/test/federation-protocol.test.cjs
+        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs
