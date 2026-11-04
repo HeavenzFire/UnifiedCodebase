@@ -10,6 +10,7 @@ const NODE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const CAPABILITY = /^[a-z][a-z0-9._-]{0,63}$/;
 const MAX_CLOCK_SKEW_MS = 30000;
 const MAX_HANDSHAKE_TTL_MS = 30000;
+const MAX_SESSION_TTL_MS = 300000;
 const REPLAY_TTL_MS = 300000;
 const MAX_REPLAY_ENTRIES = 4096;
 
@@ -131,7 +132,7 @@ function createFederationProtocol({ nodeId, capabilities = [], peers = [], clock
       nonce: nonce(),
       grantedCapabilities: granted,
       issuedAt: now,
-      expiresAt: Math.min(hello.expiresAt, now + 60000)
+      expiresAt: now + MAX_SESSION_TTL_MS
     };
     if (!NONCE.test(ackBody.nonce)) throw new Error('nonce source must return 32-byte lowercase hex');
     return signed(peer.secret, ackBody);
@@ -145,7 +146,8 @@ function createFederationProtocol({ nodeId, capabilities = [], peers = [], clock
     if (!NONCE.test(ack.nonce)) throw new Error('ack nonce is invalid');
     const now = clock();
     if (!Number.isFinite(ack.issuedAt) || !Number.isFinite(ack.expiresAt) ||
-        ack.issuedAt > now + MAX_CLOCK_SKEW_MS || ack.issuedAt < now - MAX_CLOCK_SKEW_MS || ack.expiresAt <= now) {
+        ack.issuedAt > now + MAX_CLOCK_SKEW_MS || ack.issuedAt < now - MAX_CLOCK_SKEW_MS ||
+        ack.expiresAt <= now || ack.expiresAt - ack.issuedAt > MAX_SESSION_TTL_MS) {
       throw new Error('ack is expired or outside clock-skew policy');
     }
     const granted = validateCapabilities(ack.grantedCapabilities, 'ack.grantedCapabilities');
@@ -166,12 +168,15 @@ function createFederationProtocol({ nodeId, capabilities = [], peers = [], clock
     if (!body || typeof body !== 'object' || Array.isArray(body) || Object.prototype.hasOwnProperty.call(body, 'signature')) {
       throw new Error('peer message body must be an unsigned object');
     }
-    return signed(peer.secret, body);
+    if (body.from !== undefined && body.from !== nodeId) throw new Error('peer message source identity mismatch');
+    if (body.to !== undefined && body.to !== peer.nodeId) throw new Error('peer message target identity mismatch');
+    return signed(peer.secret, { ...body, from: nodeId, to: peer.nodeId });
   }
 
   function verifyPeerMessage(sourceNodeId, message) {
     const peer = getActivePeer(sourceNodeId);
-    return verifySignature(peer.secret, message);
+    return !!message && message.from === peer.nodeId && message.to === nodeId &&
+      verifySignature(peer.secret, message);
   }
 
   function revokePeer(peerNodeId, revokedAt = new Date(clock()).toISOString()) {
