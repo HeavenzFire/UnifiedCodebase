@@ -13,6 +13,8 @@ const MAX_BODY = 2048;
 const TIMEOUT_MS = 12000;
 
 const POWERSHELL_SCRIPT = [
+  "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)",
+  "$OutputEncoding = [Console]::OutputEncoding",
   "$ErrorActionPreference = 'Stop'",
   "$ProgressPreference = 'SilentlyContinue'",
   "switch ($env:HF_ACTION) {",
