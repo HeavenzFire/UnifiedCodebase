@@ -30,29 +30,44 @@ async function main() {
 
   const protocol = createFederationProtocol({
     nodeId,
-    capabilities: ['task.submit'],
+    capabilities: ['task.submit', 'task.read'],
     peers: [{
       nodeId: peerNodeId,
       secret,
       approved: true,
       approvedAt,
-      allowedCapabilities: ['task.submit']
+      allowedCapabilities: ['task.submit', 'task.read']
     }]
   });
   const client = createFederationHttpClient({ protocol, peerNodeId, baseUrl });
-  const session = await client.handshake(['task.submit']);
-  if (session.state !== 'AUTHENTICATED' || !session.grantedCapabilities.includes('task.submit')) {
-    throw new Error('peer handshake did not grant task.submit');
+  const session = await client.handshake(['task.submit', 'task.read']);
+  if (session.state !== 'AUTHENTICATED' ||
+      !session.grantedCapabilities.includes('task.submit') ||
+      !session.grantedCapabilities.includes('task.read')) {
+    throw new Error('peer handshake did not grant task.submit and task.read');
   }
   const receipt = await client.submitTask(pack.record, pack.approvalProof);
-  process.stdout.write(JSON.stringify({
-    state: 'TASK_SUBMITTED',
-    peer: peerNodeId,
-    protocol: session.protocol,
-    taskId: receipt.taskId,
-    ledgerStatus: receipt.status,
-    accepted: receipt.ok === true
-  }) + '\n');
+  if (receipt.ok !== true || receipt.taskId !== pack.record.taskId) throw new Error('task submission receipt did not match the approved task');
+  process.stdout.write(JSON.stringify({ state: 'TASK_SUBMITTED', peer: peerNodeId, protocol: session.protocol,
+    taskId: receipt.taskId, ledgerStatus: receipt.status, accepted: true }) + '\n');
+
+  const deadline = Date.now() + 50000;
+  while (Date.now() < deadline) {
+    const response = await client.getTask(receipt.taskId);
+    const projection = response.projection;
+    const canonicalStatus = projection && projection.canonicalRecord && projection.canonicalRecord.status;
+    const ledger = projection && projection.ledger;
+    if (canonicalStatus === 'completed' && ledger && ledger.status === 'succeeded') {
+      process.stdout.write(JSON.stringify({ state: 'TASK_COMPLETED', taskId: receipt.taskId,
+        canonicalStatus, ledgerStatus: ledger.status, result: ledger.result }) + '\\n');
+      return;
+    }
+    if (canonicalStatus === 'failed' || (ledger && ledger.status === 'failed')) {
+      throw new Error('governed worker failed task: ' + String(ledger && ledger.error || 'unspecified failure'));
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw new Error('task did not complete within 50 seconds; inspect the Windows worker ledger before retrying');
 }
 
 main().catch(error => {
