@@ -99,14 +99,15 @@ $('send').onclick=send;$('prompt').addEventListener('keydown',e=>{if(e.key==='En
 (async()=>{try{agents=(await api('/api/agents')).agents;renderAgents();$('title').textContent='Planner';await loadThread()}catch(e){$('state').textContent='ERROR: '+e.message}})();
 </script></body></html>`;
 
-function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null } = {}) {
+function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null, registry: suppliedRegistry = null, maxMessageEvents = 100000 } = {}) {
   if (!stateDirectory) throw Error('stateDirectory is required');
   if (!Array.isArray(roles) || !roles.length) throw Error('at least one agent role is required');
   const byId = new Map(roles.map(role => [role.id, role]));
   if (byId.size !== roles.length || roles.some(r => !/^[a-z][a-z0-9-]{0,63}$/.test(r.id) || !r.name || !r.system)) {
     throw Error('agent role definitions are invalid or duplicated');
   }
-  const store = new AgentMessageStore(path.join(stateDirectory, 'messages.jsonl'));
+  const store = new AgentMessageStore(path.join(stateDirectory, 'messages.jsonl'), { maxEvents: maxMessageEvents });
+  const registry = suppliedRegistry || new ProjectNodeRegistry(path.join(stateDirectory, 'registry'));
   const inference = adapter || new LiveOrchestratorAdapter({ endpoint, maxRetries: ROSTER_CONFIG.execution.retries.transientHttp5xx });
   async function reply(role, prompt, conversationId) {
     const history = await store.thread(conversationId, 12);
@@ -115,23 +116,63 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
       '. System instructions: ' + role.system + '\n\nConversation context:\n' + context + '\n\nRespond to the latest user message. Be explicit about uncertainty and evidence.';
     return inference.run({ taskId: 'agent-' + crypto.randomUUID(), role: role.role, prompt: fullPrompt });
   }
+  async function readJsonBody(req, maxBytes = 20000) {
+    let raw = '', size = 0;
+    for await (const chunk of req) {
+      size += Buffer.byteLength(chunk);
+      if (size > maxBytes) throw Error('request too large');
+      raw += chunk;
+    }
+    const value = JSON.parse(raw);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('request body must be a JSON object');
+    return value;
+  }
   async function handle(req, res) {
     const send = (status, body, type = 'application/json; charset=utf-8') => {
       res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
       res.end(type.startsWith('application/json') ? JSON.stringify(body) : body);
     };
     try {
+      const hostHeader = req.headers.host;
+      let hostUrl;
+      try { hostUrl = new URL('http://' + hostHeader); } catch { return send(403, { error: 'loopback_host_required' }); }
+      if (!hostHeader || !['127.0.0.1', 'localhost', '[::1]'].includes(hostUrl.hostname)) return send(403, { error: 'loopback_host_required' });
+      if (req.headers.origin) {
+        let origin;
+        try { origin = new URL(req.headers.origin); } catch { return send(403, { error: 'same_origin_required' }); }
+        if (origin.protocol !== 'http:' || origin.host !== hostHeader || !['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname)) {
+          return send(403, { error: 'same_origin_required' });
+        }
+      }
       const url = new URL(req.url, 'http://127.0.0.1');
       if (req.method === 'GET' && url.pathname === '/') return send(200, PAGE, 'text/html; charset=utf-8');
       if (req.method === 'GET' && url.pathname === '/api/agents') return send(200, { agents: roles.map(({ id, name, role, voice }) => ({ id, name, role, voice })) });
+      if (req.method === 'GET' && url.pathname === '/api/registry') {
+        const manifest = await registry.read();
+        return send(200, { revision: manifest.revision, projects: manifest.projects, nodes: manifest.nodes, updatedAt: manifest.updatedAt });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/registry/projects') {
+        const input = await readJsonBody(req);
+        const project = await registry.registerProject(input, { actor: 'agent-command-center' });
+        return send(201, { project });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/registry/nodes') {
+        const input = await readJsonBody(req);
+        const node = await registry.upsertNode(input, { actor: 'agent-command-center' });
+        return send(201, { node });
+      }
+      const heartbeatMatch = url.pathname.match(/^\\/api\\/registry\\/nodes\\/([A-Za-z0-9._:-]{1,128})\\/heartbeat$/);
+      if (req.method === 'POST' && heartbeatMatch) {
+        const input = await readJsonBody(req);
+        const node = await registry.recordHeartbeat(decodeURIComponent(heartbeatMatch[1]), input, { actor: 'agent-command-center' });
+        return send(200, { node });
+      }
       if (req.method === 'GET' && url.pathname.startsWith('/api/thread/')) {
         const id = decodeURIComponent(url.pathname.slice('/api/thread/'.length));
         return send(200, { messages: await store.thread(id) });
       }
       if (req.method === 'POST' && url.pathname === '/api/message') {
-        let raw = '';
-        for await (const chunk of req) { raw += chunk; if (raw.length > 20000) throw Error('request too large'); }
-        const input = JSON.parse(raw);
+        const input = await readJsonBody(req);
         if (typeof input.content !== 'string' || !input.content.trim() || input.content.length > 12000) throw Error('content must be 1..12000 characters');
         const target = input.target;
         if (target === 'broadcast') {
@@ -161,11 +202,17 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
         const role = byId.get(target);
         if (!role) return send(404, { error: 'unknown agent target' });
         await store.appendMessage({ from: 'user', to: role.id, conversationId: role.id, kind: 'direct', content: input.content });
-        const result = await reply(role, input.content, role.id);
-        const answer = result.response || '(agent returned an empty response)';
-        await store.appendMessage({ from: role.id, to: 'user', conversationId: role.id, kind: 'response', content: answer,
-          metadata: { model: result.model, elapsedMs: result.elapsedMs } });
-        return send(200, { response: answer, model: result.model, elapsedMs: result.elapsedMs });
+        try {
+          const result = await reply(role, input.content, role.id);
+          const answer = result.response || '(agent returned an empty response)';
+          await store.appendMessage({ from: role.id, to: 'user', conversationId: role.id, kind: 'response', content: answer,
+            metadata: { model: result.model, elapsedMs: result.elapsedMs } });
+          return send(200, { response: answer, model: result.model, elapsedMs: result.elapsedMs });
+        } catch (error) {
+          await store.appendMessage({ from: role.id, to: 'user', conversationId: role.id, kind: 'error', content: String(error.message || error).slice(0, 1024),
+            metadata: { errorCode: 'agent_inference_failed' } });
+          return send(502, { error: 'agent_inference_failed' });
+        }
       }
       return send(404, { error: 'not found' });
     } catch (error) { return send(400, { error: error.message }); }
@@ -173,10 +220,12 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
   const server = http.createServer(handle);
   return {
     store,
+    registry,
     server,
     async listen({ host = '127.0.0.1', port = 8789 } = {}) {
       if (host !== '127.0.0.1' && host !== '::1') throw Error('Command Center binds to loopback only');
       await store.open();
+      await registry.open();
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
       return server.address();
     },
