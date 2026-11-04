@@ -91,3 +91,44 @@ test('refuses non-loopback binding and oversized or unknown agent messages', asy
   assert.equal((await request(base, '/api/message', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ target: 'planner', content: 'x'.repeat(12001) }) })).status, 400);
 });
+
+
+test('command center exposes project and node registry CRUD through the same local service', async t => {
+  const dir = await stateDir(t);
+  const app = createCommandCenterServer({ stateDirectory: dir, adapter: { run: async () => ({ response: 'ok' }) } });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const base = 'http://127.0.0.1:' + address.port;
+  const project = {
+    id: 'unified-field', name: 'Unified Field',
+    workspacePath: path.join(dir, 'workspace'),
+    remoteUrl: 'https://github.com/HeavenzFire/UnifiedCodebase',
+    branch: 'main', status: 'registered'
+  };
+  const registeredProject = await request(base, '/api/registry/projects', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(project)
+  });
+  assert.equal(registeredProject.status, 201);
+  assert.equal(registeredProject.body.project.id, 'unified-field');
+
+  const registeredNode = await request(base, '/api/registry/nodes', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: 'termux-a67l', label: 'Android Termux', platform: 'android', transport: 'tailscale',
+      status: 'offline', capabilities: ['model.inference', 'task.execute'], metrics: {}
+    })
+  });
+  assert.equal(registeredNode.status, 201);
+  const heartbeat = await request(base, '/api/registry/nodes/termux-a67l/heartbeat', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'online', capabilities: ['model.inference'], metrics: { cpuLoadPercent: 25 } })
+  });
+  assert.equal(heartbeat.status, 200);
+  assert.equal(heartbeat.body.node.status, 'online');
+
+  const manifest = await request(base, '/api/registry');
+  assert.equal(manifest.status, 200);
+  assert.equal(manifest.body.revision, 3);
+  assert.equal(manifest.body.projects.length, 1);
+  assert.equal(manifest.body.nodes[0].lastSeenAt !== null, true);
+});
