@@ -149,3 +149,13 @@ test('unsupported cancelled state is explicit rather than silently mapped', asyn
   const cancelled = { ...created, status: 'cancelled' };
   await assert.rejects(f.adapter.projectToCanonical(cancelled), /no lossless canonical mapping: cancelled/);
 });
+
+
+test('ledger authorization metadata cannot diverge from the signed canonical task', async t => {
+  const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
+  const created = await f.adapter.createFromCanonical(f.record, { approvalProof: f.createProof() });
+  const raw = f.ledger.tasks.find(task => task.id === created.id);
+  raw.metadata.agentId = 'other-agent';
+  await f.ledger._persist(f.ledger.tasks);
+  await assert.rejects(f.adapter.authorizeExecution(await f.ledger.get(created.id)), /identity, or required capability binding/);
+});
