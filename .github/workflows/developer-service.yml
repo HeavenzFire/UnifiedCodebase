@@ -1,0 +1,29 @@
+name: Developer Service MVP
+on:
+  pull_request:
+    paths: ["DeveloperService/**", ".github/workflows/developer-service.yml"]
+  push:
+    branches: ["main"]
+    paths: ["DeveloperService/**", ".github/workflows/developer-service.yml"]
+permissions:
+  contents: read
+jobs:
+  developer-service:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Syntax checks
+        run: |
+          node --check DeveloperService/license.cjs
+          node --check DeveloperService/review-agent.cjs
+          node --check DeveloperService/server.cjs
+          node --check DeveloperService/test/developer-service.test.cjs
+      - name: Test
+        run: node --test DeveloperService/test/developer-service.test.cjs
