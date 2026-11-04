@@ -77,8 +77,8 @@ function createFederationRuntime({
     if (bootstrapGrant) {
       if (!bootstrapGrant || typeof bootstrapGrant !== 'object' ||
           typeof bootstrapGrant.grantId !== 'string' || typeof bootstrapGrant.agentId !== 'string' ||
-          typeof bootstrapGrant.taskId !== 'string' || !Array.isArray(bootstrapGrant.capabilities) ||
-          !bootstrapGrant.capabilities.includes('shared-task.v1') ||
+          typeof bootstrapGrant.taskId !== 'string' || !Array.isArray(bootstrapGrant.capabilities) || bootstrapGrant.capabilities.length !== 1 ||
+          bootstrapGrant.capabilities[0] !== 'shared-task.v1' ||
           !Number.isFinite(bootstrapGrant.expiresAt) || bootstrapGrant.expiresAt <= clock()) {
         throw new Error('bootstrapGrant must be a future, task-scoped shared-task.v1 capability grant');
       }
