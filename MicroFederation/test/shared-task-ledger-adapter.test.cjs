@@ -122,5 +122,5 @@ test('unsupported cancelled state is explicit rather than silently mapped', asyn
   const f = await fixture(); t.after(() => fs.rm(f.dir, { recursive: true, force: true }));
   const created = await f.adapter.createFromCanonical(f.record, { approvalProof: 'operator-confirmed' });
   const cancelled = { ...created, status: 'cancelled' };
-  assert.throws(() => require('../shared-task-ledger-adapter.cjs').ledgerStatusToCanonical(cancelled.status), /not a function/);
+  await assert.rejects(f.adapter.projectToCanonical(cancelled), /no lossless canonical mapping: cancelled/);
 });
