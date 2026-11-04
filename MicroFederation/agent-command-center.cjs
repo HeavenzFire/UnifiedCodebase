@@ -19,9 +19,9 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const SECRET_CONTENT = [/\bsk-[A-Za-z0-9_-]{20,}\b/, /\bgh[pousr]_[A-Za-z0-9]{20,}\b/, /\bgithub_pat_[A-Za-z0-9_]{20,}\b/, /\bAIza[0-9A-Za-z_-]{30,}\b/, /\bBearer\s+[A-Za-z0-9._~-]{20,}\b/i, /\bAKIA[0-9A-Z]{16}\b/, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/];
 
 class AgentMessageStore {
-  constructor(file, { maxEvents = 100000 } = {}) {
+  constructor(file, { maxEvents = 20000 } = {}) {
     if (typeof file !== 'string' || !file.trim()) throw Error('message ledger path is required');
-    if (!Number.isInteger(maxEvents) || maxEvents < 1 || maxEvents > 1000000) throw Error('maxEvents must be 1..1000000');
+    if (!Number.isInteger(maxEvents) || maxEvents < 1 || maxEvents > 100000) throw Error('maxEvents must be 1..1000000');
     this.maxEvents = maxEvents;
     this.file = path.resolve(file);
     this.queue = Promise.resolve();
@@ -84,6 +84,7 @@ class AgentMessageStore {
     for (const key of ['from', 'to', 'conversationId', 'kind', 'content']) {
       if (typeof input[key] !== 'string' || !input[key].trim()) throw Error(key + ' is required');
     }
+    if (input.from.length > 128 || input.to.length > 128 || input.conversationId.length > 128 || input.kind.length > 32) throw Error('message routing fields exceed their limits');
     if (input.content.length > 12000) throw Error('message exceeds 12000 characters');
     if (SECRET_CONTENT.some(pattern => pattern.test(input.content))) throw Error('message appears to contain a credential; remove it before sending');
     if (input.metadata !== undefined && (!input.metadata || typeof input.metadata !== 'object' || Array.isArray(input.metadata) || Buffer.byteLength(JSON.stringify(input.metadata)) > 4096)) throw Error('message metadata must be a bounded object');
@@ -112,7 +113,7 @@ $('send').onclick=send;$('prompt').addEventListener('keydown',e=>{if(e.key==='En
 (async()=>{try{agents=(await api('/api/agents')).agents;renderAgents();$('title').textContent='Planner';await loadRegistry();await loadThread()}catch(e){$('state').textContent='ERROR: '+e.message}})();
 </script></body></html>`;
 
-function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null, registry: suppliedRegistry = null, maxMessageEvents = 100000 } = {}) {
+function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.1:8788/task', roles = ROLES, adapter = null, registry: suppliedRegistry = null, maxMessageEvents = 20000 } = {}) {
   if (!stateDirectory) throw Error('stateDirectory is required');
   if (!Array.isArray(roles) || !roles.length) throw Error('at least one agent role is required');
   const byId = new Map(roles.map(role => [role.id, role]));
