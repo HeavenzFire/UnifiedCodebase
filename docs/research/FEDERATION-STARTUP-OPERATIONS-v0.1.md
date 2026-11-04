@@ -56,7 +56,7 @@ Copy only the signed approval package to Termux over the existing SSH connection
 
 ```bash
 export HF_FEDERATION_SSH_TARGET='rucke@<WINDOWS_TAILSCALE_IP>'
-scp "$HF_FEDERATION_SSH_TARGET:C:/Users/rucke/HeavenzFire-RD/approval-package.json" "$HOME/approval-package.json"
+scp -i "$HF_FEDERATION_SSH_KEY" "$HF_FEDERATION_SSH_TARGET:C:/Users/rucke/HeavenzFire-RD/approval-package.json" "$HOME/approval-package.json"
 ```
 
 Configure the peer identity and SSH key. The peer secret must match the Windows peer secret; the operator approval secret is not needed on Android:
