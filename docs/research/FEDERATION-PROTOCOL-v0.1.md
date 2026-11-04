@@ -1,40 +1,44 @@
-# Federation protocol core v0.1
+# Federation protocol and loopback transport v0.1
 
-This module is a transport-independent protocol core. It does not open sockets, execute commands, access files, or expose local inference services.
+**Protocol:** `heavenzfire.federation.v1`  
+**Transport:** HTTP over an operator-managed SSH local-forward tunnel  
+**Listener:** loopback only (`127.0.0.1`)
 
-## Enrollment and trust
+## Trust and enrollment
 
-Each side must be provisioned with the same per-peer secret (at least 32 UTF-8 bytes) and an explicit enrollment record: `approved: true`, a valid `approvedAt`, and a capability allowlist. Secrets belong only in an operator-managed local secret store; never commit them. Revocation blocks new handshakes in the current process. Durable identity storage, key rotation, and cross-process revocation are not implemented in v0.1.
+Each node has an operator-approved peer enrollment containing the peer node ID, a per-peer HMAC-SHA256 secret (minimum 32 UTF-8 bytes), an approval timestamp, and an explicit capability allowlist. This is symmetric bootstrap authentication, not asymmetric identity or non-repudiation. Secrets are supplied from local environment/secret storage and are never committed.
 
-## Handshake
+The handshake hello has a 256-bit nonce and a 10-second expiry. The receiver validates peer enrollment, signature, protocol, target identity, clock skew, capability allowlist, and replay state. The signed acknowledgement echoes the hello nonce and grants only the requested mutually authorized capabilities. A successful session is bounded to five minutes. Handshake replay state and active sessions are process-local and bounded.
 
-1. Initiator creates a signed `heavenzfire.federation.v1` hello with a 256-bit nonce, target identity, requested capability scopes, issue time, and a 10-second expiry.
-2. Receiver authenticates HMAC-SHA256, checks identity/approval, clock skew, expiry, replay cache, and capability allowlist.
-3. Receiver returns a signed acknowledgement echoing the initiating nonce and granting only the requested, mutually authorized capabilities.
-4. Initiator verifies signature, identities, protocol version, nonce echo, expiry, and granted scopes.
+Peer-signed task messages bind the source and target node IDs and the authenticated session nonce. The receiver verifies the HMAC and session scope before accepting a task message. Duplicate task delivery is made idempotent by the canonical task ID and durable ledger input hash; it is not a distributed exactly-once guarantee.
 
-The replay cache is in-memory and bounded (4,096 entries / five-minute retention); it is not a distributed replay database. The HMAC key is a symmetric bootstrap mechanism, not public-key identity or non-repudiation. Transport confidentiality and peer routing remain the responsibility of the private overlay/SSH adapter.
+## HTTP binding
+
+- `MicroFederation/federation-http-server.cjs` binds only to `127.0.0.1`; construction with a non-loopback host fails.
+- `MicroFederation/federation-http-client.cjs` accepts numeric loopback HTTP URLs only. Remote IPs, host aliases, URL credentials, paths, queries, fragments, and HTTPS are rejected. HTTP is used only inside the SSH-encrypted tunnel.
+- `GET /health` reports local process health.
+- `POST /v1/handshake` authenticates and stores a bounded process-local session.
+- `POST /v1/tasks` requires `task.submit`, validates a peer-signed message, and passes the canonical record and signed operator approval proof to the host task adapter.
+- `POST /v1/tasks/get` requires `task.read` and returns a canonical projection plus the ledger evidence envelope.
+
+The HTTP service does not open firewall ports, create SSH tunnels, execute shell commands, or expose the local inference facade.
+
+## Approval and execution
+
+The receiving adapter requires:
+1. a canonical `heavenzfire.shared-task.v1` record in `approved` / `approved` state;
+2. exactly attributable approval evidence;
+3. a valid HMAC operator proof bound to the exact canonical record hash and task ID;
+4. a task-scoped `shared-task.v1` capability grant for the record's agent ID and grant ID;
+5. a governed worker invocation through `GovernedRuntime`.
+
+The adapter re-verifies the stored approval attestation immediately before inference. The local inference adapter calls only the configured loopback OpenAI-compatible endpoint. Model output is returned as data; it is never interpreted as shell commands or filesystem operations.
 
 ## Explicit limits
 
-- No remote shell, filesystem API, inference proxy, task executor, or listener is included.
-- No distributed locking, durable sessions, heartbeat service, or offline replay is claimed.
-- Canonical task approval/evidence mapping remains blocked on the separate issue #19 adapter; this module does not manufacture approval.
-- This is a deterministic protocol core for isolated tests and the next integration stage, not a production deployment.
-
-
-## Loopback HTTP transport binding
-
-`MicroFederation/federation-http-server.cjs` and `federation-http-client.cjs` provide a narrow HTTP binding intended to be reached only through an operator-managed SSH local-forward tunnel.
-
-- Server binding is hard-restricted to `127.0.0.1`; attempts to bind to `0.0.0.0` fail at construction.
-- Client accepts numeric loopback HTTP URLs only; host aliases, credentials, paths, queries, remote hosts, and HTTPS URLs are rejected. Requests use `redirect: error` and `cache: no-store` so signed task and approval payloads cannot be forwarded by an unexpected redirect. HTTP is acceptable here only inside the SSH-encrypted tunnel.
-- `GET /health` reports local process health without exposing peer topology.
-- `POST /v1/handshake` accepts the authenticated hello and stores a bounded, process-local session.
-- `POST /v1/tasks` requires a live session with `task.submit`, verifies an HMAC-signed message bound to the session nonce, and forwards the canonical record plus approval proof to the fail-closed task adapter.
-- The raw approval proof is passed only to the trusted host verifier; it is not logged or persisted by the transport.
-- The task adapter remains responsible for validating canonical approval evidence and idempotent ledger admission.
-
-The HTTP transport is still a library component; it does not start itself, configure SSH, provision peer secrets, create Windows services, or modify firewall rules. The task adapter's approval callbacks must be implemented by a trusted host application. The session store is process-local, so restart requires a new handshake. This transport does not provide a worker execution loop or a completed task-result return path.
-
-Tests exercise loopback binding, handshake, authenticated task submission, capability denial, forged-message rejection, and explicit approval-proof forwarding on Node 20 and Node 22.
+- Peer and operator approval secrets are symmetric HMAC keys; asymmetric identity, key rotation, and hardware-backed storage are not implemented.
+- Active sessions and handshake replay state are in-memory; restart requires a new handshake.
+- TaskLedger is a file-backed, single-process ledger. No distributed locks, cross-process multi-writer safety, heartbeat protocol, offline replay, or cross-node lease transfer are claimed.
+- Cancellation currently has no lossless canonical-v1 mapping and is rejected by the projection rather than silently reclassified.
+- CI loopback integration tests do not prove the physical Windows/Android devices have been launched or enrolled. Live acceptance remains an operator-run step.
+- No arbitrary remote shell, remote filesystem, model-generated command execution, or public listener is included.
