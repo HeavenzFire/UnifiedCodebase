@@ -8,6 +8,7 @@ on:
       - "MicroFederation/agent-command-center.cjs"
       - "MicroFederation/test-agent-command-center.cjs"
       - "MicroFederation/live-orchestrator-adapter.cjs"
+      - "MicroFederation/test-live-orchestrator-adapter.cjs"
       - ".github/workflows/agent-command-center.yml"
   push:
     branches: ["main"]
@@ -39,7 +40,10 @@ jobs:
           node --check MicroFederation/project-node-registry.cjs
           node --check MicroFederation/agent-command-center.cjs
           node --check MicroFederation/live-orchestrator-adapter.cjs
+          node --check MicroFederation/agent-roster.v1.json
       - name: Project and node registry tests
         run: node --test MicroFederation/test-project-node-registry.cjs
       - name: Agent Command Center tests
         run: node --test MicroFederation/test-agent-command-center.cjs
+      - name: Orchestrator adapter tests
+        run: node --test MicroFederation/test-live-orchestrator-adapter.cjs
