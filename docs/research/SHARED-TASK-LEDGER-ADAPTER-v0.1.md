@@ -9,14 +9,14 @@
 
 The adapter requires the canonical contract module, a trusted `verifyApproval(record)` callback, a canonical task loader, and an execution callback. The approval callback must independently verify the approval against the authoritative approval store or signature policy and return an attestation with `verified: true`, an attributable `actor`, an `evidenceRef`, and `verifiedAt`. The adapter does not accept approval booleans from task payloads, agent output, or ledger state.
 
-The adapter stores the attestation metadata and a SHA-256 hash of the full canonical record. It does not persist approval proof material. Before execution it reloads the canonical task, validates it, checks the record hash, and re-verifies the same actor and evidence reference. Content or approval drift blocks execution.
+The adapter stores attestation metadata and a SHA-256 fingerprint of immutable approved task content (schema, task ID, source, goal, approval state, and metadata); mutable lifecycle status and appended evidence are excluded. It does not persist approval proof material. Before execution it reloads the canonical task, validates the content fingerprint, and re-verifies the same actor and evidence reference. Content or approval drift blocks execution.
 
 ## API
 
 - `propose(record)`: validates and returns proposal-only state; never queues execution.
 - `enqueueApproved(record)`: accepts only canonical `status=approved` and `approvalState=approved` records after trusted verification. It maps the canonical ID to a deterministic bounded ledger ID (`shared:` plus SHA-256) and retains the original canonical ID in ledger metadata and payload.
 - `run({ taskId, role, prompt })`: execution adapter invoked by `GovernedRuntime` after ledger claim/start and capability authorization. There is deliberately no standalone `runOne` worker path; that would bypass the capability gate.
-- `projectLedgerState(canonicalRecord, ledgerRecord, { actor })`: pure, deterministic lifecycle projection through the injected canonical `transitionTask` function. The caller must persist the returned canonical record using its trusted canonical store. This method does not write to the canonical store itself.
+- `projectLedgerState(canonicalRecord, ledgerTaskId)`: asynchronously re-reads the authoritative durable ledger record by deterministic task ID, validates its adapter identity and approved-content fingerprint, and projects only the stored lifecycle status through the injected canonical `transitionTask` function. Actor attribution comes from the stored ledger owner/event, never caller-supplied fields. The caller must persist the returned canonical record using its trusted canonical store. This method does not write to the canonical store itself.
 
 ## Lifecycle mapping
 
