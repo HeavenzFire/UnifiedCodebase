@@ -75,6 +75,13 @@ function createFederationRuntime({
       await capabilityGate.store.open();
     }
     if (bootstrapGrant) {
+      if (!bootstrapGrant || typeof bootstrapGrant !== 'object' ||
+          typeof bootstrapGrant.grantId !== 'string' || typeof bootstrapGrant.agentId !== 'string' ||
+          typeof bootstrapGrant.taskId !== 'string' || !Array.isArray(bootstrapGrant.capabilities) ||
+          !bootstrapGrant.capabilities.includes('shared-task.v1') ||
+          !Number.isFinite(bootstrapGrant.expiresAt) || bootstrapGrant.expiresAt <= clock()) {
+        throw new Error('bootstrapGrant must be a future, task-scoped shared-task.v1 capability grant');
+      }
       if (!capabilityGate.store || typeof capabilityGate.store.grant !== 'function' ||
           typeof capabilityGate.store.get !== 'function') {
         throw new Error('bootstrapGrant requires a writable CapabilityStore');
