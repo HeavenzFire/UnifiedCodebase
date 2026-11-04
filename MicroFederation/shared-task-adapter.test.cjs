@@ -394,7 +394,7 @@ test('adapter exposes no ungated runOnce worker path', () => {
   assert.equal(typeof adapter.runOne, 'undefined');
 });
 
-test('projects ledger lifecycle into canonical task status with evidence', () => {
+test('projects only authoritative ledger lifecycle into canonical task status with evidence', async () => {
   const canonicalContract = contract();
   canonicalContract.transitionTask = (record, nextStatus, { evidenceItem, actor = 'system' } = {}) => {
     const allowed = {
@@ -415,62 +415,76 @@ test('projects ledger lifecycle into canonical task status with evidence', () =>
     });
     return updated;
   };
+  const ledger = memoryLedger();
+  const approved = canonical('approved');
   const adapter = createSharedTaskAdapter({
-    ledger: memoryLedger(), contract: canonicalContract,
+    ledger, contract: canonicalContract,
     verifyApproval: async () => attestation,
-    loadCanonicalTask: async () => canonical('approved'),
+    loadCanonicalTask: async () => approved,
     execute: async () => ({ ok: true })
   });
-  const approved = canonical('approved');
-  const running = adapter.projectLedgerState(approved, {
-    id: 'shared:' + 'a'.repeat(64),
-    status: 'running',
-    owner: 'worker:windows',
-    metadata: { canonicalTaskId: approved.taskId }
+  const queued = await adapter.enqueueApproved(approved);
+  const stored = ledger.tasks.get(queued.ledgerTaskId);
+
+  // A forged caller object cannot override the durable ledger status.
+  const forged = await adapter.projectLedgerState(approved, {
+    id: queued.ledgerTaskId,
+    status: 'succeeded',
+    owner: 'forged-actor',
+    metadata: { adapter: 'heavenzfire.shared-task.v1', canonicalTaskId: approved.taskId }
   });
+  assert.equal(forged.status, 'unchanged');
+  assert.equal(forged.canonicalRecord.status, 'approved');
+
+  stored.status = 'running';
+  stored.owner = 'worker:windows';
+  stored.events = [{ type: 'task.started', actor: 'worker:windows' }];
+  const running = await adapter.projectLedgerState(approved, { id: queued.ledgerTaskId });
   assert.equal(running.status, 'projected');
   assert.equal(running.canonicalRecord.status, 'running');
   assert.equal(running.canonicalRecord.evidence.at(-1).actor, 'worker:windows');
 
-  const completed = adapter.projectLedgerState(running.canonicalRecord, {
-    id: 'shared:' + 'a'.repeat(64),
-    status: 'succeeded',
-    owner: null,
-    events: [{ type: 'task.succeeded', actor: 'worker:windows' }],
-    metadata: { canonicalTaskId: approved.taskId }
-  });
+  stored.status = 'succeeded';
+  stored.owner = null;
+  stored.events.push({ type: 'task.succeeded', actor: 'worker:windows' });
+  const completed = await adapter.projectLedgerState(running.canonicalRecord, queued.ledgerTaskId);
   assert.equal(completed.canonicalRecord.status, 'completed');
   assert.equal(completed.canonicalRecord.approvalState, 'approved');
 });
 
-test('maps cancellation to review_required and rejects unknown or mismatched lifecycle states', () => {
+test('maps authoritative cancellation to review_required and rejects forged or mismatched records', async () => {
   const canonicalContract = contract();
   canonicalContract.transitionTask = (record, nextStatus, { evidenceItem, actor = 'system' } = {}) => ({
     ...record, status: nextStatus, approvalState: 'approved',
     evidence: evidenceItem ? [...record.evidence, { ...evidenceItem, actor }] : record.evidence
   });
+  const ledger = memoryLedger();
+  const approved = canonical('approved');
   const adapter = createSharedTaskAdapter({
-    ledger: memoryLedger(), contract: canonicalContract,
+    ledger, contract: canonicalContract,
     verifyApproval: async () => attestation,
-    loadCanonicalTask: async () => canonical('approved'),
+    loadCanonicalTask: async () => approved,
     execute: async () => ({ ok: true })
   });
-  const approved = canonical('approved');
-  const cancelled = adapter.projectLedgerState(approved, {
-    id: 'shared:' + 'a'.repeat(64),
-    status: 'cancelled',
-    owner: null,
-    events: [{ type: 'task.cancelled', actor: 'operator:zdh' }],
-    metadata: { canonicalTaskId: approved.taskId }
-  });
+  const queued = await adapter.enqueueApproved(approved);
+  const stored = ledger.tasks.get(queued.ledgerTaskId);
+  stored.status = 'cancelled';
+  stored.owner = null;
+  stored.events = [{ type: 'task.cancelled', actor: 'operator:zdh' }];
+
+  const cancelled = await adapter.projectLedgerState(approved, { id: queued.ledgerTaskId });
   assert.equal(cancelled.canonicalRecord.status, 'review_required');
   assert.equal(cancelled.canonicalRecord.approvalState, 'approved');
-  assert.throws(() => adapter.projectLedgerState(approved, {
-    id: 'shared:' + 'a'.repeat(64), status: 'unknown',
+  assert.equal(cancelled.canonicalRecord.evidence.at(-1).actor, 'operator:zdh');
+
+  await assert.rejects(adapter.projectLedgerState(approved, {
+    id: queued.ledgerTaskId, status: 'succeeded',
     metadata: { canonicalTaskId: approved.taskId }
-  }), /unsupported ledger lifecycle/);
-  assert.throws(() => adapter.projectLedgerState(approved, {
-    id: 'shared:' + 'a'.repeat(64), status: 'running',
-    metadata: { canonicalTaskId: 'different-task' }
-  }), /identities do not match/);
+  }), /unsupported ledger lifecycle status/);
+  await assert.rejects(adapter.projectLedgerState(approved, {
+    id: 'shared:' + 'b'.repeat(64)
+  }), /does not match canonical task identity/);
+  await assert.rejects(adapter.projectLedgerState({
+    ...approved, goal: approved.goal + ' tampered'
+  }, queued.ledgerTaskId), /content changed after enqueue/);
 });
