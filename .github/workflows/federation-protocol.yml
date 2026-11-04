@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: federation-protocol-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   protocol-tests:
     runs-on: ubuntu-latest
