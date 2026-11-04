@@ -12,10 +12,10 @@ let nonceCounter = 0;
 const nonce = () => (++nonceCounter).toString(16).padStart(64, '0');
 const clock = () => Date.parse('2026-11-04T12:00:00.000Z');
 
-function protocolPair({ serverCapabilities = ['task.submit'], clientCapabilities = ['task.submit'], secret = SECRET } = {}) {
+function protocolPair({ serverCapabilities = ['task.submit', 'task.read'], clientCapabilities = ['task.submit', 'task.read'], secret = SECRET } = {}) {
   const server = createFederationProtocol({
     nodeId: 'windows-zdh', capabilities: serverCapabilities, clock, nonce,
-    peers: [{ nodeId: 'android-a67l', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit'] }]
+    peers: [{ nodeId: 'android-a67l', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit', 'task.read'] }]
   });
   const client = createFederationProtocol({
     nodeId: 'android-a67l', capabilities: clientCapabilities, clock, nonce,
