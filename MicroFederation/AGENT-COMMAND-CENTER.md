@@ -80,3 +80,29 @@ node --test MicroFederation/test-project-node-registry.cjs
 \`\`\`
 
 CI also runs the two suites on Node 18, 20, and 22 through the MicroFederation durable-services workflow; the separate Command Center workflow verifies Node 20 and 22.
+
+
+## Unified project/node registry integration
+
+The command center now opens a `ProjectNodeRegistry` in `<stateDirectory>/registry` by default (or accepts an injected registry). The same loopback service exposes:
+
+- `GET /api/registry` — current revision, project records, node records, and update time.
+- `POST /api/registry/projects` — register a project with a normalized absolute workspace path and credential-free remote.
+- `POST /api/registry/nodes` — register or update a node using a strict allowlist of metadata fields.
+- `POST /api/registry/nodes/{id}/heartbeat` — update node status, capabilities, and bounded resource metrics.
+
+The browser panel displays current project/node counts and registry revision. Registry mutation is metadata-only; this layer does not read or execute workspace files.
+
+## Local-service boundary
+
+- Bind only to `127.0.0.1` or `::1`; validate the HTTP Host and same-origin headers to reduce DNS-rebinding exposure.
+- The browser UI receives restrictive CSP, frame, MIME-sniffing, and referrer headers.
+- Request bodies are byte-bounded; message journal entries have a configurable hard count limit.
+- Known API-key, GitHub-token, Google-key, bearer-token, AWS-key, and private-key formats are rejected before message persistence.
+- AgentMessageStore is a single-process append-only hash chain. It is not a multi-process journal or cryptographic external audit anchor.
+- The project registry has a local filesystem lock and atomic replacement; lock recovery is same-host only. If a malformed lock file remains after a crash, the service fails closed and requires operator inspection rather than guessing.
+- The live orchestrator adapter is restricted to HTTP loopback and supports bounded transient-5xx retries, timeout, and caller cancellation.
+
+## Provider boundary
+
+The adapter calls the configured local HeavenzFire orchestrator endpoint. That endpoint may itself be configured to use local inference or a separately authorized hosted provider. The command center does not embed API keys or silently route prompts to a remote service. Hosted provider use and billing remain operator-controlled.
