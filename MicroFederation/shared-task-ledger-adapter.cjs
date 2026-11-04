@@ -82,6 +82,16 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     }
     const approvalEvidence = requireEvidence(record);
     const hash = recordHash(record);
+    const existing = await ledger.get(record.taskId);
+    if (existing) {
+      const existingEnvelope = existing.metadata && existing.metadata.heavenzfireSharedTaskAdapter;
+      if (!existingEnvelope || existingEnvelope.schema !== ADAPTER_SCHEMA ||
+          recordHash(existingEnvelope.canonicalRecord) !== hash) {
+        throw new Error('task id already exists with a different or untrusted canonical record');
+      }
+      await authorizeExecution(existing);
+      return existing;
+    }
     const verified = await verifyApproval({ record, approvalProof, recordHash: hash });
     const attestation = validateApprovalResult(verified, hash, approvalEvidence);
     const now = clock();
