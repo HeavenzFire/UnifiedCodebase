@@ -79,3 +79,10 @@ test('adapter serializes calls through its queue', async () => {
   ]);
   assert.equal(maxActive, 1);
 });
+
+
+test('adapter rejects remote, HTTPS, and credential-bearing endpoints', () => {
+  assert.throws(() => new LiveOrchestratorAdapter({ endpoint: 'https://api.example.com/task' }), /loopback/);
+  assert.throws(() => new LiveOrchestratorAdapter({ endpoint: 'http://192.168.1.2:8788/task' }), /loopback/);
+  assert.throws(() => new LiveOrchestratorAdapter({ endpoint: 'http://user:pass@127.0.0.1:8788/task' }), /loopback/);
+});
