@@ -36,7 +36,7 @@ test('authenticated handshake echoes nonce and negotiates only requested capabil
 test('rejects a forged message signature', () => {
   const { a, b } = pair();
   const hello = a.createHello('android-a67l', ['inference.invoke']);
-  assert.throws(() => b.acceptHello({ ...hello, from: 'attacker' }), /authentication failed/);
+  assert.throws(() => b.acceptHello({ ...hello, signature: '0'.repeat(64) }), /authentication failed/);
 });
 
 test('rejects a replayed handshake nonce', () => {
