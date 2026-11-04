@@ -281,3 +281,29 @@ test('capability endpoints fail closed when no fabric is injected', async t => {
   });
   assert.equal(result.status, 503);
 });
+
+test('Command Center UI wires registry refresh, capability inventory/planning, and guarded remediation controls', async t => {
+  const app = createCommandCenterServer({
+    stateDirectory: await stateDir(t),
+    adapter: { run: async () => ({ response: 'ok' }) },
+    remediationPipeline: { async process(id) { return { issueId: id, status: 'blocked' }; } },
+    capabilityFabric: new (require('./capability-fabric.cjs').CapabilityFabric)({
+      definitions: [{ id: 'runtime.core', version: '1.0.0', description: 'Local runtime' }]
+    })
+  });
+  t.after(() => app.close().catch(() => {}));
+  const address = await app.listen({ host: '127.0.0.1', port: 0 });
+  const response = await fetch('http://127.0.0.1:' + address.port + '/');
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  for (const id of ['refreshRegistry', 'showCapabilities', 'capabilityIds', 'planCapabilities', 'issueId', 'remediate']) {
+    assert.match(html, new RegExp('id="' + id + '"'));
+  }
+  assert.match(html, /api\('\/api\/capabilities'\)/);
+  assert.match(html, /api\('\/api\/capabilities\/plan'/);
+  assert.match(html, /api\('\/api\/remediation\/issues\//);
+  assert.match(html, /\$\('showCapabilities'\)\.onclick=showCapabilities/);
+  assert.match(html, /\$\('planCapabilities'\)\.onclick=planCapabilities/);
+  assert.match(html, /\$\('remediate'\)\.onclick=remediateIssue/);
+  assert.match(html, /Capability execution plan \(not activated\)/);
+});
