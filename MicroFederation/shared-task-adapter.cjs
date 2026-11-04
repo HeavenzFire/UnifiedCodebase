@@ -174,7 +174,7 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
     if (!ledgerRecord || typeof ledgerRecord !== 'object' || Array.isArray(ledgerRecord)) {
       throw new TypeError('ledgerRecord must be an object');
     }
-    if (ledgerRecord.metadata && ledgerRecord.metadata.canonicalTaskId !== canonicalRecord.taskId) {
+    if (!ledgerRecord.metadata || ledgerRecord.metadata.canonicalTaskId !== canonicalRecord.taskId) {
       throw new Error('canonical and ledger task identities do not match');
     }
     const mapping = {
@@ -242,12 +242,6 @@ function createSharedTaskAdapter({ ledger, contract, verifyApproval, loadCanonic
 
     return Object.freeze({ status: 'projected', canonicalRecord: projected, ledgerStatus: ledgerRecord.status });
   }
-
-
-  return Object.freeze({ propose, enqueueApproved, run, runOne });
-}
-
-module.exports = { createSharedTaskAdapter };
 
 
   return Object.freeze({ propose, enqueueApproved, run, projectLedgerState });
