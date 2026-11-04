@@ -9,29 +9,36 @@ const root = process.env.HF_UNIFIEDCODEBASE_ROOT;
 if (!root) throw new Error('HF_UNIFIEDCODEBASE_ROOT is required');
 
 const { TaskLedger } = require(path.join(root, 'MicroFederation/task-ledger.cjs'));
+const { CapabilityStore } = require(path.join(root, 'MicroFederation/capability-store.cjs'));
+const { CapabilityGate } = require(path.join(root, 'MicroFederation/adaptive-control-plane.cjs'));
 const { createOperatorApprovalAuthority } = require(path.join(root, 'MicroFederation/operator-approval.cjs'));
 
 const contractPath = process.env.HF_SHARED_TASK_CONTRACT_MODULE;
-const capabilityGatePath = process.env.HF_CAPABILITY_GATE_MODULE;
 const peersJson = process.env.HF_FEDERATION_PEERS_JSON;
-if (!contractPath || !capabilityGatePath || !peersJson) {
-  throw new Error('Set HF_SHARED_TASK_CONTRACT_MODULE, HF_CAPABILITY_GATE_MODULE, and HF_FEDERATION_PEERS_JSON');
+if (!contractPath || !peersJson) {
+  throw new Error('Set HF_SHARED_TASK_CONTRACT_MODULE and HF_FEDERATION_PEERS_JSON');
 }
 if (!process.env.HF_OPERATOR_APPROVAL_SECRET || Buffer.byteLength(process.env.HF_OPERATOR_APPROVAL_SECRET, 'utf8') < 32) {
   throw new Error('HF_OPERATOR_APPROVAL_SECRET must contain at least 32 UTF-8 bytes');
 }
 
 const contract = require(path.resolve(contractPath));
-const capabilityGate = require(path.resolve(capabilityGatePath));
-if (!capabilityGate || typeof capabilityGate.authorize !== 'function') {
-  throw new Error('capability gate module must export authorize(input)');
-}
 const approvalAuthority = createOperatorApprovalAuthority({ secret: process.env.HF_OPERATOR_APPROVAL_SECRET });
+const capabilityStore = new CapabilityStore(
+  process.env.HF_CAPABILITY_STORE_PATH || path.join(os.homedir(), '.heavenzfire', 'federation', 'capabilities.json')
+);
+const capabilityGate = new CapabilityGate({
+  capabilityStore,
+  // High-impact operations remain denied until a separate trusted approval
+  // provider is explicitly configured. Initial federation scope is bounded.
+  approvalVerifier: async () => ({ verified: false })
+});
 
 module.exports = {
   nodeId: process.env.HF_NODE_ID || 'windows-zdh',
   peers: JSON.parse(peersJson),
   ledger: new TaskLedger(process.env.HF_LEDGER_PATH || path.join(os.homedir(), '.heavenzfire', 'federation', 'task-ledger.json')),
+  capabilityStore,
   contract,
   verifyApproval: approvalAuthority.verifyApproval,
   verifyAttestation: approvalAuthority.verifyAttestation,
