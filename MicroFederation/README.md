@@ -128,6 +128,10 @@ Run `node --test .\test-capability-store.cjs` to verify restart persistence, rev
 5. Add live provider smoke tests only after authorized credentials are configured.
 
 
+## Agent Command Center
+
+See [AGENT-COMMAND-CENTER.md](AGENT-COMMAND-CENTER.md) for the loopback-only browser interface, direct agent threads, sequential broadcast, Windows/Termux startup, persistent message journal, and current implementation boundaries.
+
 ## Adaptive control plane (opt-in)
 
 ```powershell
