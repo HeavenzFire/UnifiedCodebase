@@ -31,8 +31,9 @@ function requireEvidence(record) {
   return evidence;
 }
 
-function validateApprovalResult(result, hash, evidence) {
+function validateApprovalResult(result, hash, evidence, taskId) {
   if (!result || result.ok !== true) throw new Error('trusted approval verifier denied execution');
+  if (result.schema !== 'heavenzfire.operator-approval.v1' || result.taskId !== taskId) throw new Error('approval verifier returned an invalid proof schema or task identity');
   if (typeof result.approver !== 'string' || !ID.test(result.approver)) throw new Error('approval verifier did not identify an approver');
   if (typeof result.evidenceRef !== 'string' || !result.evidenceRef.trim() || result.evidenceRef.length > 512) {
     throw new Error('approval verifier did not return a bounded evidence reference');
@@ -42,11 +43,20 @@ function validateApprovalResult(result, hash, evidence) {
     throw new Error('approval verifier returned an invalid verification time');
   }
   if (result.recordHash !== hash) throw new Error('approval verifier attested a different canonical record');
+  if (typeof result.issuedAt !== 'string' || !Number.isFinite(Date.parse(result.issuedAt)) ||
+      typeof result.expiresAt !== 'string' || !Number.isFinite(Date.parse(result.expiresAt)) ||
+      Date.parse(result.expiresAt) <= Date.parse(result.issuedAt)) throw new Error('approval verifier returned an invalid proof lifetime');
+  if (typeof result.signature !== 'string' || !/^[a-f0-9]{64}$/.test(result.signature)) throw new Error('approval verifier did not return a cryptographic proof signature');
   return Object.freeze({
+    schema: result.schema,
+    taskId: result.taskId,
     approver: result.approver,
     evidenceRef: result.evidenceRef,
+    issuedAt: result.issuedAt,
+    expiresAt: result.expiresAt,
     verifiedAt: result.verifiedAt,
-    recordHash: hash
+    recordHash: hash,
+    signature: result.signature
   });
 }
 
@@ -94,7 +104,7 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
       return existing;
     }
     const verified = await verifyApproval({ record, approvalProof, recordHash: hash });
-    const attestation = validateApprovalResult(verified, hash, approvalEvidence);
+    const attestation = validateApprovalResult(verified, hash, approvalEvidence, record.taskId);
     const now = clock();
     if (!Number.isFinite(now)) throw new Error('clock returned an invalid timestamp');
 
@@ -143,8 +153,11 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     const evidence = requireEvidence(record);
     const hash = recordHash(record);
     const attestation = envelope.approvalAttestation;
-    if (!attestation || attestation.recordHash !== hash ||
+    if (!attestation || attestation.schema !== 'heavenzfire.operator-approval.v1' || attestation.taskId !== task.id || attestation.recordHash !== hash ||
         !evidence.some(item => item.actor === attestation.approver) ||
+        typeof attestation.signature !== 'string' || !/^[a-f0-9]{64}$/.test(attestation.signature) ||
+        typeof attestation.issuedAt !== 'string' || !Number.isFinite(Date.parse(attestation.issuedAt)) ||
+        typeof attestation.expiresAt !== 'string' || !Number.isFinite(Date.parse(attestation.expiresAt)) ||
         typeof attestation.evidenceRef !== 'string' || !attestation.evidenceRef.trim() ||
         typeof attestation.verifiedAt !== 'string' || !Number.isFinite(Date.parse(attestation.verifiedAt))) {
       throw new Error('stored approval attestation is malformed or does not match the canonical record');
