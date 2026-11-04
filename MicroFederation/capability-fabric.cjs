@@ -2,6 +2,7 @@
 
 const ID = /^[a-z][a-z0-9.-]{0,63}$/;
 const RISK = new Set(['read_only', 'bounded_reversible', 'privileged', 'destructive', 'credential_sensitive', 'security_sensitive', 'external_network']);
+const APPROVAL_REQUIRED = new Set(['privileged', 'destructive', 'credential_sensitive', 'security_sensitive', 'external_network']);
 const clone = value => JSON.parse(JSON.stringify(value));
 
 function validateDefinition(input) {
@@ -31,7 +32,7 @@ function validateDefinition(input) {
 }
 
 class CapabilityFabric {
-  constructor({ definitions = [], adapters = {}, allowedOrigins = [] } = {}) {
+  constructor({ definitions = [], adapters = {}, allowedOrigins = [], approvalVerifier = null } = {}) {
     if (!Array.isArray(definitions)) throw Error('capability definitions must be an array');
     if (!adapters || typeof adapters !== 'object' || Array.isArray(adapters)) throw Error('capability adapters must be an object');
     if (!Array.isArray(allowedOrigins) || allowedOrigins.some(x => typeof x !== 'string')) throw Error('allowedOrigins must be a string array');
@@ -41,6 +42,8 @@ class CapabilityFabric {
       return value;
     }));
     this.definitions = new Map();
+    if (approvalVerifier !== null && typeof approvalVerifier !== 'function') throw Error('approvalVerifier must be a function');
+    this.approvalVerifier = approvalVerifier;
     this.adapters = new Map(Object.entries(adapters));
     this.states = new Map();
     this.active = new Set();
@@ -104,6 +107,14 @@ class CapabilityFabric {
 
   async load(requested, context = {}) {
     const order = this.resolve(requested);
+    for (const id of order) {
+      const capability = this.definitions.get(id);
+      if (APPROVAL_REQUIRED.has(capability.riskClass)) {
+        if (!this.approvalVerifier || !(await this.approvalVerifier({ capability: clone(capability), context }))) {
+          throw Error('explicit host approval required for capability: ' + id);
+        }
+      }
+    }
     const newlyLoaded = [];
     for (const id of order) {
       if (this.states.get(id) === 'ready') continue;
