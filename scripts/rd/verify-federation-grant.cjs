@@ -30,7 +30,7 @@ async function main() {
   if (!grant) throw new Error('task-scoped capability grant was not found');
   if (grant.agentId !== agentId || grant.grantId !== grantId || grant.taskId !== taskId ||
       grant.revoked === true || !Number.isFinite(grant.expiresAt) || grant.expiresAt <= Date.now() ||
-      !Array.isArray(grant.capabilities) || !grant.capabilities.includes('shared-task.v1')) {
+      !Array.isArray(grant.capabilities) || grant.capabilities.length !== 1 || grant.capabilities[0] !== 'shared-task.v1') {
     throw new Error('capability grant is expired, revoked, mismatched, or missing shared-task.v1');
   }
   process.stdout.write(JSON.stringify({
