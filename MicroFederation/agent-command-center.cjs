@@ -6,13 +6,8 @@ const crypto = require('node:crypto');
 const http = require('node:http');
 const { LiveOrchestratorAdapter } = require('./live-orchestrator-adapter.cjs');
 
-const ROLES = Object.freeze([
-  { id: 'planner', name: 'Planner', role: 'Planner', voice: 'clear, structured, concise', system: 'Decompose objectives into ordered, testable work. Identify dependencies, risks, and acceptance criteria.' },
-  { id: 'architect', name: 'Architect', role: 'Architect', voice: 'measured, systems-oriented', system: 'Design interfaces, data contracts, boundaries, failure modes, and integration paths. Prefer reuse over duplication.' },
-  { id: 'security-reviewer', name: 'Security Reviewer', role: 'Security Reviewer', voice: 'skeptical, precise', system: 'Challenge trust assumptions, inspect authorization boundaries, identify abuse cases, and propose verifiable mitigations.' },
-  { id: 'runtime-integrator', name: 'Runtime Integrator', role: 'Runtime Integrator', voice: 'practical, implementation-focused', system: 'Focus on runtime wiring, provider adapters, process lifecycle, resource constraints, and deployment.' },
-  { id: 'test-engineer', name: 'Test Engineer', role: 'Test Engineer', voice: 'evidence-driven, exact', system: 'Turn requirements into automated tests, negative cases, measurable acceptance criteria, and reproducible verification.' }
-]);
+const ROSTER_CONFIG = require('./agent-roster.v1.json');
+const ROLES = Object.freeze(ROSTER_CONFIG.agents.map(role => Object.freeze(role)));
 
 const canonical = value => value === null || typeof value !== 'object' ? JSON.stringify(value) :
   Array.isArray(value) ? '[' + value.map(canonical).join(',') + ']' :
