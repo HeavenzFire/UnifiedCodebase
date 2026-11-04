@@ -1,6 +1,6 @@
 # HeavenzFire Unified Field — Cross-Device Federation R&D v0.1
 
-**Status:** ACTIVE — protocol-core implementation and isolated verification phase  
+**Status:** ACTIVE — loopback federation runtime implemented; physical two-device acceptance pending  
 **Date:** 2026-11-04  
 **Tracking issue:** [UnifiedCodebase #46](https://github.com/HeavenzFire/UnifiedCodebase/issues/46)  
 **Related foundations:** [PR #41 — Project/Node Registry + Agent Command Center](https://github.com/HeavenzFire/UnifiedCodebase/pull/41), [PR #45 — Local Inference Engine](https://github.com/HeavenzFire/UnifiedCodebase/pull/45)
@@ -9,7 +9,7 @@
 
 Design and verify a secure, local-first federation layer connecting authorized HeavenzFire Windows, Android/Termux, and Linux nodes. Federation must reuse the existing registry, task contracts, local inference services, and private overlay transport. It must not create a second orchestrator or expose loopback services directly to the network.
 
-This document is a research baseline and execution plan. The transport-independent protocol core has now been added on this branch; no live federation listener, task handoff, or production deployment is claimed.
+This document is the source-of-truth R&D plan. The branch now contains a loopback-only HTTP gateway/client, authenticated peer handshake, signed operator approval, canonical-task ledger adapter, capability-gated worker, and local inference adapter. CI exercises the local round-trip; the physical Windows/Android pair has not yet been launched through this runtime.
 
 ## 2. Verified baseline — 2026-11-04
 
@@ -45,15 +45,15 @@ No unmerged PR is treated as part of `main` merely because its design or tests e
 - Each installation generates or receives a unique node identity.
 - Enrollment is initiated by an operator and requires explicit approval on the receiving node.
 - Identity credentials are scoped to node-to-node protocol operations; they are not shell credentials.
-- Enrollment records protocol version, node ID, public-key fingerprint, declared capabilities, allowed peer IDs, creation time, and revocation state.
+- Enrollment records protocol version, node ID, an operator-approved per-peer HMAC secret reference, declared capabilities, allowed peer IDs, creation time, and revocation state. Current v0.1 uses symmetric HMAC bootstrap credentials, not public-key fingerprints.
 - Private keys never enter Git, task records, logs, prompts, or telemetry.
 
 ### 4.2 Transport
 
-- Use an operator-configured private overlay (for example, Tailscale) or a separately authenticated transport adapter.
-- Preserve local service bindings on loopback.
-- Remote requests terminate at a narrow node gateway; they do not connect directly to inference, registry, or Command Center listeners.
-- Transport reachability and cryptographic peer authentication are separate states and must be reported separately.
+- The implemented transport is HTTP bound only to `127.0.0.1`, reached through an operator-managed SSH local-forward tunnel over the private overlay.
+- Preserve local service bindings on loopback; do not open the federation or inference ports to the mesh/public interface.
+- Remote requests terminate at a narrow federation gateway; they do not connect directly to inference, registry, or Command Center listeners.
+- Transport reachability and cryptographic peer authentication remain separate states and must be reported separately.
 
 ### 4.3 Handshake
 
@@ -64,14 +64,13 @@ A protocol handshake must exchange and verify:
 4. fresh cryptographic nonce;
 5. bounded timeout and session expiry.
 
-The peer must authenticate the handshake and echo the nonce and protocol version. A successful TCP connection, SSH login, registry record, or HTTP 200 alone is not a federation handshake.
+The implemented peer authenticates the handshake with HMAC-SHA256 and echoes the nonce and protocol version. Hello expiry is 10 seconds and authenticated sessions are bounded to five minutes. A successful TCP connection, SSH login, registry record, or HTTP 200 alone is not a federation handshake.
 
 ### 4.4 Task handoff
 
-- Use the canonical `heavenzfire.shared-task.v1` contract after its current schema and approval semantics have been inspected.
-- Preserve task ID, idempotency key, origin node, target node, creation time, expiry, cancellation state, and evidence references.
-- Require authenticated caller identity and explicit authorization for each capability scope.
-- Reject unknown states, expired tasks, replayed nonces, duplicate non-idempotent actions, forged approval claims, and unrecognized capability requests.
+- Use the injected canonical `heavenzfire.shared-task.v1` contract. The adapter requires approved state plus attributable approval evidence and preserves the canonical task ID as the ledger ID/idempotency key.
+- Require authenticated caller identity, a task-bound HMAC operator approval proof, and a task-scoped `shared-task.v1` capability grant.
+- Reject unknown states, expired sessions/proofs, forged approval claims, task identity mismatch, and unrecognized capability requests. Duplicate delivery of the same canonical record is idempotent at the local ledger.
 - Never infer approval from an agent response, model output, provider status, task status, or transport identity.
 - No arbitrary remote shell or unrestricted filesystem operation is part of the initial protocol.
 
@@ -176,7 +175,7 @@ Do not begin with a general remote command executor, distributed shell, or broad
 - `scope`: R0 source inspection and R1 protocol/threat-model specification
 - `dependencies`: UnifiedCodebase issue #46; review of PR #41; inspection of canonical shared-task contract and issue #19
 - `risk_class`: security-sensitive design; read-only research phase
-- `status`: IMPLEMENTATION_IN_PROGRESS
+- `status`: LOOPBACK_IMPLEMENTATION_COMPLETE_PENDING_LIVE_ACCEPTANCE
 - `idempotency_key`: `hf-rd-federation-r0-2026-11-04`
 - `evidence_refs`: PR #41; PR #45; issue #19; issue #46; operator-provided live SSH and inference test output dated 2026-11-04
 - `target_commit_sha`: mainline base selected when this branch was created
@@ -186,31 +185,45 @@ Do not begin with a general remote command executor, distributed shell, or broad
 
 ## 10. Decision gate
 
-This R&D branch is documentation-only at this stage. The next code change must be based on inspected source contracts and deterministic tests. Do not merge this branch, merge dependent draft PRs, or deploy federation until the stated acceptance criteria are met.
+This R&D branch now contains the initial runnable implementation and deterministic loopback integration tests. It is not yet accepted as a live deployment. Do not merge or deploy until the latest Node 20/22 CI run is green, code review is complete, and the physical Windows/Android handshake plus approved task round-trip has been captured.
 
 
-## 11. Implemented protocol core — branch work
+## 11. Implemented federation runtime — branch work
 
-**Implementation:** `MicroFederation/federation-protocol.cjs`  
-**Tests:** `MicroFederation/test/federation-protocol.test.cjs`  
-**CI:** `.github/workflows/federation-protocol.yml`  
-**Protocol:** `heavenzfire.federation.v1`
+**Protocol:** `heavenzfire.federation.v1`  
+**Transport:** loopback HTTP over SSH local forwarding  
+**Node entry point:** `MicroFederation/federation-node.cjs`  
+**Runtime:** `MicroFederation/federation-runtime.cjs`  
+**Approval:** `MicroFederation/operator-approval.cjs`  
+**Task adapter:** `MicroFederation/shared-task-ledger-adapter.cjs`  
+**Worker:** existing `MicroFederation/governed-runtime.cjs`  
+**Inference:** `MicroFederation/openai-local-inference-adapter.cjs`
 
-The initial isolated implementation provides:
-- HMAC-SHA256 authenticated hello and acknowledgement messages;
-- explicit approved-peer enrollment records and capability allowlists;
-- 256-bit nonce generation, nonce echo, bounded handshake expiry, and in-memory replay rejection;
-- identity, protocol-version, expiry, and capability-scope validation;
-- process-local peer revocation.
+Implemented on this branch:
 
-The test workflow runs the deterministic protocol suite on Node 20 and Node 22.
+- HMAC-authenticated hello/ack with nonce echo, identity binding, capability allowlists, expiry, replay rejection, and bounded five-minute sessions.
+- Loopback-only HTTP server/client with `task.submit` and `task.read` scopes; client rejects non-loopback destinations.
+- Signed operator approval proof bound to canonical task ID, exact record hash, actor, evidence reference, nonce, and expiry.
+- Canonical shared-task admission to TaskLedger with stable task ID, idempotency, and approval re-verification immediately before execution.
+- Task-scoped capability gate using the existing CapabilityStore and CapabilityGate; no un-gated worker path.
+- Governed worker calling the local OpenAI-compatible inference facade; model output remains data and is never executed as commands.
+- Explicit one-task bootstrap capability grant, with audit event in CapabilityStore.
+- Windows node config, Android submit CLI, approval-package CLI, scoped-grant helper, and launch documentation.
+- Loopback HTTP and full task-round-trip integration tests added to the Node 20/22 CI workflow.
 
-**Important limitations:** this is a protocol core only. The symmetric peer secret must be provisioned outside the repository. Replay state and revocation are process-local, not durable or distributed. There is no socket listener, SSH command dispatcher, heartbeat daemon, persistent session store, distributed lease, canonical task adapter, or remote task executor. The code does not grant remote shell or filesystem access. Live device enrollment and task round-trip remain unverified.
+**Security boundaries:** no remote shell, unrestricted filesystem, network-exposed listener, direct inference exposure, or model-generated command execution. HMAC secrets remain external to the repository. TaskLedger and session state remain process-local/single-writer.
+
+**Not yet proven:** the actual Windows service has not been launched from this branch; the Android SSH tunnel has not yet been used by the new HTTP client; a physical task has not yet been observed reaching ledger `succeeded`. CI fixtures are not live-device evidence.
 
 ## 12. Immediate acceptance sequence
 
-1. Confirm Node 20 and 22 CI results for the protocol test file.
-2. Review test failures and security findings; do not infer success from workflow creation.
-3. Implement the issue #19 canonical-task adapter separately, with approval evidence verified by a trusted local callback.
-4. Add a narrow transport adapter over the already-configured SSH/private overlay; preserve loopback service bindings.
-5. Run explicit two-device enrollment and nonce-echo handshake, then a non-privileged, idempotent task round-trip.
+1. Verify the latest Node 20 and Node 22 workflow run for the entire federation suite, including HTTP transport and full task round-trip.
+2. Review the changed runtime, approval, and capability code; keep the PR draft until review and CI are complete.
+3. Pull the branch on Windows and Termux; configure peer and operator secrets locally, never in Git.
+4. On Windows, configure the canonical contract path, task-scoped bootstrap grant, capability store, and loopback inference endpoint; launch `federation-node.cjs`.
+5. On Android, establish the SSH local-forward tunnel to Windows loopback, run the approval package and submit CLI, and verify the returned task ID.
+6. On Windows, verify ledger status `succeeded`, then verify the task projection reports canonical `completed` and ledger `succeeded`.
+7. Repeat the same task to prove idempotency; then test invalid proof, missing grant, expired session, and unauthorized capability rejection.
+8. Capture redacted command output and exit codes in a live acceptance report. Do not commit secrets, private IPs, raw proofs, or hostnames.
+
+The implementation is ready for this bounded live acceptance run, not for broad mesh deployment or production multi-writer use.
