@@ -12,6 +12,11 @@ on:
       - "MicroFederation/test-ledger-orchestrator-worker.cjs"
       - "MicroFederation/capability-store.cjs"
       - "MicroFederation/test-capability-store.cjs"
+      - "MicroFederation/project-node-registry.cjs"
+      - "MicroFederation/test-project-node-registry.cjs"
+      - "MicroFederation/agent-command-center.cjs"
+      - "MicroFederation/test-agent-command-center.cjs"
+      - "MicroFederation/live-orchestrator-adapter.cjs"
       - ".github/workflows/provider-registry.yml"
   push:
     branches: ["main"]
@@ -25,6 +30,11 @@ on:
       - "MicroFederation/test-ledger-orchestrator-worker.cjs"
       - "MicroFederation/capability-store.cjs"
       - "MicroFederation/test-capability-store.cjs"
+      - "MicroFederation/project-node-registry.cjs"
+      - "MicroFederation/test-project-node-registry.cjs"
+      - "MicroFederation/agent-command-center.cjs"
+      - "MicroFederation/test-agent-command-center.cjs"
+      - "MicroFederation/live-orchestrator-adapter.cjs"
       - ".github/workflows/provider-registry.yml"
 
 permissions:
@@ -56,3 +66,11 @@ jobs:
         run: node --test MicroFederation/test-ledger-orchestrator-worker.cjs
       - name: Run persistent capability store tests
         run: node --test MicroFederation/test-capability-store.cjs
+      - name: Check project and node registry syntax
+        run: node --check MicroFederation/project-node-registry.cjs
+      - name: Run project and node registry tests
+        run: node --test MicroFederation/test-project-node-registry.cjs
+      - name: Check Agent Command Center syntax
+        run: node --check MicroFederation/agent-command-center.cjs
+      - name: Run Agent Command Center tests
+        run: node --test MicroFederation/test-agent-command-center.cjs
