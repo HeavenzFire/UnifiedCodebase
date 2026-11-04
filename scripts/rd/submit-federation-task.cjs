@@ -59,7 +59,7 @@ async function main() {
     const ledger = projection && projection.ledger;
     if (canonicalStatus === 'completed' && ledger && ledger.status === 'succeeded') {
       process.stdout.write(JSON.stringify({ state: 'TASK_COMPLETED', taskId: receipt.taskId,
-        canonicalStatus, ledgerStatus: ledger.status, result: ledger.result }) + '\\n');
+        canonicalStatus, ledgerStatus: ledger.status, result: ledger.result }) + '\n');
       return;
     }
     if (canonicalStatus === 'failed' || (ledger && ledger.status === 'failed')) {
