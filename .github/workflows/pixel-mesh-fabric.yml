@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   mesh-fabric:
-    name: Human-protection fabric (Node ${{ matrix.node }})
+    name: Human-protection fabric (Node \${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,14 +23,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: \${{ matrix.node }}
       - name: Syntax checks
         run: |
           node --check MicroFederation/approval-gate.cjs
+          node --check MicroFederation/approval-nonce-store.cjs
           node --check MicroFederation/task-ledger.cjs
           node --check MicroFederation/pixel-mesh.cjs
           node --check MicroFederation/nonlinear-workflow.cjs
           node --check MicroFederation/unified-field-fabric.cjs
       - name: Run human-protection and regression tests
         run: |
-          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs MicroFederation/test-task-ledger.cjs MicroFederation/test-human-protection.cjs MicroFederation/test-approval-gate.cjs
+          node --test MicroFederation/test-pixel-mesh.cjs MicroFederation/test-nonlinear-workflow.cjs MicroFederation/test-unified-field-fabric.cjs MicroFederation/test-task-ledger.cjs MicroFederation/test-human-protection.cjs MicroFederation/test-approval-gate.cjs MicroFederation/test-approval-nonce-store.cjs
