@@ -1,6 +1,6 @@
 # HeavenzFire Unified Field — Cross-Device Federation R&D v0.1
 
-**Status:** ACTIVE — research/specification phase  
+**Status:** ACTIVE — protocol-core implementation and isolated verification phase  
 **Date:** 2026-11-04  
 **Tracking issue:** [UnifiedCodebase #46](https://github.com/HeavenzFire/UnifiedCodebase/issues/46)  
 **Related foundations:** [PR #41 — Project/Node Registry + Agent Command Center](https://github.com/HeavenzFire/UnifiedCodebase/pull/41), [PR #45 — Local Inference Engine](https://github.com/HeavenzFire/UnifiedCodebase/pull/45)
@@ -9,7 +9,7 @@
 
 Design and verify a secure, local-first federation layer connecting authorized HeavenzFire Windows, Android/Termux, and Linux nodes. Federation must reuse the existing registry, task contracts, local inference services, and private overlay transport. It must not create a second orchestrator or expose loopback services directly to the network.
 
-This document is a research baseline and execution plan, not a claim that federation has been implemented or deployed.
+This document is a research baseline and execution plan. The transport-independent protocol core has now been added on this branch; no live federation listener, task handoff, or production deployment is claimed.
 
 ## 2. Verified baseline — 2026-11-04
 
@@ -176,14 +176,41 @@ Do not begin with a general remote command executor, distributed shell, or broad
 - `scope`: R0 source inspection and R1 protocol/threat-model specification
 - `dependencies`: UnifiedCodebase issue #46; review of PR #41; inspection of canonical shared-task contract and issue #19
 - `risk_class`: security-sensitive design; read-only research phase
-- `status`: ACTIVE
+- `status`: IMPLEMENTATION_IN_PROGRESS
 - `idempotency_key`: `hf-rd-federation-r0-2026-11-04`
 - `evidence_refs`: PR #41; PR #45; issue #19; issue #46; operator-provided live SSH and inference test output dated 2026-11-04
 - `target_commit_sha`: mainline base selected when this branch was created
 - `attempts`: 1
 - `last_error`: none
-- `next_action`: inspect source contracts and review blockers before implementing protocol code
+- `next_action`: run Node 20/22 deterministic protocol tests in CI, then add an operator-approved transport adapter and live handshake
 
 ## 10. Decision gate
 
 This R&D branch is documentation-only at this stage. The next code change must be based on inspected source contracts and deterministic tests. Do not merge this branch, merge dependent draft PRs, or deploy federation until the stated acceptance criteria are met.
+
+
+## 11. Implemented protocol core — branch work
+
+**Implementation:** `MicroFederation/federation-protocol.cjs`  
+**Tests:** `MicroFederation/test/federation-protocol.test.cjs`  
+**CI:** `.github/workflows/federation-protocol.yml`  
+**Protocol:** `heavenzfire.federation.v1`
+
+The initial isolated implementation provides:
+- HMAC-SHA256 authenticated hello and acknowledgement messages;
+- explicit approved-peer enrollment records and capability allowlists;
+- 256-bit nonce generation, nonce echo, bounded handshake expiry, and in-memory replay rejection;
+- identity, protocol-version, expiry, and capability-scope validation;
+- process-local peer revocation.
+
+The test workflow runs the deterministic protocol suite on Node 20 and Node 22.
+
+**Important limitations:** this is a protocol core only. The symmetric peer secret must be provisioned outside the repository. Replay state and revocation are process-local, not durable or distributed. There is no socket listener, SSH command dispatcher, heartbeat daemon, persistent session store, distributed lease, canonical task adapter, or remote task executor. The code does not grant remote shell or filesystem access. Live device enrollment and task round-trip remain unverified.
+
+## 12. Immediate acceptance sequence
+
+1. Confirm Node 20 and 22 CI results for the protocol test file.
+2. Review test failures and security findings; do not infer success from workflow creation.
+3. Implement the issue #19 canonical-task adapter separately, with approval evidence verified by a trusted local callback.
+4. Add a narrow transport adapter over the already-configured SSH/private overlay; preserve loopback service bindings.
+5. Run explicit two-device enrollment and nonce-echo handshake, then a non-privileged, idempotent task round-trip.
