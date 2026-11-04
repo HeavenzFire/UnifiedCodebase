@@ -57,6 +57,6 @@ test('persists bounded structured failure evidence across ledger restart',async 
 
 test('AEGIS bridge explicitly emits UTF-8 without a byte-order mark',async()=>{
  const bridge=await fs.readFile(path.join(__dirname,'..','UnifiedField','Bridge','aegis-powershell-bridge.cjs'),'utf8');
- assert.match(bridge,/\\[Console\\]::OutputEncoding = \\[System\\.Text\\.UTF8Encoding\\]::new\\(\\$false\\)/);
- assert.match(bridge,/\\$OutputEncoding = \\[Console\\]::OutputEncoding/);
+ assert.ok(bridge.includes('[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)'));
+ assert.ok(bridge.includes('$OutputEncoding = [Console]::OutputEncoding'));
 });
