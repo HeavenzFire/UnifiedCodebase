@@ -1,7 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # HeavenzFire Cross-Device Federation R&D launcher
-# Termux; read-only preflight, workspace sync, SSH-mediated remote health check.
+# Termux; workspace sync and bounded, read-only Windows inference health check.
 set -u
+
 REPO_URL='https://github.com/HeavenzFire/UnifiedCodebase.git'
 BRANCH='research/cross-device-federation-rd-v0.1'
 WORKSPACE="$HOME/HeavenzFire-RD"
@@ -11,8 +12,9 @@ WINDOWS_HOST='100.96.1.10'
 SSH_KEY="$HOME/.ssh/heavenzfire_bridge"
 
 echo '=== HEAVENZFIRE ANDROID R&D ==='
-command -v git >/dev/null 2>&1 || { echo 'ERROR: git is required'; exit 10; }
-command -v ssh >/dev/null 2>&1 || { echo 'ERROR: openssh is required'; exit 10; }
+for bin in git ssh python iconv base64; do
+  command -v "$bin" >/dev/null 2>&1 || { echo "ERROR: $bin is required"; exit 10; }
+done
 
 if [ -d "$WORKSPACE/.git" ]; then
   git -C "$WORKSPACE" fetch origin "$BRANCH" || { echo 'ERROR: git fetch failed'; exit 11; }
@@ -32,13 +34,27 @@ SSH_STATE='NOT_CONFIGURED'
 REMOTE_HEALTH='NOT_TESTED'
 if [ -s "$SSH_KEY" ]; then
   SSH_STATE='KEY_PRESENT'
-  REMOTE_OUTPUT=$(ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new \
+
+  # Encode PowerShell as UTF-16LE Base64. This prevents OpenSSH/Windows
+  # command-line parsing from stripping quotes around string literals.
+  REMOTE_PS='try { $h = Invoke-RestMethod -Uri "http://127.0.0.1:11820/health" -TimeoutSec 5; $h | ConvertTo-Json -Compress; if ($h.status -eq "ok") { Write-Output "FACADE_OK"; exit 0 } else { Write-Output "FACADE_NOT_OK"; exit 2 } } catch { Write-Output $_.Exception.Message; exit 3 }'
+  ENCODED_PS=$(printf '%s' "$REMOTE_PS" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')
+
+  REMOTE_OUTPUT=$(ssh -i "$SSH_KEY" \
+    -o BatchMode=yes \
+    -o ConnectTimeout=8 \
+    -o ConnectionAttempts=1 \
+    -o ServerAliveInterval=3 \
+    -o ServerAliveCountMax=2 \
+    -o StrictHostKeyChecking=accept-new \
     "rucke@$WINDOWS_HOST" \
-    'powershell.exe -NoLogo -NoProfile -NonInteractive -Command "try { $h=Invoke-RestMethod http://127.0.0.1:11820/health -TimeoutSec 5; if ($h.status -eq "ok") { "FACADE_OK" } else { "FACADE_NOT_OK"; exit 2 } } catch { "FACADE_UNREACHABLE"; exit 3 }"' 2>&1)
+    "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand $ENCODED_PS" 2>&1)
   SSH_EXIT=$?
+
   if [ "$SSH_EXIT" -eq 0 ] && printf '%s' "$REMOTE_OUTPUT" | grep -q 'FACADE_OK'; then
     SSH_STATE='AUTHENTICATED'
     REMOTE_HEALTH='PASS'
+    printf '%s\n' "$REMOTE_OUTPUT"
   else
     SSH_STATE='FAILED'
     REMOTE_HEALTH="FAIL:$SSH_EXIT"
@@ -46,8 +62,8 @@ if [ -s "$SSH_KEY" ]; then
   fi
 fi
 
-mkdir -p "$EVIDENCE_DIR"
-COMMIT=$(git -C "$WORKSPACE" rev-parse HEAD)
+mkdir -p "$EVIDENCE_DIR" || { echo 'ERROR: cannot create evidence directory'; exit 17; }
+COMMIT=$(git -C "$WORKSPACE" rev-parse HEAD) || exit 18
 TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 cat > "$EVIDENCE_FILE" <<EOF
 {
