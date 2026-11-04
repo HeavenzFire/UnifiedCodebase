@@ -20,12 +20,15 @@ function createFederationRuntime({
   host = '127.0.0.1',
   port = 18100,
   leaseMs = 120000,
-  pollMs = 1000,
+  pollMs = 500,
+  clock = () => Date.now(),
   onWorkerError = () => {}
-}) {
+} = {}) {
   if (!capabilityGate || typeof capabilityGate.authorize !== 'function') {
-    throw new Error('trusted capabilityGate.authorize() is required for governed federation execution');
+    throw new Error('a configured capability gate is required; refusing to start an ungated worker');
   }
+  if (!ledger || typeof ledger.open !== 'function') throw new Error('a durable TaskLedger is required');
+  if (typeof onWorkerError !== 'function') throw new Error('onWorkerError must be a function');
 
   const protocol = createFederationProtocol({
     nodeId,
@@ -41,11 +44,8 @@ function createFederationRuntime({
     contract,
     verifyApproval,
     verifyAttestation,
-    execute: args => inference.run({
-      taskId: args.taskId,
-      role: args.role,
-      prompt: args.prompt
-    })
+    execute: inference.run,
+    clock
   });
   const worker = createGovernedRuntime({
     ledger,
@@ -54,16 +54,27 @@ function createFederationRuntime({
     workerId,
     leaseMs,
     pollMs,
+    clock,
     onError: onWorkerError
   });
-  const server = createFederationHttpServer({ protocol, taskAdapter, host, port });
+  const server = createFederationHttpServer({
+    protocol,
+    taskAdapter,
+    host,
+    port,
+    clock
+  });
 
   let started = false;
 
   async function start() {
     if (started) throw new Error('federation runtime is already started');
+    await ledger.open();
+    if (capabilityGate.store && typeof capabilityGate.store.open === 'function') {
+      await capabilityGate.store.open();
+    }
     const address = await server.listen();
-    worker.start();
+    const workerState = worker.start();
     started = true;
     return Object.freeze({
       state: 'READY',
@@ -72,18 +83,30 @@ function createFederationRuntime({
       port: address.port,
       protocol: 'heavenzfire.federation.v1',
       inference: inference.baseUrl,
-      worker: worker.status()
+      model: inference.model,
+      workerId,
+      worker: workerState
     });
   }
 
   async function stop() {
-    if (!started) return;
-    await worker.stop();
+    if (!started) return Object.freeze({ state: 'STOPPED' });
+    const workerState = await worker.stop();
     await server.close();
     started = false;
+    return Object.freeze({ state: 'STOPPED', worker: workerState });
   }
 
-  return Object.freeze({ protocol, taskAdapter, worker, server, start, stop });
+  function status() {
+    return Object.freeze({
+      state: started ? 'READY' : 'STOPPED',
+      nodeId,
+      worker: worker.status(),
+      sessions: server.sessionCount()
+    });
+  }
+
+  return Object.freeze({ protocol, taskAdapter, inference, worker, server, start, stop, status });
 }
 
 module.exports = { createFederationRuntime };
