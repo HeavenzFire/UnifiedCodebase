@@ -57,6 +57,13 @@ function memoryLedger() {
       task.status = 'running';
       return task;
     },
+    async releaseClaim(id, workerId, options) {
+      const task = tasks.get(id);
+      assert.equal(task.owner, workerId);
+      task.status = 'failed';
+      task.error = options.reason;
+      return task;
+    },
     async complete(id, workerId, result, options) {
       const task = tasks.get(id);
       assert.equal(task.status, 'running');
