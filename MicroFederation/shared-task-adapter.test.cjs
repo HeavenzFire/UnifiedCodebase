@@ -477,10 +477,12 @@ test('maps authoritative cancellation to review_required and rejects forged or m
   assert.equal(cancelled.canonicalRecord.approvalState, 'approved');
   assert.equal(cancelled.canonicalRecord.evidence.at(-1).actor, 'operator:zdh');
 
+  const previousStatus = stored.status;
+  stored.status = 'unknown';
   await assert.rejects(adapter.projectLedgerState(approved, {
-    id: queued.ledgerTaskId, status: 'succeeded',
-    metadata: { canonicalTaskId: approved.taskId }
+    id: queued.ledgerTaskId, status: 'succeeded'
   }), /unsupported ledger lifecycle status/);
+  stored.status = previousStatus;
   await assert.rejects(adapter.projectLedgerState(approved, {
     id: 'shared:' + 'b'.repeat(64)
   }), /does not match canonical task identity/);
