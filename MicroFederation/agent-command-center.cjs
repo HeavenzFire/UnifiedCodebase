@@ -98,7 +98,7 @@ function createCommandCenterServer({ stateDirectory, endpoint = 'http://127.0.0.
     throw Error('agent role definitions are invalid or duplicated');
   }
   const store = new AgentMessageStore(path.join(stateDirectory, 'messages.jsonl'));
-  const inference = adapter || new LiveOrchestratorAdapter({ endpoint });
+  const inference = adapter || new LiveOrchestratorAdapter({ endpoint, maxRetries: ROSTER_CONFIG.execution.retries.transientHttp5xx });
   async function reply(role, prompt, conversationId) {
     const history = await store.thread(conversationId, 12);
     const context = history.map(e => e.from + ': ' + e.content).join('\n');
