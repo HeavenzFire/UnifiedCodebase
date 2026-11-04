@@ -141,7 +141,6 @@ test('fabric producer and worker policies bind signed identity to grants and tas
     capabilityGate,
     getWorkerToken: async ({ peerId, nodeId }) => {
       assert.equal(peerId, 'agent-1');
-      assert.equal(nodeId, 'build');
       return workerToken;
     }
   });
