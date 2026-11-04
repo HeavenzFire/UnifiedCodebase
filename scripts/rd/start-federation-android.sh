@@ -6,6 +6,10 @@ if [ -z "$PACKAGE_PATH" ]; then
   echo "Usage: bash scripts/rd/start-federation-android.sh <approval-package.json>" >&2
   exit 2
 fi
+case "$PACKAGE_PATH" in /*) ;; *) PACKAGE_PATH="$PWD/$PACKAGE_PATH" ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
 
 : "${HF_FEDERATION_SSH_TARGET:?Set HF_FEDERATION_SSH_TARGET to the approved Windows SSH target}"
 : "${HF_FEDERATION_PEER_SECRET:?Set HF_FEDERATION_PEER_SECRET to the provisioned peer secret}"
