@@ -9,7 +9,14 @@
       "transientHttp5xx": 2
     },
     "humanApprovalRequired": true,
-    "toolAccess": []
+    "toolAccess": [],
+    "enforcement": {
+      "maxParallel": "enforced: inference adapter queue serializes all model calls; broadcast iterates sequentially",
+      "transientHttp5xxRetries": "enforced: adapter retries up to the configured count",
+      "outputTokenBudget": "not enforced: current /task adapter contract exposes no max-token field",
+      "humanApproval": "each interactive send is user-initiated; no separate API approval workflow is implemented",
+      "toolAccess": "enforced: Command Center exposes no shell, filesystem, or browser tools"
+    }
   },
   "agents": [
     {
