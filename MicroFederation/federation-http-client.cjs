@@ -4,8 +4,10 @@ const { PROTOCOL } = require('./federation-protocol.cjs');
 
 function assertLoopbackUrl(value) {
   const url = new URL(value);
-  if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
-    throw new Error('federation client accepts loopback URLs only; use an SSH local-forward endpoint');
+  if (url.username || url.password) throw new Error('federation endpoint credentials are not allowed');
+  if (url.search || url.hash || url.pathname !== '/') throw new Error('federation base URL must not include a path, query, or fragment');
+  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) {
+    throw new Error('federation client accepts numeric loopback URLs only; use an SSH local-forward endpoint');
   }
   if (url.protocol !== 'http:') throw new Error('federation loopback endpoint must use HTTP inside the SSH tunnel');
   return url;
@@ -23,6 +25,8 @@ function createFederationHttpClient({ protocol, peerNodeId, baseUrl, fetchImpl =
     const url = new URL(path, base);
     const response = await fetchImpl(url, {
       method: 'POST',
+      redirect: 'error',
+      cache: 'no-store',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(8000)
