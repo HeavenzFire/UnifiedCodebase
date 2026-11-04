@@ -29,10 +29,16 @@ class AgentMessageStore {
   }
   async open() {
     if (this.events) return this;
-    await fs.mkdir(path.dirname(this.file), { recursive: true });
+    const directory = path.dirname(this.file);
+    await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+    if (process.platform !== 'win32') await fs.chmod(directory, 0o700);
     let raw;
-    try { raw = await fs.readFile(this.file, 'utf8'); }
-    catch (e) { if (e.code !== 'ENOENT') throw e; raw = ''; }
+    try {
+      const stat = await fs.lstat(this.file);
+      if (stat.isSymbolicLink() || !stat.isFile()) throw Error('message ledger must be a regular non-symlink file');
+      if (process.platform !== 'win32') await fs.chmod(this.file, 0o600);
+      raw = await fs.readFile(this.file, 'utf8');
+    } catch (e) { if (e.code !== 'ENOENT') throw e; raw = ''; }
     const events = raw.split('\n').filter(Boolean).map(line => JSON.parse(line));
     if (events.length > this.maxEvents) throw Error('message ledger exceeds configured event bound');
     let previousHash = '0'.repeat(64);
@@ -61,6 +67,12 @@ class AgentMessageStore {
       const handle = await fs.open(this.file, 'a', 0o600);
       try { await handle.writeFile(JSON.stringify(event) + '\n', 'utf8'); await handle.sync(); }
       finally { await handle.close(); }
+      if (process.platform !== 'win32') {
+        let directoryHandle;
+        try { directoryHandle = await fs.open(path.dirname(this.file), 'r'); await directoryHandle.sync(); }
+        catch (error) { if (!['EISDIR', 'EPERM', 'EINVAL', 'ENOTSUP', 'EACCES', 'EBADF'].includes(error.code)) throw error; }
+        finally { if (directoryHandle) await directoryHandle.close(); }
+      }
       this.events.push(event);
       return clone(event);
     });
