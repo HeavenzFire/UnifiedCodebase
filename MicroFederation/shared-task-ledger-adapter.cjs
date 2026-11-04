@@ -159,7 +159,10 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
         typeof attestation.issuedAt !== 'string' || !Number.isFinite(Date.parse(attestation.issuedAt)) ||
         typeof attestation.expiresAt !== 'string' || !Number.isFinite(Date.parse(attestation.expiresAt)) ||
         typeof attestation.evidenceRef !== 'string' || !attestation.evidenceRef.trim() ||
-        typeof attestation.verifiedAt !== 'string' || !Number.isFinite(Date.parse(attestation.verifiedAt))) {
+        typeof attestation.verifiedAt !== 'string' || !Number.isFinite(Date.parse(attestation.verifiedAt)) ||
+        !Number.isFinite(attestation.proofIssuedAt) || !Number.isFinite(attestation.proofExpiresAt) ||
+        typeof attestation.proofNonce !== 'string' || !/^[a-f0-9]{64}$/.test(attestation.proofNonce) ||
+        typeof attestation.proofSignature !== 'string' || !/^[a-f0-9]{64}$/.test(attestation.proofSignature)) {
       throw new Error('stored approval attestation is malformed or does not match the canonical record');
     }
     const result = await verifyAttestation({ record, attestation });
