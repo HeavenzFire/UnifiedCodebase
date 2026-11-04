@@ -120,7 +120,10 @@ function validateManifest(manifest) {
       manifest.revision !== manifest.events.length) throw Error('registry manifest schema or revision is invalid');
   const projectIds = new Set();
   for (const project of manifest.projects) {
-    const validated = validateProject(project);
+    const projectFields = new Set(['id', 'name', 'workspacePath', 'remoteUrl', 'branch', 'status', 'createdAt', 'updatedAt']);
+    for (const key of Object.keys(project)) if (!projectFields.has(key)) throw Error('unsupported project record field: ' + key);
+    const validated = validateProject({ id: project.id, name: project.name, workspacePath: project.workspacePath,
+      remoteUrl: project.remoteUrl, branch: project.branch, status: project.status });
     if (projectIds.has(validated.id)) throw Error('registry contains duplicate project id');
     projectIds.add(validated.id);
     if (typeof project.createdAt !== 'string' || !Number.isFinite(Date.parse(project.createdAt)) ||
