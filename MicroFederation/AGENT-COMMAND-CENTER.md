@@ -5,7 +5,7 @@
 ## What is implemented
 
 - Browser command interface with a text composer, agent selector, direct conversations, and sequential broadcast.
-- Five starter specialist profiles: Planner, Architect, Security Reviewer, Runtime Integrator, and Test Engineer. The server accepts an injected role roster so the existing 16-role definitions can be supplied without hard-coding a competing roster.
+- Canonical 16-role specialist roster loaded from `agent-roster.v1.json`: Planner, Architect, Implementer, Test Engineer, Security Reviewer, Adversarial Reviewer, Browser Integration, Runtime Integrator, Reliability Engineer, Data Integrity, Privacy Reviewer, Windows Operator, Network Reviewer, Documentation, Independent Verifier, and Synthesizer.
 - Per-agent conversation threads and a broadcast thread.
 - Local JSONL message journal. Each event includes sequence, timestamp, sender, recipient, conversation ID, kind, content, metadata, previous hash, and SHA-256 hash.
 - Restart loading and hash-chain verification. Corruption is rejected rather than silently accepted.
@@ -47,7 +47,7 @@ By default, persistent messages are stored outside the repository:
 - Windows: \`%USERPROFILE%\\.heavenzfire\\agent-command-center\\messages.jsonl\`
 - Termux/Linux: \`$HOME/.heavenzfire/agent-command-center/messages.jsonl\`
 
-Override with \`HEAVENZFIRE_STATE\`. The service never writes into the registered project workspace paths.
+Override with \`HEAVENZFIRE_STATE\`. The service never writes into the registered project workspace paths. The canonical specialist roster is stored at `MicroFederation/agent-roster.v1.json`.
 
 ## HTTP interface
 
@@ -63,8 +63,10 @@ Override with \`HEAVENZFIRE_STATE\`. The service never writes into the registere
 - The journal is append-only by application behavior and hash-chained. It is not administrator-proof, signed, or externally anchored.
 - The journal is single-process-writer. Do not run multiple Command Center processes against the same state directory.
 - The service binds to loopback only. It does not expose LAN, Tailscale, or internet access and has no remote authentication protocol yet.
-- Broadcasts are sequential and may take several minutes depending on model latency.
+- Broadcasts are sequential and may take several minutes depending on model latency. The adapter serializes inference to preserve the low-memory single-active-call policy.
 - Agent-to-agent authenticated handoff, orchestrator-level synthesis, disagreement tracking, multi-provider model fusion, and voice output are follow-on milestones.
+- The current `/task` adapter contract does not expose a hard `max_tokens` parameter. The 48-token smoke-test budget is therefore not enforced by this Command Center; do not treat the recorded budget as a runtime guarantee.
+- Each interactive send is user-initiated, but there is not yet a separate API-level approval workflow for every message. No shell, filesystem, or browser tools are exposed to these agents.
 - No approval boundary is bypassed. This UI only submits text prompts through the existing orchestrator endpoint.
 
 ## Verification
@@ -72,6 +74,7 @@ Override with \`HEAVENZFIRE_STATE\`. The service never writes into the registere
 \`\`\`sh
 node --check MicroFederation/agent-command-center.cjs
 node --test MicroFederation/test-agent-command-center.cjs
+node --test MicroFederation/test-live-orchestrator-adapter.cjs
 node --check MicroFederation/project-node-registry.cjs
 node --test MicroFederation/test-project-node-registry.cjs
 \`\`\`
