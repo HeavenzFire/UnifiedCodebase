@@ -181,3 +181,13 @@ test('POSIX message journal uses owner-only directory and file permissions', asy
   assert.equal((await fs.stat(dir)).mode & 0o777, 0o700);
   assert.equal((await fs.stat(file)).mode & 0o777, 0o600);
 });
+
+test('refuses a symlink as the persistent message journal', async t => {
+  if (process.platform === 'win32') return t.skip('Symlink creation requires elevated or developer-mode Windows permissions.');
+  const dir = await stateDir(t);
+  const target = path.join(dir, 'target.jsonl');
+  const link = path.join(dir, 'messages.jsonl');
+  await fs.writeFile(target, '');
+  await fs.symlink(target, link);
+  await assert.rejects(new AgentMessageStore(link).open(), /regular non-symlink/);
+});
