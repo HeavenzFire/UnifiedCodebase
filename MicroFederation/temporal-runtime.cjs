@@ -3,15 +3,38 @@
 const SNAPSHOT_SCHEMA = 'heavenzfire.temporal-runtime.snapshot.v1';
 const MAX_EVENTS_PER_ADVANCE = 100000;
 
-function cloneJson(value, label = 'value') {
-  let encoded;
-  try {
-    encoded = JSON.stringify(value);
-  } catch (error) {
-    throw new TypeError(label + ' must be JSON-serializable: ' + error.message);
+function assertPlainJson(value, label, seen = new Set()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(label + ' contains a non-finite number');
+    return;
   }
-  if (encoded === undefined) throw new TypeError(label + ' must be JSON-serializable');
-  return JSON.parse(encoded);
+  if (typeof value !== 'object') {
+    throw new TypeError(label + ' must contain only JSON values');
+  }
+  if (seen.has(value)) throw new TypeError(label + ' must not contain circular references');
+  const prototype = Object.getPrototypeOf(value);
+  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(label + ' must contain only plain objects and arrays');
+  }
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) assertPlainJson(item, label, seen);
+  } else {
+    for (const [key, item] of Object.entries(value)) {
+      if (item === undefined) throw new TypeError(label + ' must not contain undefined values');
+      assertPlainJson(item, label, seen);
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      throw new TypeError(label + ' must not contain symbol keys');
+    }
+  }
+  seen.delete(value);
+}
+
+function cloneJson(value, label = 'value') {
+  assertPlainJson(value, label);
+  return JSON.parse(JSON.stringify(value));
 }
 
 function finiteTime(value, label) {
@@ -155,12 +178,11 @@ class TemporalRuntime {
       if (!source || typeof source !== 'object') throw new TypeError('invalid event at index ' + index);
       const at = finiteTime(source.at, 'event.at');
       if (at < now) throw new RangeError('snapshot contains an event in the virtual past');
-      if (typeof source.id !== 'string' || !/^event-[0-9]{8}$/.test(source.id)) {
-        throw new TypeError('invalid event id');
-      }
       if (!Number.isInteger(source.sequence) || source.sequence < 1) {
         throw new TypeError('invalid event sequence');
       }
+      const expectedId = 'event-' + String(source.sequence).padStart(8, '0');
+      if (source.id !== expectedId) throw new TypeError('event id does not match its sequence');
       if (ids.has(source.id) || sequences.has(source.sequence)) {
         throw new TypeError('duplicate event identity or sequence');
       }
