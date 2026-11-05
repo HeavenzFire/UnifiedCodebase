@@ -1,0 +1,52 @@
+name: Project registry and Agent Command Center
+
+on:
+  pull_request:
+    paths:
+      - "MicroFederation/project-node-registry.cjs"
+      - "MicroFederation/test-project-node-registry.cjs"
+      - "MicroFederation/agent-roster.v1.json"
+      - "MicroFederation/agent-command-center.cjs"
+      - "MicroFederation/test-agent-command-center.cjs"
+      - "MicroFederation/agent-roster.v1.json"
+      - "MicroFederation/live-orchestrator-adapter.cjs"
+      - "MicroFederation/test-live-orchestrator-adapter.cjs"
+      - "MicroFederation/test-live-orchestrator-adapter.cjs"
+      - ".github/workflows/agent-command-center.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "MicroFederation/project-node-registry.cjs"
+      - "MicroFederation/test-project-node-registry.cjs"
+      - "MicroFederation/agent-command-center.cjs"
+      - "MicroFederation/test-agent-command-center.cjs"
+      - "MicroFederation/live-orchestrator-adapter.cjs"
+      - ".github/workflows/agent-command-center.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Syntax checks
+        run: |
+          node --check MicroFederation/project-node-registry.cjs
+          node --check MicroFederation/agent-command-center.cjs
+          node --check MicroFederation/live-orchestrator-adapter.cjs
+          node -e "JSON.parse(require('node:fs').readFileSync('MicroFederation/agent-roster.v1.json', 'utf8'))"
+      - name: Project and node registry tests
+        run: node --test MicroFederation/test-project-node-registry.cjs
+      - name: Agent Command Center tests
+        run: node --test MicroFederation/test-agent-command-center.cjs
+      - name: Orchestrator adapter tests
+        run: node --test MicroFederation/test-live-orchestrator-adapter.cjs
