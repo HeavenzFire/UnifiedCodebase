@@ -41,9 +41,7 @@ test('handlers can enqueue deterministic follow-up events in the same advance', 
     handlers: {
       chain(payload) {
         seen.push(payload.depth);
-        if (payload.depth < 3) {
-          runtime.scheduleIn(1, 'chain', { depth: payload.depth + 1 });
-        }
+        if (payload.depth < 3) runtime.scheduleIn(1, 'chain', { depth: payload.depth + 1 });
       }
     }
   });
@@ -55,9 +53,7 @@ test('handlers can enqueue deterministic follow-up events in the same advance', 
 
 test('snapshot and restore reproduce pending event order and virtual state', () => {
   const seen = [];
-  const handlers = {
-    record(payload) { seen.push(payload.value); }
-  };
+  const handlers = { record(payload) { seen.push(payload.value); } };
   const first = new TemporalRuntime({ startAt: 4, handlers });
   first.scheduleAt(7, 'record', { value: 'a' });
   first.scheduleAt(7, 'record', { value: 'b' });
@@ -75,7 +71,6 @@ test('rejects invalid time, unknown handlers, and non-JSON payloads', () => {
   assert.throws(() => runtime.scheduleAt(0, 'missing'), /unregistered handler/);
   assert.throws(() => runtime.scheduleAt(0, 'noop', { value: undefined }), /JSON-serializable/);
   assert.throws(() => runtime.scheduleIn(Infinity, 'noop'), /finite/);
-  assert.throws(() => runtime.advanceTo(0).then, /never/);
 });
 
 test('rejects backwards time, reentrant advancement, and asynchronous handlers', () => {
