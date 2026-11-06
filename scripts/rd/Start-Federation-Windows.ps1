@@ -5,8 +5,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
-$NodeEntry = Join-Path $RepoRoot 'MicroFederation\federation-node.cjs'
-$ExampleConfig = Join-Path $RepoRoot 'scripts\rd\federation-node-config.example.cjs'
+$NodeEntry = Join-Path $RepoRoot 'MicroFederation\\federation-node.cjs'
+$ExampleConfig = Join-Path $RepoRoot 'scripts\\rd\\federation-node-config.example.cjs'
 
 if (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
     throw "UnifiedCodebase repository not found at $RepoRoot"
@@ -39,7 +39,9 @@ $Required = @(
     'HF_OPERATOR_APPROVAL_SECRET',
     'HF_FEDERATION_AGENT_ID',
     'HF_FEDERATION_GRANT_ID',
-    'HF_FEDERATION_TASK_ID'
+    'HF_FEDERATION_TASK_ID',
+    'HF_FEDERATION_READ_PEER_ID',
+    'HF_FEDERATION_READ_TASK_ID'
 )
 foreach ($Name in $Required) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($Name))) {
@@ -51,7 +53,7 @@ if ($env:HF_OPERATOR_APPROVAL_SECRET.Length -lt 32) {
     throw 'HF_OPERATOR_APPROVAL_SECRET must contain at least 32 characters.'
 }
 
-$GrantVerifier = Join-Path $RepoRoot 'scripts\rd\verify-federation-grant.cjs'
+$GrantVerifier = Join-Path $RepoRoot 'scripts\\rd\\verify-federation-grant.cjs'
 & $Node.Source $GrantVerifier $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID
 if ($LASTEXITCODE -ne 0) {
     throw 'Task-scoped capability grant verification failed. Federation node was not started.'
@@ -74,6 +76,7 @@ Write-Host "PORT=$Port"
 Write-Host 'REMOTE_ACCESS=SSH_LOCAL_FORWARD_ONLY'
 Write-Host 'APPROVAL=HMAC_OPERATOR_PROOF_REQUIRED'
 Write-Host 'CAPABILITY_GATE=REQUIRED'
+Write-Host 'TASK_READ_SCOPE=EXACT_PEER_AND_TASK'
 Write-Host 'Starting foreground node. Press Ctrl+C to stop.'
 Write-Host
 
