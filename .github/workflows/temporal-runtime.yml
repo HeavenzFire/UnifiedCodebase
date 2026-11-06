@@ -1,0 +1,38 @@
+name: Temporal Runtime
+
+on:
+  pull_request:
+    paths:
+      - 'MicroFederation/temporal-runtime.cjs'
+      - 'MicroFederation/test-temporal-runtime.cjs'
+      - 'MicroFederation/TEMPORAL-RUNTIME.md'
+      - '.github/workflows/temporal-runtime.yml'
+  push:
+    branches:
+      - 'feat/reality-mirror-temporal-runtime-v0.1'
+    paths:
+      - 'MicroFederation/temporal-runtime.cjs'
+      - 'MicroFederation/test-temporal-runtime.cjs'
+      - '.github/workflows/temporal-runtime.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Syntax checks
+        run: |
+          node --check MicroFederation/temporal-runtime.cjs
+          node --check MicroFederation/test-temporal-runtime.cjs
+      - name: Temporal runtime contract tests
+        run: node --test MicroFederation/test-temporal-runtime.cjs
