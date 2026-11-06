@@ -14,6 +14,7 @@ function json(response, status, body) {
     'content-type': 'application/json; charset=utf-8',
     'content-length': encoded.length,
     'cache-control': 'no-store',
+    'connection': 'close',
     'x-content-type-options': 'nosniff'
   });
   response.end(encoded);
