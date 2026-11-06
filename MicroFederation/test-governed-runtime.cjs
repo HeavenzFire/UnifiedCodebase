@@ -133,3 +133,63 @@ test('releases a claimed task immediately when ledger.start fails, then recovers
   assert.equal(afterRecovery.attempts, 2);
   assert.equal(calls, 1);
 });
+
+
+test('worker claims only its configured capability class', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'foreign-first', payload: { prompt: 'not for this worker' }, requiredCapabilities: ['fabric.v1'] });
+  await ledger.create({ id: 'shared-second', payload: { prompt: 'shared task' }, requiredCapabilities: ['shared-task.v1'] });
+  let executed = '';
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'shared-worker', requiredCapabilities: ['shared-task.v1'],
+    adapter: { async run(input) { executed = input.taskId; return { ok: true }; } }
+  });
+  const result = await runtime.runOnce();
+  assert.equal(result.taskId, 'shared-second');
+  assert.equal(executed, 'shared-second');
+  assert.equal((await ledger.get('foreign-first')).status, 'queued');
+});
+
+test('capability-filtered recovery does not mutate expired tasks owned by another class', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'expired-shared', payload: { prompt: 'shared' }, requiredCapabilities: ['shared-task.v1'], maxAttempts: 1 });
+  await ledger.create({ id: 'expired-fabric', payload: { prompt: 'fabric' }, requiredCapabilities: ['fabric.v1'], maxAttempts: 1 });
+  await ledger.claimNext('shared-worker', { now: 1000, leaseMs: 1000 });
+  await ledger.claimNext('fabric-worker', { now: 1000, leaseMs: 1000 });
+  await ledger.claimNext('shared-worker', { now: 2000, leaseMs: 1000, requiredCapabilities: ['shared-task.v1'] });
+  assert.equal((await ledger.get('expired-shared')).status, 'failed');
+  assert.equal((await ledger.get('expired-fabric')).status, 'claimed');
+});
+
+test('stop during asynchronous authorization aborts and never invokes the adapter', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({
+    id: 'stop-auth-race', payload: { prompt: 'must not execute' },
+    requiredCapabilities: ['shared-task.v1'],
+    metadata: { agentId: 'agent-1', grantId: 'grant-1' }
+  });
+  let enterAuthorization;
+  const entered = new Promise(resolve => { enterAuthorization = resolve; });
+  let releaseAuthorization;
+  let observedSignal;
+  let calls = 0;
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'shared-worker', pollMs: 250,
+    requiredCapabilities: ['shared-task.v1'],
+    capabilityGate: { authorize(request) {
+      observedSignal = request.signal;
+      enterAuthorization();
+      return new Promise(resolve => { releaseAuthorization = resolve; });
+    } },
+    adapter: { async run() { calls++; return { ok: true }; } }
+  });
+  runtime.start();
+  await entered;
+  const stopping = runtime.stop();
+  releaseAuthorization({ allow: true });
+  await stopping;
+  assert.equal(observedSignal.aborted, true);
+  assert.equal(calls, 0);
+  assert.equal((await ledger.get('stop-auth-race')).status, 'queued');
+});
+
