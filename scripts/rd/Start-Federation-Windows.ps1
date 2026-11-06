@@ -5,8 +5,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
-$NodeEntry = Join-Path $RepoRoot 'MicroFederation\\federation-node.cjs'
-$ExampleConfig = Join-Path $RepoRoot 'scripts\\rd\\federation-node-config.example.cjs'
+$NodeEntry = Join-Path $RepoRoot 'MicroFederation\federation-node.cjs'
+$ExampleConfig = Join-Path $RepoRoot 'scripts\rd\federation-node-config.example.cjs'
 
 if (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
     throw "UnifiedCodebase repository not found at $RepoRoot"
@@ -53,7 +53,7 @@ if ($env:HF_OPERATOR_APPROVAL_SECRET.Length -lt 32) {
     throw 'HF_OPERATOR_APPROVAL_SECRET must contain at least 32 characters.'
 }
 
-$GrantVerifier = Join-Path $RepoRoot 'scripts\\rd\\verify-federation-grant.cjs'
+$GrantVerifier = Join-Path $RepoRoot 'scripts\rd\verify-federation-grant.cjs'
 & $Node.Source $GrantVerifier $env:HF_FEDERATION_AGENT_ID $env:HF_FEDERATION_GRANT_ID $env:HF_FEDERATION_TASK_ID
 if ($LASTEXITCODE -ne 0) {
     throw 'Task-scoped capability grant verification failed. Federation node was not started.'
