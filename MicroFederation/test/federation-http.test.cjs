@@ -263,6 +263,7 @@ test('loopback federation performs an approved task round-trip through the gover
   const runtime = createGovernedRuntime({
     ledger,
     workerId: 'windows-governed-worker',
+    clock,
     capabilityGate,
     requiredCapabilities: ['shared-task.v1'],
     adapter: taskAdapter
