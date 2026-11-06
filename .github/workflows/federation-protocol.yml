@@ -42,6 +42,8 @@ jobs:
         run: node --test MicroFederation/test/federation-protocol.test.cjs
       - name: Canonical shared-task adapter tests
         run: node --test MicroFederation/test/shared-task-ledger-adapter.test.cjs
+      - name: Task-read authorization scope tests
+        run: node --test MicroFederation/test/federation-task-read-authorizer.test.cjs
       - name: Isolated federation transport tests (20s per case)
         shell: bash
         run: |
