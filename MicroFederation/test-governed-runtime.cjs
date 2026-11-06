@@ -25,7 +25,10 @@ test('executes a task and persists its result and evidence receipt', async t => 
   const result = await runtime.runOnce();
   const saved = await ledger.get('runtime-ok');
   assert.equal(result.status, 'succeeded');
-  assert.deepEqual(call, { taskId: 'runtime-ok', role: 'verifier', prompt: 'return token' });
+  assert.equal(call.taskId, 'runtime-ok');
+  assert.equal(call.role, 'verifier');
+  assert.equal(call.prompt, 'return token');
+  assert.equal(call.signal instanceof AbortSignal, true);
   assert.equal(saved.status, 'succeeded');
   assert.equal(saved.result.response, 'HF_RUNTIME_OK');
   assert.equal(saved.evidence[0].ref, 'governed-runtime:runtime-ok');
@@ -138,10 +141,11 @@ test('releases a claimed task immediately when ledger.start fails, then recovers
 test('worker claims only its configured capability class', async t => {
   const ledger = await makeLedger(t);
   await ledger.create({ id: 'foreign-first', payload: { prompt: 'not for this worker' }, requiredCapabilities: ['fabric.v1'] });
-  await ledger.create({ id: 'shared-second', payload: { prompt: 'shared task' }, requiredCapabilities: ['shared-task.v1'] });
+  await ledger.create({ id: 'shared-second', payload: { prompt: 'shared task' }, requiredCapabilities: ['shared-task.v1'], metadata: { agentId: 'agent-1', grantId: 'grant-1' } });
   let executed = '';
   const runtime = createGovernedRuntime({
     ledger, workerId: 'shared-worker', requiredCapabilities: ['shared-task.v1'],
+    capabilityGate: { async authorize() { return { allow: true }; } },
     adapter: { async run(input) { executed = input.taskId; return { ok: true }; } }
   });
   const result = await runtime.runOnce();
