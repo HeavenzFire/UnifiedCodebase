@@ -38,4 +38,4 @@ jobs:
           for file in MicroFederation/*.cjs scripts/rd/*.cjs; do node --check "$file"; done
           bash -n scripts/rd/start-federation-android.sh
       - name: Run deterministic federation suites
-        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http-transport.test.cjs MicroFederation/test/federation-http.test.cjs MicroFederation/test/governed-runtime.test.cjs MicroFederation/test/openai-local-inference-adapter.test.cjs
+        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http-transport.test.cjs MicroFederation/test/federation-http.test.cjs MicroFederation/test-governed-runtime.cjs MicroFederation/test/openai-local-inference-adapter.test.cjs
