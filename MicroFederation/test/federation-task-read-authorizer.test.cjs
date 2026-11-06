@@ -16,6 +16,6 @@ test('allows readback only for the configured authenticated peer and exact task'
 test('rejects missing or malformed operator read scope at configuration time', () => {
   assert.throws(() => createTaskReadAuthorizer({ taskId: 'task-123' }), /peerId/);
   assert.throws(() => createTaskReadAuthorizer({ peerId: 'android-a67l' }), /taskId/);
-  assert.throws(() => createTaskReadAuthorizer({ peerId: '0.0.0.0', taskId: 'task-123' }), /peerId/);
+  assert.throws(() => createTaskReadAuthorizer({ peerId: '../peer', taskId: 'task-123' }), /peerId/);
   assert.throws(() => createTaskReadAuthorizer({ peerId: 'android-a67l', taskId: '../other' }), /taskId/);
 });
