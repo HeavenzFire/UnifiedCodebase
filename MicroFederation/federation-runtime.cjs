@@ -14,6 +14,7 @@ function createFederationRuntime({
   verifyApproval,
   verifyAttestation,
   capabilityGate,
+  authorizeTaskRead = async () => false,
   bootstrapGrant = null,
   inferenceBaseUrl = 'http://127.0.0.1:11820',
   inferenceModel = 'heavenzfire-qwen-0.5b',
@@ -53,6 +54,7 @@ function createFederationRuntime({
     adapter: taskAdapter,
     capabilityGate,
     workerId,
+    requiredCapabilities: ['shared-task.v1'],
     leaseMs,
     pollMs,
     clock,
@@ -61,6 +63,7 @@ function createFederationRuntime({
   const server = createFederationHttpServer({
     protocol,
     taskAdapter,
+    authorizeTaskRead,
     host,
     port,
     clock

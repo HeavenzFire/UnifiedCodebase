@@ -29,11 +29,14 @@ test('rejects attempts to self-assign the fabric routing capability without a tr
 });
 
 
-test('expired lease exhaustion is swept regardless of claimant capability filter',async t=>{
+test('expired lease exhaustion does not mutate a task outside the claimant capability filter',async t=>{
  const ledger=await makeLedger(t);
  await ledger.create({id:'expired-other-capability',payload:{ok:true},requiredCapabilities:['capability.alpha'],maxAttempts:1},{now:1000});
  await ledger.claimNext('worker-alpha',{now:1000,leaseMs:1000,requiredCapabilities:['capability.alpha']});
  assert.equal(await ledger.claimNext('worker-beta',{now:2000,leaseMs:1000,requiredCapabilities:['capability.beta']}),null);
+ const untouched=await ledger.get('expired-other-capability');
+ assert.equal(untouched.status,'claimed');
+ assert.equal(await ledger.claimNext('worker-alpha',{now:2000,leaseMs:1000,requiredCapabilities:['capability.alpha']}),null);
  const task=await ledger.get('expired-other-capability');
  assert.equal(task.status,'failed');
  assert.match(task.error,/lease expired/);

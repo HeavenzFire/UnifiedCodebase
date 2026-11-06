@@ -45,9 +45,11 @@ The Windows config example creates the local TaskLedger, CapabilityStore, capabi
 
 The launcher verifies the task-scoped grant and local inference health before starting. It binds only to 127.0.0.1:18100. Keep this PowerShell process open.
 
+Remote task reads are denied by default. If Android needs to poll for completion, the local runtime must be configured with an `authorizeTaskRead` callback that authorizes the authenticated peer AND the exact task ID against a trusted task-scoped grant or an allowlist bound to the approved record. A peer-wide `task.read` capability alone is insufficient. Do not replace this with a permissive callback.
+
 ## 3. Transfer the signed package to Android
 
-The package contains the approved canonical record and a signed, task-bound approval proof. It does not contain the operator approval secret.
+The package contains the approved canonical record and a signed, task-bound approval proof. It does not contain the operator approval secret. The current local HMAC authority proves possession of a shared secret and binds the proof to a task hash; it does not independently authenticate the human identity represented by the caller-supplied actor string. Treat identity assurance as unresolved until an independent identity provider or hardware-backed operator credential is integrated.
 
 From Termux, copy it over the already-authorized SSH connection. The remote path is relative to the Windows SSH user's home directory:
 

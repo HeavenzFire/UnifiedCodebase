@@ -30,6 +30,20 @@ test('inference adapter accepts loopback only and sends a bounded deterministic 
   assert.equal(captured.body.stream, false);
 });
 
+test('inference adapter refuses redirects so prompts cannot be forwarded to another origin', async () => {
+  let captured;
+  const adapter = createOpenAICompatibleInferenceAdapter({
+    baseUrl: 'http://127.0.0.1:11820',
+    fetchImpl: async (url, options) => {
+      captured = options;
+      throw Object.assign(new Error('redirect mode error'), { name: 'TypeError' });
+    }
+  });
+  await assert.rejects(adapter.run({ taskId: 'redirect-test', prompt: 'private prompt' }), /redirect mode error/);
+  assert.equal(captured.redirect, 'error');
+  assert.equal(captured.cache, 'no-store');
+});
+
 test('inference adapter rejects non-loopback backends', () => {
   assert.throws(() => createOpenAICompatibleInferenceAdapter({ baseUrl: 'http://192.0.2.1:11820' }), /loopback HTTP endpoints only/);
 });

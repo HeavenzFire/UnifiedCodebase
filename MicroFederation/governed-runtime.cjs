@@ -9,7 +9,7 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
  */
 function createGovernedRuntime({
   ledger, adapter, capabilityGate = null, workerId,
-  leaseMs = 120000, pollMs = 1000, retryDelayMs = 1000,
+  leaseMs = 120000, pollMs = 1000, retryDelayMs = 1000, requiredCapabilities = [],
   clock = () => Date.now(), onError = () => {}
 } = {}) {
   if (!ledger || !['claimNext', 'start', 'releaseClaim', 'complete', 'fail'].every(k => typeof ledger[k] === 'function')) {
@@ -20,19 +20,23 @@ function createGovernedRuntime({
   if (!Number.isInteger(leaseMs) || leaseMs < 1000 || leaseMs > 3600000) throw Error('leaseMs must be 1000..3600000');
   if (!Number.isInteger(pollMs) || pollMs < 250 || pollMs > 60000) throw Error('pollMs must be 250..60000');
   if (!Number.isInteger(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 86400000) throw Error('retryDelayMs must be 0..86400000');
+  if (!Array.isArray(requiredCapabilities) || requiredCapabilities.length > 32 || requiredCapabilities.some(x => typeof x !== 'string' || !/^[a-z][a-z0-9._-]{0,63}$/.test(x))) throw Error('requiredCapabilities must contain up to 32 capability slugs');
+  const workerCapabilities = Object.freeze([...new Set(requiredCapabilities)].sort());
   if (typeof clock !== 'function' || typeof onError !== 'function') throw Error('clock and onError must be functions');
 
   let running = false;
   let stopping = false;
   let timer = null;
   let inFlight = null;
+  let runOnceInFlight = null;
   let activeController = null;
   let completed = 0;
   let failed = 0;
   let blocked = 0;
   let lastError = null;
 
-  async function authorize(task) {
+  async function authorize(task, signal) {
+    if (signal && signal.aborted) throw signal.reason || Error('worker stopped before authorization');
     const required = Array.isArray(task.requiredCapabilities) ? task.requiredCapabilities : [];
     if (!required.length) return;
     if (!capabilityGate || typeof capabilityGate.authorize !== 'function') {
@@ -49,29 +53,39 @@ function createGovernedRuntime({
         taskId: task.id,
         capability,
         action: metadata.action || capability,
-        approvalRequestId: metadata.approvalRequestId || null
+        approvalRequestId: metadata.approvalRequestId || null,
+        signal
       });
+      if (signal && signal.aborted) throw signal.reason || Error('worker stopped during authorization');
       if (!decision || decision.allow !== true) {
         throw Object.assign(Error('capability denied: ' + capability + ' (' + (decision && decision.reason || 'no authorization') + ')'), { policyDenied: true });
       }
     }
   }
 
-  async function runOnce({ now = clock() } = {}) {
-    const claimed = await ledger.claimNext(workerId, { now, leaseMs });
+  async function runOnceInternal({ now = clock() } = {}) {
+    if (stopping) return { status: 'stopping' };
+    const claimed = await ledger.claimNext(workerId, { now, leaseMs, requiredCapabilities: workerCapabilities });
     if (!claimed) return { status: 'idle' };
+    if (stopping) {
+      await ledger.releaseClaim(claimed.id, workerId, {
+        now, retryDelayMs: 0, reason: 'worker stopped before task start'
+      });
+      return { status: 'stopped', taskId: claimed.id };
+    }
     let started = false;
-    let controller = null;
+    const controller = new AbortController();
+    activeController = controller;
     try {
       await ledger.start(claimed.id, workerId, { now });
       started = true;
-      await authorize(claimed);
+      if (controller.signal.aborted) throw controller.signal.reason || Error('worker stopped before execution');
+      await authorize(claimed, controller.signal);
+      if (controller.signal.aborted) throw controller.signal.reason || Error('worker stopped before execution');
       const payload = claimed.payload;
       if (!payload || typeof payload.prompt !== 'string' || !payload.prompt.trim()) {
         throw Object.assign(Error('task payload must contain a non-empty prompt'), { policyDenied: true });
       }
-      controller = new AbortController();
-      activeController = controller;
       const result = await adapter.run({
         taskId: claimed.id,
         role: payload.role || 'worker',
@@ -114,6 +128,18 @@ function createGovernedRuntime({
     }
   }
 
+
+  async function runOnce(options = {}) {
+    if (runOnceInFlight) return { status: 'busy' };
+    const operation = runOnceInternal(options);
+    runOnceInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (runOnceInFlight === operation) runOnceInFlight = null;
+    }
+  }
+
   async function cycle() {
     if (stopping || inFlight) return;
     inFlight = runOnce().catch(error => {
@@ -142,6 +168,7 @@ function createGovernedRuntime({
       if (timer) clearTimeout(timer);
       timer = null;
       if (inFlight) await inFlight;
+      if (runOnceInFlight) await runOnceInFlight;
       running = false;
       return this.status();
     },

@@ -1,6 +1,7 @@
 'use strict';
 
-const test = require('node:test');
+const nodeTest = require('node:test');
+const test = (name, fn) => nodeTest(name, { timeout: 10000 }, fn);
 const assert = require('node:assert/strict');
 const { createFederationProtocol } = require('../federation-protocol.cjs');
 const { createFederationHttpServer } = require('../federation-http-server.cjs');
@@ -19,7 +20,7 @@ function protocolPair({ serverCapabilities = ['task.submit', 'task.read'], clien
   });
   const client = createFederationProtocol({
     nodeId: 'android-a67l', capabilities: clientCapabilities, clock, nonce,
-    peers: [{ nodeId: 'windows-zdh', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit'] }]
+    peers: [{ nodeId: 'windows-zdh', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit', 'task.read'] }]
   });
   return { server, client };
 }
@@ -38,14 +39,22 @@ async function startServer(options = {}) {
       return item ? { schema: 'heavenzfire.shared-task-ledger-adapter.v1', canonicalRecord: item.record, ledger: { status: 'queued' } } : null;
     }
   };
-  const runtime = createFederationHttpServer({ protocol: pair.server, taskAdapter });
+  const runtime = createFederationHttpServer({
+    protocol: pair.server,
+    taskAdapter,
+    clock,
+    port: 0,
+    authorizeTaskRead: async ({ peerId, taskId }) => ({
+      allow: peerId === 'android-a67l' && taskId === record.taskId
+    })
+  });
   const address = await runtime.listen();
   const client = createFederationHttpClient({
     protocol: pair.client,
     peerNodeId: 'windows-zdh',
     baseUrl: 'http://127.0.0.1:' + address.port
   });
-  return { ...pair, runtime, client, address, received };
+  return { serverProtocol: pair.server, clientProtocol: pair.client, runtime, client, address, received };
 }
 
 const record = {
@@ -68,7 +77,7 @@ test('HTTP binding listens on loopback only and exposes health without publishin
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.bind, '127.0.0.1');
-  assert.throws(() => createFederationHttpServer({ protocol: f.server, taskAdapter: { createFromCanonical() {} }, host: '0.0.0.0' }), /127.0.0.1 only/);
+  assert.throws(() => createFederationHttpServer({ protocol: f.serverProtocol, taskAdapter: { createFromCanonical() {} }, host: '0.0.0.0' }), /127.0.0.1 only/);
 });
 
 test('authenticated handshake permits a signed task submit only with task.submit capability', async t => {
@@ -133,10 +142,10 @@ test('task retrieval is denied without task.read capability', async t => {
 test('client refuses non-loopback and non-HTTP endpoints', async t => {
   const f = await startServer(); t.after(() => f.runtime.close());
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://192.0.2.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://192.0.2.1:18100'
   }), /loopback URLs only/);
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'https://127.0.0.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'https://127.0.0.1:18100'
   }), /must use HTTP inside the SSH tunnel/);
 });
 
@@ -160,12 +169,12 @@ test('client disables redirects for signed federation payloads', async () => {
   assert.equal(requestOptions.cache, 'no-store');
 });
 
-test('client rejects localhost aliases and credential-bearing loopback URLs', async () => {
+test('client rejects localhost aliases and credential-bearing loopback URLs', async t => {
   const f = await startServer(); t.after(() => f.runtime.close());
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
   }), /numeric loopback URLs only/);
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://user:pass@127.0.0.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://user:pass@127.0.0.1:18100'
   }), /credentials are not allowed/);
 });

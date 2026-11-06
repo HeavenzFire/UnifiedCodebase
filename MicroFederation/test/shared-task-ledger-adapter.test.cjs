@@ -103,6 +103,7 @@ test('GovernedRuntime owns execution and adapter rechecks the trusted attestatio
   const runtime = createGovernedRuntime({
     ledger: f.ledger,
     workerId: 'worker-zdh',
+    clock: f.now,
     capabilityGate: { async authorize() { return { allow: true }; } },
     adapter: f.adapter
   });
@@ -123,6 +124,7 @@ test('tampered approval metadata is blocked by the governed runtime before execu
   const runtime = createGovernedRuntime({
     ledger: f.ledger,
     workerId: 'worker-zdh',
+    clock: f.now,
     capabilityGate: { async authorize() { return { allow: true }; } },
     adapter: f.adapter
   });

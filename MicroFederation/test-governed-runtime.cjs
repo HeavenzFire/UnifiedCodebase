@@ -25,7 +25,10 @@ test('executes a task and persists its result and evidence receipt', async t => 
   const result = await runtime.runOnce();
   const saved = await ledger.get('runtime-ok');
   assert.equal(result.status, 'succeeded');
-  assert.deepEqual(call, { taskId: 'runtime-ok', role: 'verifier', prompt: 'return token' });
+  assert.equal(call.taskId, 'runtime-ok');
+  assert.equal(call.role, 'verifier');
+  assert.equal(call.prompt, 'return token');
+  assert.equal(call.signal instanceof AbortSignal, true);
   assert.equal(saved.status, 'succeeded');
   assert.equal(saved.result.response, 'HF_RUNTIME_OK');
   assert.equal(saved.evidence[0].ref, 'governed-runtime:runtime-ok');
@@ -106,7 +109,7 @@ test('supervisor starts one polling loop and stops cleanly', async t => {
 
 test('releases a claimed task immediately when ledger.start fails, then recovers it', async t => {
   const ledger = await makeLedger(t);
-  await ledger.create({ id: 'runtime-start-recovery', payload: { prompt: 'recover me' }, maxAttempts: 2 });
+  await ledger.create({ id: 'runtime-start-recovery', payload: { prompt: 'recover me' }, maxAttempts: 2 }, { now: 1000 });
   const start = ledger.start.bind(ledger);
   let rejectOnce = true;
   ledger.start = async (...args) => {
@@ -132,4 +135,96 @@ test('releases a claimed task immediately when ledger.start fails, then recovers
   assert.equal(afterRecovery.status, 'succeeded');
   assert.equal(afterRecovery.attempts, 2);
   assert.equal(calls, 1);
+});
+
+
+test('worker claims only its configured capability class', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'foreign-first', payload: { prompt: 'not for this worker' }, requiredCapabilities: ['fabric.v1'] });
+  await ledger.create({ id: 'shared-second', payload: { prompt: 'shared task' }, requiredCapabilities: ['shared-task.v1'], metadata: { agentId: 'agent-1', grantId: 'grant-1' } });
+  let executed = '';
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'shared-worker', requiredCapabilities: ['shared-task.v1'],
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter: { async run(input) { executed = input.taskId; return { ok: true }; } }
+  });
+  const result = await runtime.runOnce();
+  assert.equal(result.taskId, 'shared-second');
+  assert.equal(executed, 'shared-second');
+  assert.equal((await ledger.get('foreign-first')).status, 'queued');
+});
+
+test('capability-filtered recovery does not mutate expired tasks owned by another class', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'expired-shared', payload: { prompt: 'shared' }, requiredCapabilities: ['shared-task.v1'], maxAttempts: 1 }, { now: 1000 });
+  await ledger.create({ id: 'expired-fabric', payload: { prompt: 'fabric' }, requiredCapabilities: ['fabric.v1'], maxAttempts: 1 }, { now: 1000 });
+  await ledger.claimNext('shared-worker', { now: 1000, leaseMs: 1000 });
+  await ledger.claimNext('fabric-worker', { now: 1000, leaseMs: 1000 });
+  await ledger.claimNext('shared-worker', { now: 2000, leaseMs: 1000, requiredCapabilities: ['shared-task.v1'] });
+  assert.equal((await ledger.get('expired-shared')).status, 'failed');
+  assert.equal((await ledger.get('expired-fabric')).status, 'claimed');
+});
+
+test('stop during asynchronous authorization aborts and never invokes the adapter', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({
+    id: 'stop-auth-race', payload: { prompt: 'must not execute' },
+    requiredCapabilities: ['shared-task.v1'],
+    metadata: { agentId: 'agent-1', grantId: 'grant-1' }
+  });
+  let enterAuthorization;
+  const entered = new Promise(resolve => { enterAuthorization = resolve; });
+  let releaseAuthorization;
+  let observedSignal;
+  let calls = 0;
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'shared-worker', pollMs: 250,
+    requiredCapabilities: ['shared-task.v1'],
+    capabilityGate: { authorize(request) {
+      observedSignal = request.signal;
+      enterAuthorization();
+      return new Promise(resolve => { releaseAuthorization = resolve; });
+    } },
+    adapter: { async run() { calls++; return { ok: true }; } }
+  });
+  runtime.start();
+  await entered;
+  const stopping = runtime.stop();
+  releaseAuthorization({ allow: true });
+  await stopping;
+  assert.equal(observedSignal.aborted, true);
+  assert.equal(calls, 0);
+  assert.equal((await ledger.get('stop-auth-race')).status, 'queued');
+});
+
+
+
+test('serializes concurrent direct runOnce calls for a single worker instance', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'single-flight-a', payload: { prompt: 'first' } });
+  await ledger.create({ id: 'single-flight-b', payload: { prompt: 'second' } });
+  let enterAdapter;
+  const entered = new Promise(resolve => { enterAdapter = resolve; });
+  let releaseAdapter;
+  let calls = 0;
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'single-flight-worker',
+    adapter: { async run() {
+      calls++;
+      enterAdapter();
+      await new Promise(resolve => { releaseAdapter = resolve; });
+      return { ok: true };
+    } }
+  });
+  const first = runtime.runOnce();
+  await entered;
+  const second = await runtime.runOnce();
+  assert.equal(second.status, 'busy');
+  assert.equal(calls, 1);
+  releaseAdapter();
+  const result = await first;
+  assert.equal(result.status, 'succeeded');
+  assert.equal(calls, 1);
+  assert.equal((await ledger.get('single-flight-a')).status, 'succeeded');
+  assert.equal((await ledger.get('single-flight-b')).status, 'queued');
 });

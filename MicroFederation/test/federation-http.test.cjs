@@ -52,6 +52,10 @@ async function withServer(t, options = {}) {
       }
       accepted.set(record.taskId, record);
       return { id: record.taskId, status: 'queued' };
+    },
+    async projectToCanonical(taskId) {
+      const record = accepted.get(taskId);
+      return record ? { taskId: record.taskId, goal: record.goal } : null;
     }
   };
   const server = createFederationHttpServer({
@@ -89,7 +93,7 @@ test('HTTP federation handshake and task submission work over a loopback endpoin
   assert.deepEqual(session.grantedCapabilities, ['task.read', 'task.submit']);
   const result = await f.client.submitTask(approvedRecord(), 'signed-operator-proof');
   assert.equal(result.ok, true);
-  assert.equal(result.status, 202);
+  assert.equal(result.status, 'queued');
   assert.equal(result.taskId, 'hf-task-http-001');
   assert.equal(f.accepted.size, 1);
 });
@@ -104,6 +108,26 @@ test('task submission is refused before handshake and duplicate delivery is idem
   assert.equal(first.taskId, second.taskId);
   assert.equal(f.accepted.size, 1);
   assert.equal(f.getCalls(), 2);
+});
+
+test('remote task reads require trusted peer-and-task scoped authorization', async t => {
+  const f = await withServer(t, {
+    authorizeTaskRead: async ({ peerId, taskId }) => ({
+      allow: peerId === 'android-a67l' && taskId === 'allowed-task'
+    })
+  });
+  await f.client.handshake();
+  await f.client.submitTask(approvedRecord('allowed-task'), 'signed-operator-proof');
+  const allowed = await f.client.getTask('allowed-task');
+  assert.equal(allowed.projection.taskId, 'allowed-task');
+  await assert.rejects(f.client.getTask('different-task'), /task_read_denied/);
+});
+
+test('remote task reads are denied when no trusted task-scope authorizer is configured', async t => {
+  const f = await withServer(t);
+  await f.client.handshake();
+  await f.client.submitTask(approvedRecord('private-task'), 'signed-operator-proof');
+  await assert.rejects(f.client.getTask('private-task'), /task_read_denied/);
 });
 
 test('server rejects a forged message source/target binding', async t => {
@@ -157,7 +181,7 @@ test('unapproved or incorrectly keyed peers cannot complete the handshake', asyn
     protocol: badClientProtocol, peerNodeId: 'windows-zdh',
     baseUrl: 'http://127.0.0.1:' + address.port
   });
-  await assert.rejects(client.handshake(), /federation request failed/);
+  await assert.rejects(client.handshake(['task.submit']), /federation request failed/);
 });
 
 
@@ -239,7 +263,9 @@ test('loopback federation performs an approved task round-trip through the gover
   const runtime = createGovernedRuntime({
     ledger,
     workerId: 'windows-governed-worker',
+    clock,
     capabilityGate,
+    requiredCapabilities: ['shared-task.v1'],
     adapter: taskAdapter
   });
   const completed = await runtime.runOnce({ now: now });
