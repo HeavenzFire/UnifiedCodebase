@@ -93,7 +93,7 @@ test('HTTP federation handshake and task submission work over a loopback endpoin
   assert.deepEqual(session.grantedCapabilities, ['task.read', 'task.submit']);
   const result = await f.client.submitTask(approvedRecord(), 'signed-operator-proof');
   assert.equal(result.ok, true);
-  assert.equal(result.status, 202);
+  assert.equal(result.status, 'queued');
   assert.equal(result.taskId, 'hf-task-http-001');
   assert.equal(f.accepted.size, 1);
 });
@@ -181,7 +181,7 @@ test('unapproved or incorrectly keyed peers cannot complete the handshake', asyn
     protocol: badClientProtocol, peerNodeId: 'windows-zdh',
     baseUrl: 'http://127.0.0.1:' + address.port
   });
-  await assert.rejects(client.handshake(), /federation request failed/);
+  await assert.rejects(client.handshake(['task.submit']), /federation request failed/);
 });
 
 
