@@ -28,6 +28,7 @@ function createGovernedRuntime({
   let stopping = false;
   let timer = null;
   let inFlight = null;
+  let runOnceInFlight = null;
   let activeController = null;
   let completed = 0;
   let failed = 0;
@@ -62,9 +63,16 @@ function createGovernedRuntime({
     }
   }
 
-  async function runOnce({ now = clock() } = {}) {
+  async function runOnceInternal({ now = clock() } = {}) {
+    if (stopping) return { status: 'stopping' };
     const claimed = await ledger.claimNext(workerId, { now, leaseMs, requiredCapabilities: workerCapabilities });
     if (!claimed) return { status: 'idle' };
+    if (stopping) {
+      await ledger.releaseClaim(claimed.id, workerId, {
+        now, retryDelayMs: 0, reason: 'worker stopped before task start'
+      });
+      return { status: 'stopped', taskId: claimed.id };
+    }
     let started = false;
     const controller = new AbortController();
     activeController = controller;
@@ -120,6 +128,18 @@ function createGovernedRuntime({
     }
   }
 
+
+  async function runOnce(options = {}) {
+    if (runOnceInFlight) return { status: 'busy' };
+    const operation = runOnceInternal(options);
+    runOnceInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (runOnceInFlight === operation) runOnceInFlight = null;
+    }
+  }
+
   async function cycle() {
     if (stopping || inFlight) return;
     inFlight = runOnce().catch(error => {
@@ -148,6 +168,7 @@ function createGovernedRuntime({
       if (timer) clearTimeout(timer);
       timer = null;
       if (inFlight) await inFlight;
+      if (runOnceInFlight) await runOnceInFlight;
       running = false;
       return this.status();
     },
