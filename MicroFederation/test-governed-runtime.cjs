@@ -109,7 +109,7 @@ test('supervisor starts one polling loop and stops cleanly', async t => {
 
 test('releases a claimed task immediately when ledger.start fails, then recovers it', async t => {
   const ledger = await makeLedger(t);
-  await ledger.create({ id: 'runtime-start-recovery', payload: { prompt: 'recover me' }, maxAttempts: 2 });
+  await ledger.create({ id: 'runtime-start-recovery', payload: { prompt: 'recover me' }, maxAttempts: 2 }, { now: 1000 });
   const start = ledger.start.bind(ledger);
   let rejectOnce = true;
   ledger.start = async (...args) => {
@@ -156,8 +156,8 @@ test('worker claims only its configured capability class', async t => {
 
 test('capability-filtered recovery does not mutate expired tasks owned by another class', async t => {
   const ledger = await makeLedger(t);
-  await ledger.create({ id: 'expired-shared', payload: { prompt: 'shared' }, requiredCapabilities: ['shared-task.v1'], maxAttempts: 1 });
-  await ledger.create({ id: 'expired-fabric', payload: { prompt: 'fabric' }, requiredCapabilities: ['fabric.v1'], maxAttempts: 1 });
+  await ledger.create({ id: 'expired-shared', payload: { prompt: 'shared' }, requiredCapabilities: ['shared-task.v1'], maxAttempts: 1 }, { now: 1000 });
+  await ledger.create({ id: 'expired-fabric', payload: { prompt: 'fabric' }, requiredCapabilities: ['fabric.v1'], maxAttempts: 1 }, { now: 1000 });
   await ledger.claimNext('shared-worker', { now: 1000, leaseMs: 1000 });
   await ledger.claimNext('fabric-worker', { now: 1000, leaseMs: 1000 });
   await ledger.claimNext('shared-worker', { now: 2000, leaseMs: 1000, requiredCapabilities: ['shared-task.v1'] });
