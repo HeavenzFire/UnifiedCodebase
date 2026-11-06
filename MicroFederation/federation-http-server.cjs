@@ -142,9 +142,10 @@ function createFederationHttpServer({ protocol, taskAdapter, authorizeTaskRead =
     close() {
       return new Promise((resolve, reject) => {
         server.close(error => error ? reject(error) : resolve());
-        // Close idle keep-alive sockets so shutdown cannot wait indefinitely
-        // for remote clients that have finished their request but retain a pool.
-        if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+        // Close remaining HTTP connections after the listener stops accepting
+        // requests; explicit shutdown must not hang on remote keep-alive pools.
+        if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+        else if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
       });
     },
     sessionCount() { return sessions.size; }
