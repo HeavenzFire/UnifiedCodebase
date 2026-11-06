@@ -35,6 +35,15 @@ test('supports relative scheduling and cancellation', () => {
   assert.deepEqual(seen, ['kept']);
 });
 
+test('excludes cancelled future events from the pending count', () => {
+  const runtime = new TemporalRuntime({ handlers: { noop() {} } });
+  const cancelled = runtime.scheduleAt(100, 'noop');
+  assert.equal(runtime.cancel(cancelled), true);
+  assert.deepEqual(runtime.advanceTo(0), { now: 0, executed: 0, pending: 0 });
+  assert.equal(runtime.pendingCount, 0);
+  assert.equal(runtime.snapshot().events.length, 0);
+});
+
 test('handlers can enqueue deterministic follow-up events in the same advance', () => {
   const seen = [];
   const runtime = new TemporalRuntime({
