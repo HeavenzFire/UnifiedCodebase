@@ -38,7 +38,13 @@ async function startServer(options = {}) {
       return item ? { schema: 'heavenzfire.shared-task-ledger-adapter.v1', canonicalRecord: item.record, ledger: { status: 'queued' } } : null;
     }
   };
-  const runtime = createFederationHttpServer({ protocol: pair.server, taskAdapter });
+  const runtime = createFederationHttpServer({
+    protocol: pair.server,
+    taskAdapter,
+    authorizeTaskRead: async ({ peerId, taskId }) => ({
+      allow: peerId === 'android-a67l' && taskId === record.taskId
+    })
+  });
   const address = await runtime.listen();
   const client = createFederationHttpClient({
     protocol: pair.client,
