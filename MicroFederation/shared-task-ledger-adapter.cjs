@@ -180,7 +180,16 @@ function createSharedTaskLedgerAdapter({ ledger, contract, verifyApproval, verif
     if (!task || task.status !== 'running') {
       throw Object.assign(new Error('shared task must be running under GovernedRuntime'), { policyDenied: true });
     }
-    const authorization = await authorizeExecution(task);
+    let authorization;
+    try {
+      authorization = await authorizeExecution(task);
+    } catch (error) {
+      // Integrity and approval-attestation failures are policy denials, not
+      // transient provider failures. Never spend retry attempts on them.
+      throw Object.assign(new Error(String(error && error.message || 'approval attestation verification failed')), {
+        policyDenied: true
+      });
+    }
     const envelope = task.metadata.heavenzfireSharedTaskAdapter;
     const record = envelope.canonicalRecord;
     if (prompt !== task.payload.prompt || prompt !== record.goal ||
