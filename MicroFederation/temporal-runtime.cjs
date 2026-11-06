@@ -168,7 +168,7 @@ class TemporalRuntime {
         }
       }
       this.now = targetTime;
-      return { now: this.now, executed, pending: this.events.length };
+      return { now: this.now, executed, pending: this.pendingCount };
     } finally {
       this.running = false;
     }
