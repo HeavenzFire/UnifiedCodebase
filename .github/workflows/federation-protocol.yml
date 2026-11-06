@@ -42,8 +42,35 @@ jobs:
         run: node --test MicroFederation/test/federation-protocol.test.cjs
       - name: Canonical shared-task adapter tests
         run: node --test MicroFederation/test/shared-task-ledger-adapter.test.cjs
-      - name: Federation transport tests
-        run: node --test MicroFederation/test/federation-http-transport.test.cjs
+      - name: Isolated federation transport tests (20s per case)
+        shell: bash
+        run: |
+          set +e
+          failures=0
+          patterns=(
+            'HTTP binding listens on loopback'
+            'authenticated handshake permits'
+            'task submission requires a handshake'
+            'server rejects unsigned'
+            'task submission still passes'
+            'authenticated task.read'
+            'task retrieval is denied'
+            'client refuses non-loopback'
+            'client disables redirects'
+            'client rejects localhost aliases'
+          )
+          for pattern in "${patterns[@]}"; do
+            echo "::group::transport test: $pattern"
+            timeout 20s node --test --test-name-pattern="$pattern" MicroFederation/test/federation-http-transport.test.cjs
+            result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then
+              echo "FAILED_OR_TIMED_OUT: $pattern (exit $result)"
+              failures=$((failures + 1))
+            fi
+          done
+          echo "Transport isolated failures/timeouts: $failures"
+          test "$failures" -eq 0
       - name: Federation HTTP and task-scope tests
         run: node --test MicroFederation/test/federation-http.test.cjs
       - name: Governed worker, queue isolation, and stop-race tests
