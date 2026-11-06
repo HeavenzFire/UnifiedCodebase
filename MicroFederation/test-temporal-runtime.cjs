@@ -69,7 +69,7 @@ test('rejects invalid time, unknown handlers, and non-JSON payloads', () => {
   const runtime = new TemporalRuntime({ handlers: { noop() {} } });
   assert.throws(() => runtime.advanceTo(-1), /non-negative/);
   assert.throws(() => runtime.scheduleAt(0, 'missing'), /unregistered handler/);
-  assert.throws(() => runtime.scheduleAt(0, 'noop', { value: undefined }), /JSON-serializable/);
+  assert.throws(() => runtime.scheduleAt(0, 'noop', { value: undefined }), /must not contain undefined values/);
   assert.throws(() => runtime.scheduleIn(Infinity, 'noop'), /finite/);
 });
 
