@@ -72,6 +72,6 @@ module.exports = {
   leaseMs: 120000,
   pollMs: 1000,
   onWorkerError(error) {
-    process.stderr.write('FEDERATION_WORKER_ERROR: ' + String(error && error.message || error).slice(0, 512) + '\\n');
+    process.stderr.write('FEDERATION_WORKER_ERROR: ' + String(error && error.message || error).slice(0, 512) + '\n');
   }
 };
