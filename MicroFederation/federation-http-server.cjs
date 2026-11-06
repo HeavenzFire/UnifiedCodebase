@@ -45,13 +45,14 @@ function readJson(request) {
   });
 }
 
-function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1', port = 18100, clock = () => Date.now() }) {
+function createFederationHttpServer({ protocol, taskAdapter, authorizeTaskRead = async () => false, host = '127.0.0.1', port = 18100, clock = () => Date.now() }) {
   if (!protocol || typeof protocol.acceptHello !== 'function' || typeof protocol.verifyPeerMessage !== 'function') {
     throw new Error('configured federation protocol instance is required');
   }
   if (!taskAdapter || typeof taskAdapter.createFromCanonical !== 'function') {
     throw new Error('canonical shared-task adapter is required');
   }
+  if (typeof authorizeTaskRead !== 'function') throw new Error('trusted task-read authorizer is required');
   if (host !== '127.0.0.1') throw new Error('federation HTTP server must bind to 127.0.0.1 only');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('port must be 0..65535');
   if (typeof clock !== 'function') throw new Error('clock must be a function');
@@ -109,6 +110,12 @@ function createFederationHttpServer({ protocol, taskAdapter, host = '127.0.0.1',
       if (body.type !== 'task_get' || typeof body.taskId !== 'string' || typeof taskAdapter.projectToCanonical !== 'function') {
         return json(response, 400, { ok: false, error: 'invalid_task_query' });
       }
+      const readDecision = await authorizeTaskRead(Object.freeze({
+        peerId: session.peerId,
+        taskId: body.taskId,
+        session: Object.freeze({ capabilities: Object.freeze([...session.capabilities]), expiresAt: session.expiresAt })
+      }));
+      if (!readDecision || readDecision.allow !== true) return json(response, 403, { ok: false, error: 'task_read_denied' });
       const projection = await taskAdapter.projectToCanonical(body.taskId);
       if (!projection) return json(response, 404, { ok: false, error: 'task_not_found' });
       return json(response, 200, { ok: true, projection });
