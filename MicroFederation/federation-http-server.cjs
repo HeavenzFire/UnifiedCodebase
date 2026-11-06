@@ -140,7 +140,12 @@ function createFederationHttpServer({ protocol, taskAdapter, authorizeTaskRead =
       return Object.freeze({ host, port: address.port, service: 'heavenzfire-federation-http', protocol: PROTOCOL });
     },
     close() {
-      return new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      return new Promise((resolve, reject) => {
+        server.close(error => error ? reject(error) : resolve());
+        // Close idle keep-alive sockets so shutdown cannot wait indefinitely
+        // for remote clients that have finished their request but retain a pool.
+        if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+      });
     },
     sessionCount() { return sessions.size; }
   });
