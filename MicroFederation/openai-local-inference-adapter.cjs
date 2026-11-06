@@ -15,6 +15,8 @@ function createOpenAICompatibleInferenceAdapter({ baseUrl = 'http://127.0.0.1:11
     const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     const response = await fetchImpl(new URL('/v1/chat/completions', url), {
       method: 'POST',
+      redirect: 'error',
+      cache: 'no-store',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         model,
