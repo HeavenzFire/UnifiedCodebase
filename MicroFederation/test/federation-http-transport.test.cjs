@@ -19,7 +19,7 @@ function protocolPair({ serverCapabilities = ['task.submit', 'task.read'], clien
   });
   const client = createFederationProtocol({
     nodeId: 'android-a67l', capabilities: clientCapabilities, clock, nonce,
-    peers: [{ nodeId: 'windows-zdh', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit'] }]
+    peers: [{ nodeId: 'windows-zdh', secret, approved: true, approvedAt: APPROVED_AT, allowedCapabilities: ['task.submit', 'task.read'] }]
   });
   return { server, client };
 }
