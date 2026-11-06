@@ -1,6 +1,7 @@
 'use strict';
 
-const test = require('node:test');
+const nodeTest = require('node:test');
+const test = (name, fn) => nodeTest(name, { timeout: 10000 }, fn);
 const assert = require('node:assert/strict');
 const { createFederationProtocol } = require('../federation-protocol.cjs');
 const { createFederationHttpServer } = require('../federation-http-server.cjs');
