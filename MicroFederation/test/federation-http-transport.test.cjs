@@ -77,7 +77,7 @@ test('HTTP binding listens on loopback only and exposes health without publishin
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.bind, '127.0.0.1');
-  assert.throws(() => createFederationHttpServer({ protocol: f.server, taskAdapter: { createFromCanonical() {} }, host: '0.0.0.0' }), /127.0.0.1 only/);
+  assert.throws(() => createFederationHttpServer({ protocol: f.serverProtocol, taskAdapter: { createFromCanonical() {} }, host: '0.0.0.0' }), /127.0.0.1 only/);
 });
 
 test('authenticated handshake permits a signed task submit only with task.submit capability', async t => {
@@ -172,9 +172,9 @@ test('client disables redirects for signed federation payloads', async () => {
 test('client rejects localhost aliases and credential-bearing loopback URLs', async t => {
   const f = await startServer(); t.after(() => f.runtime.close());
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
   }), /numeric loopback URLs only/);
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://user:pass@127.0.0.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://user:pass@127.0.0.1:18100'
   }), /credentials are not allowed/);
 });
