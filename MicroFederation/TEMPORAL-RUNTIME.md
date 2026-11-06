@@ -10,7 +10,8 @@ MicroFederation/temporal-runtime.cjs provides a deterministic event scheduler fo
 
 - Virtual time is a finite, non-negative numeric domain. It does not read or alter the host clock.
 - Events execute in stable (virtual timestamp, insertion sequence) order.
-- Handlers are registered by stable identifier and receive JSON payloads.
+- Handlers are registered by stable identifier and receive strict JSON payloads: finite JSON primitives, plain objects, and dense arrays only.
+- Object values must be enumerable own data properties. Accessors, symbol keys, non-enumerable properties, sparse arrays, and custom array properties are rejected before serialization; getters are never invoked during validation.
 - Handlers must be synchronous. This restriction keeps event ordering and replay deterministic.
 - Handlers may schedule additional events; eligible events execute in the same advancement.
 - advanceTo() and advanceBy() enforce monotonic virtual time.

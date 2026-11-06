@@ -13,20 +13,45 @@ function assertPlainJson(value, label, seen = new Set()) {
     throw new TypeError(label + ' must contain only JSON values');
   }
   if (seen.has(value)) throw new TypeError(label + ' must not contain circular references');
+
   const prototype = Object.getPrototypeOf(value);
-  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) {
+  const isArray = Array.isArray(value);
+  if (!isArray && prototype !== Object.prototype && prototype !== null) {
     throw new TypeError(label + ' must contain only plain objects and arrays');
   }
+
   seen.add(value);
-  if (Array.isArray(value)) {
-    for (const item of value) assertPlainJson(item, label, seen);
-  } else {
-    for (const [key, item] of Object.entries(value)) {
-      if (item === undefined) throw new TypeError(label + ' must not contain undefined values');
-      assertPlainJson(item, label, seen);
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.some(key => typeof key === 'symbol')) {
+    throw new TypeError(label + ' must not contain symbol keys');
+  }
+
+  if (isArray) {
+    // JSON arrays must be dense and may not carry custom/non-index properties.
+    // Check key count first so a very large sparse array is rejected without
+    // iterating over its potentially enormous length.
+    if (ownKeys.length !== value.length + 1) {
+      throw new TypeError(label + ' arrays must be dense and contain no extra properties');
     }
-    for (const key of Object.getOwnPropertySymbols(value)) {
-      throw new TypeError(label + ' must not contain symbol keys');
+    for (const key of ownKeys) {
+      if (key === 'length') continue;
+      const index = Number(key);
+      if (!Number.isInteger(index) || index < 0 || index >= value.length || String(index) !== key) {
+        throw new TypeError(label + ' arrays must contain only indexed elements');
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(label + ' must not contain accessors or non-enumerable values');
+      }
+      assertPlainJson(descriptor.value, label, seen);
+    }
+  } else {
+    for (const key of ownKeys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(label + ' must contain only enumerable data properties');
+      }
+      assertPlainJson(descriptor.value, label, seen);
     }
   }
   seen.delete(value);
@@ -143,7 +168,7 @@ class TemporalRuntime {
         }
       }
       this.now = targetTime;
-      return { now: this.now, executed, pending: this.events.length };
+      return { now: this.now, executed, pending: this.pendingCount };
     } finally {
       this.running = false;
     }

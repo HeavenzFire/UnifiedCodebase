@@ -35,6 +35,15 @@ test('supports relative scheduling and cancellation', () => {
   assert.deepEqual(seen, ['kept']);
 });
 
+test('excludes cancelled future events from the pending count', () => {
+  const runtime = new TemporalRuntime({ handlers: { noop() {} } });
+  const cancelled = runtime.scheduleAt(100, 'noop');
+  assert.equal(runtime.cancel(cancelled), true);
+  assert.deepEqual(runtime.advanceTo(0), { now: 0, executed: 0, pending: 0 });
+  assert.equal(runtime.pendingCount, 0);
+  assert.equal(runtime.snapshot().events.length, 0);
+});
+
 test('handlers can enqueue deterministic follow-up events in the same advance', () => {
   const seen = [];
   const runtime = new TemporalRuntime({
@@ -69,8 +78,40 @@ test('rejects invalid time, unknown handlers, and non-JSON payloads', () => {
   const runtime = new TemporalRuntime({ handlers: { noop() {} } });
   assert.throws(() => runtime.advanceTo(-1), /non-negative/);
   assert.throws(() => runtime.scheduleAt(0, 'missing'), /unregistered handler/);
-  assert.throws(() => runtime.scheduleAt(0, 'noop', { value: undefined }), /must not contain undefined values/);
+  assert.throws(() => runtime.scheduleAt(0, 'noop', { value: undefined }), /must contain only JSON values/);
   assert.throws(() => runtime.scheduleIn(Infinity, 'noop'), /finite/);
+});
+
+test('rejects sparse arrays, custom array properties, and symbol keys', () => {
+  const runtime = new TemporalRuntime({ handlers: { noop() {} } });
+  const sparse = [];
+  sparse.length = 2;
+  sparse[1] = 'present';
+  assert.throws(() => runtime.scheduleAt(0, 'noop', sparse), /arrays must be dense/);
+
+  const extra = ['valid'];
+  extra.metadata = 'not JSON array data';
+  assert.throws(() => runtime.scheduleAt(0, 'noop', extra), /arrays must be dense/);
+
+  const symbolKey = { valid: true };
+  symbolKey[Symbol('hidden')] = 'not JSON';
+  assert.throws(() => runtime.scheduleAt(0, 'noop', symbolKey), /symbol keys/);
+});
+
+test('rejects accessors without invoking getters and rejects non-enumerable properties', () => {
+  const runtime = new TemporalRuntime({ handlers: { noop() {} } });
+  let getterCalls = 0;
+  const accessor = {};
+  Object.defineProperty(accessor, 'value', {
+    enumerable: true,
+    get() { getterCalls += 1; return 'side effect'; }
+  });
+  assert.throws(() => runtime.scheduleAt(0, 'noop', accessor), /enumerable data properties/);
+  assert.equal(getterCalls, 0);
+
+  const hidden = {};
+  Object.defineProperty(hidden, 'value', { enumerable: false, value: 1 });
+  assert.throws(() => runtime.scheduleAt(0, 'noop', hidden), /enumerable data properties/);
 });
 
 test('rejects backwards time, reentrant advancement, and asynchronous handlers', () => {
