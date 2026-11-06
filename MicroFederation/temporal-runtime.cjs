@@ -97,7 +97,7 @@ class TemporalRuntime {
   cancel(eventId) {
     if (typeof eventId !== 'string') throw new TypeError('eventId must be a string');
     const exists = this.events.some(event => event.id === eventId);
-    if (!exists) return false;
+    if (!exists || this.cancelled.has(eventId)) return false;
     this.cancelled.add(eventId);
     return true;
   }
