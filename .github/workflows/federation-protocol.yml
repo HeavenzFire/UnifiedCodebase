@@ -1,0 +1,41 @@
+name: Federation protocol core
+
+on:
+  push:
+    branches:
+      - research/cross-device-federation-rd-v0.1
+    paths:
+      - 'MicroFederation/**'
+      - 'scripts/rd/**'
+      - '.github/workflows/federation-protocol.yml'
+  pull_request:
+    paths:
+      - 'MicroFederation/**'
+      - 'scripts/rd/federation-node-config.example.cjs'
+      - '.github/workflows/federation-protocol.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: federation-protocol-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  protocol-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax-check federation modules and launch scripts
+        run: |
+          for file in MicroFederation/*.cjs scripts/rd/*.cjs; do node --check "$file"; done
+          bash -n scripts/rd/start-federation-android.sh
+      - name: Run deterministic federation suites
+        run: node --test MicroFederation/test/federation-protocol.test.cjs MicroFederation/test/shared-task-ledger-adapter.test.cjs MicroFederation/test/federation-http-transport.test.cjs MicroFederation/test/federation-http.test.cjs MicroFederation/test-governed-runtime.cjs MicroFederation/test/openai-local-inference-adapter.test.cjs
