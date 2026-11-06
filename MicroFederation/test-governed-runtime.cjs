@@ -197,3 +197,34 @@ test('stop during asynchronous authorization aborts and never invokes the adapte
   assert.equal((await ledger.get('stop-auth-race')).status, 'queued');
 });
 
+
+
+test('serializes concurrent direct runOnce calls for a single worker instance', async t => {
+  const ledger = await makeLedger(t);
+  await ledger.create({ id: 'single-flight-a', payload: { prompt: 'first' } });
+  await ledger.create({ id: 'single-flight-b', payload: { prompt: 'second' } });
+  let enterAdapter;
+  const entered = new Promise(resolve => { enterAdapter = resolve; });
+  let releaseAdapter;
+  let calls = 0;
+  const runtime = createGovernedRuntime({
+    ledger, workerId: 'single-flight-worker',
+    adapter: { async run() {
+      calls++;
+      enterAdapter();
+      await new Promise(resolve => { releaseAdapter = resolve; });
+      return { ok: true };
+    } }
+  });
+  const first = runtime.runOnce();
+  await entered;
+  const second = await runtime.runOnce();
+  assert.equal(second.status, 'busy');
+  assert.equal(calls, 1);
+  releaseAdapter();
+  const result = await first;
+  assert.equal(result.status, 'succeeded');
+  assert.equal(calls, 1);
+  assert.equal((await ledger.get('single-flight-a')).status, 'succeeded');
+  assert.equal((await ledger.get('single-flight-b')).status, 'queued');
+});
