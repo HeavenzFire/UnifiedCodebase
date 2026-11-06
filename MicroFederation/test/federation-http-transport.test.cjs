@@ -42,6 +42,8 @@ async function startServer(options = {}) {
   const runtime = createFederationHttpServer({
     protocol: pair.server,
     taskAdapter,
+    clock,
+    port: 0,
     authorizeTaskRead: async ({ peerId, taskId }) => ({
       allow: peerId === 'android-a67l' && taskId === record.taskId
     })
@@ -52,7 +54,7 @@ async function startServer(options = {}) {
     peerNodeId: 'windows-zdh',
     baseUrl: 'http://127.0.0.1:' + address.port
   });
-  return { ...pair, runtime, client, address, received };
+  return { serverProtocol: pair.server, clientProtocol: pair.client, runtime, client, address, received };
 }
 
 const record = {
@@ -140,10 +142,10 @@ test('task retrieval is denied without task.read capability', async t => {
 test('client refuses non-loopback and non-HTTP endpoints', async t => {
   const f = await startServer(); t.after(() => f.runtime.close());
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://192.0.2.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'http://192.0.2.1:18100'
   }), /loopback URLs only/);
   assert.throws(() => createFederationHttpClient({
-    protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'https://127.0.0.1:18100'
+    protocol: f.clientProtocol, peerNodeId: 'windows-zdh', baseUrl: 'https://127.0.0.1:18100'
   }), /must use HTTP inside the SSH tunnel/);
 });
 
@@ -167,7 +169,7 @@ test('client disables redirects for signed federation payloads', async () => {
   assert.equal(requestOptions.cache, 'no-store');
 });
 
-test('client rejects localhost aliases and credential-bearing loopback URLs', async () => {
+test('client rejects localhost aliases and credential-bearing loopback URLs', async t => {
   const f = await startServer(); t.after(() => f.runtime.close());
   assert.throws(() => createFederationHttpClient({
     protocol: f.client, peerNodeId: 'windows-zdh', baseUrl: 'http://localhost:18100'
