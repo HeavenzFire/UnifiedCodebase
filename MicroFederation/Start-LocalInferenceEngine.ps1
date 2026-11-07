@@ -52,7 +52,21 @@ if (-not (Test-HttpReady $BackendHealth)) {
     if (-not (Test-HttpReady $BackendHealth)) { throw "llama-server did not become healthy. Inspect $ErrLog" }
 }
 $EngineHealth = "http://127.0.0.1:$Port/health"
-if (Test-HttpReady $EngineHealth) { Write-Output "HeavenzFire Local Inference Engine already running: $EngineHealth"; exit 0 }
+$ExistingEngine = $null
+try { $ExistingEngine = Invoke-RestMethod -Uri $EngineHealth -TimeoutSec 2 } catch {}
+if ($ExistingEngine) {
+    $ExpectedBackend = $BackendUri.GetLeftPart([System.UriPartial]::Authority)
+    if ($ExistingEngine.engine -ne 'heavenzfire-local-inference' -or
+        $ExistingEngine.status -ne 'ok' -or $ExistingEngine.backendUrl -ne $ExpectedBackend) {
+        throw "Port $Port already has a listener, but its inference backend cannot be verified as $ExpectedBackend. No process was stopped or replaced."
+    }
+    Write-Output "HeavenzFire Local Inference Engine already running with verified backend: $ExpectedBackend"
+    Write-Output "API_BASE=http://127.0.0.1:$Port/v1"
+    exit 0
+}
+if (Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -InformationLevel Quiet) {
+    throw "Port $Port is occupied by an unverified listener. No process was stopped or replaced."
+}
 $LogDir = Join-Path $env:USERPROFILE '.heavenzfire\local-inference'
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $env:HEAVENZFIRE_INFERENCE_BACKEND = $BackendUrl
