@@ -25,11 +25,11 @@ From PowerShell 5.1, with the repository checked out:
     Set-Location <checkout>\MicroFederation
     .\Start-LocalInferenceEngine.ps1
 
-This reuses the existing backend at 127.0.0.1:11800 and launches the facade on 127.0.0.1:11820. If the backend is not healthy, the script stops rather than silently downloading a model or changing an existing service.
+This reuses the existing llama.cpp backend at 127.0.0.1:11801 (the separate gateway may use 11800) and launches the facade on 127.0.0.1:11820. If the backend is not healthy, the script stops rather than silently downloading a model or changing an existing service.
 
 To explicitly start a model backend after checking available RAM:
 
-    .\Start-LocalInferenceEngine.ps1 -StartBackend -LlamaServerPath 'C:\path\to\llama-server.exe' -ModelPath 'C:\path\to\model.gguf' -BackendUrl 'http://127.0.0.1:11800' -Port 11820 -ContextSize 1024
+    .\Start-LocalInferenceEngine.ps1 -StartBackend -LlamaServerPath 'C:\path\to\llama-server.exe' -ModelPath 'C:\path\to\model.gguf' -BackendUrl 'http://127.0.0.1:11801' -Port 11820 -ContextSize 1024
 
 The launcher estimates free-memory demand as model file size × 1.35 + 1.5 GiB. This is a conservative admission heuristic, not a guarantee of runtime memory usage. It refuses to start a new backend if observed free RAM is below that estimate. It never kills or replaces an existing backend.
 
@@ -82,7 +82,7 @@ Tests use an in-process fake backend and verify loopback restrictions, request v
 
 - This is a local inference API and facade, not a newly trained foundation model.
 - Model quality, context window, tool use, and throughput depend on the chosen GGUF and llama.cpp build.
-- The Windows host has constrained memory. Prefer reusing a healthy existing backend; do not start another model process unless the launcher's memory check passes.
+- The Windows host has constrained memory. The current host inventory identifies 11800 as the gateway and 11801 as the llama.cpp backend; verify the live listener before overriding this default. Prefer reusing a healthy existing backend; do not start another model process unless the launcher's memory check passes.
 - No model is downloaded automatically.
 - No remote provider fallback is implemented.
 - No model weights, API keys, prompt contents, or credentials are written to the repository.
