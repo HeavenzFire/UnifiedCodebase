@@ -21,8 +21,9 @@ if (-not $Node) {
 }
 
 $Branch = (& git -C $RepoRoot branch --show-current).Trim()
-if ($LASTEXITCODE -ne 0 -or $Branch -ne 'research/cross-device-federation-rd-v0.1') {
-    throw "Expected branch research/cross-device-federation-rd-v0.1; found '$Branch'."
+$AllowedBranches = @('fix/federation-task-read-scope-v0.1', 'main')
+if ($LASTEXITCODE -ne 0 -or $AllowedBranches -notcontains $Branch) {
+    throw "Expected one of the reviewed federation candidate branches ($($AllowedBranches -join ', ')); found '$Branch'."
 }
 
 $env:HF_UNIFIEDCODEBASE_ROOT = $RepoRoot
