@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
-const { createLocalInferenceEngine, validateBackendUrl, validateBindHost, validateChatRequest } = require('./local-inference-engine.cjs');
+const { createLocalInferenceEngine, validateBackendUrl, validateBindHost, isLoopbackHostHeader, validateChatRequest } = require('./local-inference-engine.cjs');
 
 async function startServer(handler) {
   const server = http.createServer(handler);
@@ -17,6 +17,11 @@ test('backend and bind targets are restricted to loopback', () => {
   assert.throws(() => validateBackendUrl('http://user:pass@127.0.0.1:11800'), /plain HTTP loopback/);
   assert.throws(() => validateBackendUrl('http://127.0.0.1:11800/?token=x'), /plain HTTP loopback/);
   assert.throws(() => validateBindHost('0.0.0.0'), /loopback only/);
+  assert.equal(isLoopbackHostHeader('127.0.0.1:11820'), true);
+  assert.equal(isLoopbackHostHeader('localhost:11820'), true);
+  assert.equal(isLoopbackHostHeader('[::1]:11820'), true);
+  assert.equal(isLoopbackHostHeader('127.0.0.1.evil:11820'), false);
+  assert.equal(isLoopbackHostHeader('user@127.0.0.1:11820'), false);
 });
 
 test('chat request schema enforces bounded roles, messages and tokens', () => {
