@@ -1,0 +1,36 @@
+name: Impact Engine
+on:
+  pull_request:
+    paths:
+      - 'MicroFederation/impact-engine.cjs'
+      - 'MicroFederation/test-impact-engine.cjs'
+      - 'schemas/impact-opportunity.schema.json'
+      - 'docs/IMPACT-ENGINE-v0.1.md'
+      - '.github/workflows/impact-engine.yml'
+  push:
+    branches:
+      - main
+      - 'feat/impact-engine-v0.1'
+    paths:
+      - 'MicroFederation/impact-engine.cjs'
+      - 'MicroFederation/test-impact-engine.cjs'
+      - 'schemas/impact-opportunity.schema.json'
+      - '.github/workflows/impact-engine.yml'
+permissions:
+  contents: read
+jobs:
+  impact-engine-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Syntax check
+        run: node --check MicroFederation/impact-engine.cjs
+      - name: Run impact engine tests
+        run: node --test MicroFederation/test-impact-engine.cjs
