@@ -2,6 +2,8 @@
 
 This is the current guarded launch sequence: create and approve the task on Windows, grant one task-scoped capability on Windows, start the receiver, transfer the signed package to Android, then submit through an SSH local forward. The operator approval secret never leaves Windows.
 
+**Candidate revision:** use branch `fix/federation-task-read-scope-v0.1` for the current end-to-end candidate. The Windows launcher accepts that branch and `main` only. The PR stack remains draft until independent review and live device acceptance pass.
+
 ## 1. Windows — create and approve one task
 
 From the UnifiedCodebase repository root, set the canonical contract module and the local operator approval secret. The approval secret must contain at least 32 UTF-8 bytes and must never be committed or sent to Android.
@@ -37,6 +39,11 @@ Set the approved Android peer enrollment. The peer HMAC secret is distinct from 
     $peer = @{ nodeId = 'android-a67l'; secret = $peerSecret; approved = $true; approvedAt = $approvedAt; allowedCapabilities = @('task.submit','task.read') }
     $env:HF_FEDERATION_PEERS_JSON = ConvertTo-Json -InputObject @($peer) -Compress
 
+The readback grant is deliberately narrower than the peer capability. Permit this one enrolled Android peer to read only the exact task being submitted:
+
+    $env:HF_FEDERATION_READ_PEER_ID = 'android-a67l'
+    $env:HF_FEDERATION_READ_TASK_ID = '<TASK_ID>'
+
 The Windows config example creates the local TaskLedger, CapabilityStore, capability gate, and local inference adapter. Set the receiver identity and start the preflight launcher:
 
     $env:HF_NODE_ID = 'windows-zdh'
@@ -45,7 +52,7 @@ The Windows config example creates the local TaskLedger, CapabilityStore, capabi
 
 The launcher verifies the task-scoped grant and local inference health before starting. It binds only to 127.0.0.1:18100. Keep this PowerShell process open.
 
-Remote task reads are denied by default. If Android needs to poll for completion, the local runtime must be configured with an `authorizeTaskRead` callback that authorizes the authenticated peer AND the exact task ID against a trusted task-scoped grant or an allowlist bound to the approved record. A peer-wide `task.read` capability alone is insufficient. Do not replace this with a permissive callback.
+Remote task reads are denied by default. A peer-wide `task.read` capability alone is insufficient; the runtime authorizes the authenticated peer AND the exact task ID. Do not replace this with a permissive callback.
 
 ## 3. Transfer the signed package to Android
 
