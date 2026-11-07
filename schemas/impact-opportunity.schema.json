@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HeavenzFire/UnifiedCodebase/blob/main/schemas/impact-opportunity.schema.json",
+  "title": "HeavenzFire Impact Opportunity",
+  "description": "Evidence-referenced candidate for human-reviewed impact prioritization; not an execution authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "impact", "evidenceQuality", "feasibility", "urgency", "evidence"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "description": { "type": "string", "maxLength": 4000 },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["life_safety", "financial", "resource"],
+      "properties": {
+        "life_safety": { "type": "number", "minimum": 0, "maximum": 5 },
+        "financial": { "type": "number", "minimum": 0, "maximum": 5 },
+        "resource": { "type": "number", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "evidenceQuality": { "type": "number", "minimum": 0, "maximum": 1 },
+    "feasibility": { "type": "number", "minimum": 0, "maximum": 1 },
+    "urgency": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "level"],
+        "properties": {
+          "ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
+          "level": { "enum": ["unverified", "source_supported", "independently_reproduced"] },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "retrievedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "estimatedCost": { "$ref": "#/$defs/estimate" },
+    "estimatedBenefit": { "$ref": "#/$defs/estimate" },
+    "requiresHumanApproval": { "type": "boolean" }
+  },
+  "$defs": {
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "unit": { "type": "string", "maxLength": 80 },
+        "period": { "type": "string", "maxLength": 80 }
+      }
+    }
+  }
+}
