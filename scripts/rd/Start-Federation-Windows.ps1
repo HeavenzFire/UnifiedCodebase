@@ -21,8 +21,9 @@ if (-not $Node) {
 }
 
 $Branch = (& git -C $RepoRoot branch --show-current).Trim()
-if ($LASTEXITCODE -ne 0 -or $Branch -ne 'research/cross-device-federation-rd-v0.1') {
-    throw "Expected branch research/cross-device-federation-rd-v0.1; found '$Branch'."
+$AllowedBranches = @('fix/federation-task-read-scope-v0.1', 'main')
+if ($LASTEXITCODE -ne 0 -or $AllowedBranches -notcontains $Branch) {
+    throw "Expected one of the reviewed federation candidate branches ($($AllowedBranches -join ', ')); found '$Branch'."
 }
 
 $env:HF_UNIFIEDCODEBASE_ROOT = $RepoRoot
@@ -39,7 +40,9 @@ $Required = @(
     'HF_OPERATOR_APPROVAL_SECRET',
     'HF_FEDERATION_AGENT_ID',
     'HF_FEDERATION_GRANT_ID',
-    'HF_FEDERATION_TASK_ID'
+    'HF_FEDERATION_TASK_ID',
+    'HF_FEDERATION_READ_PEER_ID',
+    'HF_FEDERATION_READ_TASK_ID'
 )
 foreach ($Name in $Required) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($Name))) {
@@ -74,6 +77,7 @@ Write-Host "PORT=$Port"
 Write-Host 'REMOTE_ACCESS=SSH_LOCAL_FORWARD_ONLY'
 Write-Host 'APPROVAL=HMAC_OPERATOR_PROOF_REQUIRED'
 Write-Host 'CAPABILITY_GATE=REQUIRED'
+Write-Host 'TASK_READ_SCOPE=EXACT_PEER_AND_TASK'
 Write-Host 'Starting foreground node. Press Ctrl+C to stop.'
 Write-Host
 
