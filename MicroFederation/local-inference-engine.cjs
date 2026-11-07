@@ -27,6 +27,13 @@ function validateBindHost(host) {
   if (!isLoopback(host)) throw Error('Local inference engine must bind to loopback only');
   return host;
 }
+function isLoopbackHostHeader(value) {
+  if (typeof value !== 'string' || !value || value.trim() !== value || /[\\/?#@]/.test(value)) return false;
+  try {
+    const parsed = new URL('http://' + value);
+    return !parsed.username && !parsed.password && parsed.pathname === '/' && isLoopback(parsed.hostname);
+  } catch { return false; }
+}
 function json(res, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8',
@@ -94,8 +101,7 @@ function createLocalInferenceEngine({
   }
 
   const server = http.createServer(async (req, res) => {
-    const hostHeader = String(req.headers.host || '').split(':')[0].replace(/^\[|\]$/g, '');
-    if (!isLoopback(hostHeader)) return json(res, 403, { error: 'loopback Host header required' });
+    if (!isLoopbackHostHeader(req.headers.host)) return json(res, 403, { error: 'loopback Host header required' });
     const origin = req.headers.origin;
     if (origin) {
       let parsedOrigin;
@@ -171,4 +177,4 @@ if (require.main === module) {
     event: 'listening', engine: ENGINE_NAME, address: address.address, port: address.port, backend: engine.backendUrl
   }) + '\n')).catch(error => { process.stderr.write('local inference engine failed to start: ' + error.message + '\n'); process.exitCode = 1; });
 }
-module.exports = { createLocalInferenceEngine, validateBackendUrl, validateBindHost, validateChatRequest, MAX_BODY_BYTES };
+module.exports = { createLocalInferenceEngine, validateBackendUrl, validateBindHost, isLoopbackHostHeader, validateChatRequest, MAX_BODY_BYTES };
