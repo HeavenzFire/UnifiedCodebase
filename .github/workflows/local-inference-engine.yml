@@ -27,3 +27,29 @@ jobs:
         run: node --test MicroFederation/test-local-inference-engine.cjs
       - name: Termux launcher syntax
         run: bash -n MicroFederation/Start-LocalInferenceEngine-Termux.sh
+
+  windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: PowerShell 5.1 launcher parse
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'MicroFederation/Start-LocalInferenceEngine.ps1'),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+          Write-Output 'WINDOWS_POWERSHELL_PARSE=PASS'
+      - name: Windows Node syntax and contract tests
+        shell: powershell
+        run: |
+          node --check MicroFederation/local-inference-engine.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test MicroFederation/test-local-inference-engine.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
