@@ -43,7 +43,7 @@ test('health and model discovery are served through the local facade', async t =
   const base = 'http://127.0.0.1:' + address.port;
   const health = await fetch(base + '/health');
   assert.equal(health.status, 200);
-  assert.equal((await health.json()).engine, 'heavenzfire-local-inference');
+  const healthBody = await health.json();\n  assert.equal(healthBody.engine, 'heavenzfire-local-inference');\n  assert.equal(healthBody.backendUrl, backend.url);
   const models = await fetch(base + '/v1/models');
   assert.deepEqual(await models.json(), { data: [{ id: 'qwen-local' }] });
 });
