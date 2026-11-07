@@ -12,7 +12,7 @@ This component is a local OpenAI-compatible inference facade around a local llam
 - Existing Agent Command Center and orchestrator clients can use http://127.0.0.1:11820/v1 as an OpenAI-compatible base URL.
 
 Supported routes:
-- GET /health and GET /api/health
+- GET /health and GET /api/health (reports the configured loopback `backendUrl` so the Windows launcher can reject a pre-existing facade bound to a different backend)
 - GET /v1/models
 - POST /v1/chat/completions (JSON and Server-Sent Events streaming)
 
