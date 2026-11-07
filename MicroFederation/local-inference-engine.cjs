@@ -3,7 +3,7 @@ const http = require('node:http');
 const { URL } = require('node:url');
 
 const ENGINE_NAME = 'heavenzfire-local-inference';
-const DEFAULT_BACKEND = 'http://127.0.0.1:11800';
+const DEFAULT_BACKEND = 'http://127.0.0.1:11801';
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 11820;
 const MAX_BODY_BYTES = 1024 * 1024;
