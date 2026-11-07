@@ -117,10 +117,10 @@ function createLocalInferenceEngine({
         try { details = JSON.parse(text); } catch {}
         const ready = response.ok && (!details || ['ok', 'healthy'].includes(details.status));
         return json(res, ready ? 200 : 503, { engine: ENGINE_NAME, status: ready ? 'ok' : 'degraded',
-          backend: 'llama.cpp-compatible', backendStatus: response.status, details });
+          backend: 'llama.cpp-compatible', backendUrl: backend.origin, backendStatus: response.status, details });
       } catch (error) {
         return json(res, 503, { engine: ENGINE_NAME, status: 'degraded',
-          backend: 'llama.cpp-compatible', error: error.message });
+          backend: 'llama.cpp-compatible', backendUrl: backend.origin, error: error.message });
       }
     }
     if (req.method === 'GET' && pathname === '/v1/models') {
