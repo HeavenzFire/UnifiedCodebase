@@ -7,10 +7,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { TaskLedger } = require('./task-ledger.cjs');
 const { createSharedTaskAdapter } = require('./shared-task-adapter.cjs');
+const { createGovernedRuntime } = require('./governed-runtime.cjs');
+const { CapabilityStore } = require('./capability-store.cjs');
+const { CapabilityGate } = require('./adaptive-control-plane.cjs');
 const { createUnifiedFieldFabric } = require('./unified-field-fabric.cjs');
 const { createPixelMesh } = require('./pixel-mesh.cjs');
 
-test('shared-task worker cannot claim a fabric task from the same durable ledger', async t => {
+test('shared-task governed worker cannot claim a fabric task from the same durable ledger', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'hf-shared-fabric-isolation-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
 
@@ -26,7 +29,7 @@ test('shared-task worker cannot claim a fabric task from the same durable ledger
     status: 'approved',
     approvalState: 'approved',
     evidence: [],
-    metadata: {}
+    metadata: { agentId: 'shared-agent', grantId: 'shared-grant', role: 'research' }
   };
   const contract = {
     validateTaskRecord(record) {
@@ -46,7 +49,16 @@ test('shared-task worker cannot claim a fabric task from the same durable ledger
     loadCanonicalTask: async id => id === canonicalRecord.taskId ? canonicalRecord : null,
     execute: async () => { sharedExecutions++; return { shared: true }; }
   });
-  await shared.enqueueApproved(canonicalRecord);
+  const queued = await shared.enqueueApproved(canonicalRecord);
+
+  const capabilityStore = await new CapabilityStore(path.join(directory, 'capabilities.json')).open();
+  await capabilityStore.grant({
+    grantId: 'shared-grant',
+    agentId: 'shared-agent',
+    taskId: queued.ledgerTaskId,
+    capabilities: ['shared-task.v1'],
+    expiresAt: Date.now() + 60000
+  });
 
   const mesh = createPixelMesh();
   mesh.register({ peerId: 'fabric-worker', capabilities: ['artifact.build'], capacity: 1 });
@@ -67,7 +79,17 @@ test('shared-task worker cannot claim a fabric task from the same durable ledger
     producerProof: 'fixture'
   });
 
-  const sharedRun = await shared.runOne({ workerId: 'shared-task-worker' });
+  assert.equal(typeof shared.runOne, 'undefined');
+  const sharedRuntime = createGovernedRuntime({
+    ledger,
+    workerId: 'shared-task-worker',
+    capabilityGate: new CapabilityGate({
+      capabilityStore,
+      approvalVerifier: async () => ({ verified: false })
+    }),
+    adapter: shared
+  });
+  const sharedRun = await sharedRuntime.runOnce();
   assert.equal(sharedRun.status, 'succeeded');
   assert.equal(sharedExecutions, 1);
   assert.equal((await ledger.get('fabric-task-isolated')).status, 'queued');

@@ -19,7 +19,7 @@ function canonical(status = 'proposed') {
     status,
     approvalState: status === 'approved' ? 'approved' : 'pending',
     evidence: [],
-    metadata: { role: 'research' }
+    metadata: { role: 'research', agentId: 'agent-shared', grantId: 'grant-shared' }
   };
 }
 function contract() {
@@ -57,6 +57,13 @@ function memoryLedger() {
       task.status = 'running';
       return task;
     },
+    async releaseClaim(id, workerId, options) {
+      const task = tasks.get(id);
+      assert.equal(task.owner, workerId);
+      task.status = 'failed';
+      task.error = options.reason;
+      return task;
+    },
     async complete(id, workerId, result, options) {
       const task = tasks.get(id);
       assert.equal(task.status, 'running');
@@ -74,6 +81,16 @@ function memoryLedger() {
     async get(id) { return tasks.get(id) || null; }
   };
 }
+
+async function runGovernedOnce(ledger, adapter, workerId = 'adapter-test-worker') {
+  const runtime = createGovernedRuntime({
+    ledger, workerId,
+    capabilityGate: { async authorize() { return { allow: true }; } },
+    adapter
+  });
+  return runtime.runOnce();
+}
+
 const attestation = {
   verified: true, actor: 'trusted-approver',
   evidenceRef: 'approval-event:abc123',
@@ -130,7 +147,7 @@ test('approved canonical record is enqueued and re-verified immediately before e
   const queued = await adapter.enqueueApproved(record);
   assert.equal(queued.status, 'queued');
   assert.equal(verifyCalls, 1);
-  const result = await adapter.runOne({ workerId: 'rd-worker-1' });
+  const result = await runGovernedOnce(ledger, adapter, 'rd-worker-1');
   assert.equal(result.status, 'succeeded');
   assert.equal(executions, 1);
   assert.equal(verifyCalls, 2);
@@ -155,7 +172,7 @@ test('durable TaskLedger integration persists and executes an approved task', as
   });
 
   const queued = await adapter.enqueueApproved(record);
-  const result = await adapter.runOne({ workerId: 'rd-worker-durable' });
+  const result = await runGovernedOnce(ledger, adapter, 'rd-worker-durable');
   const persisted = await ledger.get(queued.ledgerTaskId);
 
   assert.equal(result.status, 'succeeded');
@@ -205,7 +222,7 @@ test('canonical task content drift blocks execution even when approval evidence 
   });
 
   const queued = await adapter.enqueueApproved(approved);
-  const result = await adapter.runOne({ workerId: 'rd-worker-content-drift' });
+  const result = await runGovernedOnce(ledger, adapter, 'rd-worker-content-drift');
 
   assert.equal(result.status, 'blocked');
   assert.match(result.error, /content changed after enqueue/);
@@ -229,7 +246,7 @@ test('changed approval evidence blocks execution and is not retried', async () =
     execute: async () => { executions++; return { ok: true }; }
   });
   const queued = await adapter.enqueueApproved(record);
-  const result = await adapter.runOne({ workerId: 'rd-worker-2' });
+  const result = await runGovernedOnce(ledger, adapter, 'rd-worker-2');
   assert.equal(result.status, 'blocked');
   assert.match(result.error, /changed after enqueue/);
   assert.equal(executions, 0);
@@ -363,4 +380,113 @@ test('governed shared adapter rejects changed trusted approval evidence before e
   assert.match(persisted.error, /approval evidence changed after enqueue/);
   assert.equal(executionCalls, 0);
   assert.equal(verifyCalls, 2);
+});
+
+
+test('adapter exposes no ungated runOnce worker path', () => {
+  const ledger = memoryLedger();
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: contract(),
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => canonical('approved'),
+    execute: async () => ({ ok: true })
+  });
+  assert.equal(typeof adapter.runOne, 'undefined');
+});
+
+test('projects only authoritative ledger lifecycle into canonical task status with evidence', async () => {
+  const canonicalContract = contract();
+  canonicalContract.transitionTask = (record, nextStatus, { evidenceItem, actor = 'system' } = {}) => {
+    const allowed = {
+      approved: ['running', 'review_required'],
+      running: ['completed', 'failed', 'review_required']
+    };
+    if (!allowed[record.status] || !allowed[record.status].includes(nextStatus)) {
+      throw new Error('invalid task transition: ' + record.status + ' -> ' + nextStatus);
+    }
+    const updated = {
+      ...record, status: nextStatus,
+      approvalState: 'approved',
+      updatedAt: new Date().toISOString(),
+      evidence: record.evidence.slice()
+    };
+    if (evidenceItem) updated.evidence.push({
+      ...evidenceItem, actor, observedAt: updated.updatedAt
+    });
+    return updated;
+  };
+  const ledger = memoryLedger();
+  const approved = canonical('approved');
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: canonicalContract,
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => approved,
+    execute: async () => ({ ok: true })
+  });
+  const queued = await adapter.enqueueApproved(approved);
+  const stored = ledger.tasks.get(queued.ledgerTaskId);
+
+  // A forged caller object cannot override the durable ledger status.
+  const forged = await adapter.projectLedgerState(approved, {
+    id: queued.ledgerTaskId,
+    status: 'succeeded',
+    owner: 'forged-actor',
+    metadata: { adapter: 'heavenzfire.shared-task.v1', canonicalTaskId: approved.taskId }
+  });
+  assert.equal(forged.status, 'unchanged');
+  assert.equal(forged.canonicalRecord.status, 'approved');
+
+  stored.status = 'running';
+  stored.owner = 'worker:windows';
+  stored.events = [{ type: 'task.started', actor: 'worker:windows' }];
+  const running = await adapter.projectLedgerState(approved, { id: queued.ledgerTaskId });
+  assert.equal(running.status, 'projected');
+  assert.equal(running.canonicalRecord.status, 'running');
+  assert.equal(running.canonicalRecord.evidence.at(-1).actor, 'worker:windows');
+
+  stored.status = 'succeeded';
+  stored.owner = null;
+  stored.events.push({ type: 'task.succeeded', actor: 'worker:windows' });
+  const completed = await adapter.projectLedgerState(running.canonicalRecord, queued.ledgerTaskId);
+  assert.equal(completed.canonicalRecord.status, 'completed');
+  assert.equal(completed.canonicalRecord.approvalState, 'approved');
+});
+
+test('maps authoritative cancellation to review_required and rejects forged or mismatched records', async () => {
+  const canonicalContract = contract();
+  canonicalContract.transitionTask = (record, nextStatus, { evidenceItem, actor = 'system' } = {}) => ({
+    ...record, status: nextStatus, approvalState: 'approved',
+    evidence: evidenceItem ? [...record.evidence, { ...evidenceItem, actor }] : record.evidence
+  });
+  const ledger = memoryLedger();
+  const approved = canonical('approved');
+  const adapter = createSharedTaskAdapter({
+    ledger, contract: canonicalContract,
+    verifyApproval: async () => attestation,
+    loadCanonicalTask: async () => approved,
+    execute: async () => ({ ok: true })
+  });
+  const queued = await adapter.enqueueApproved(approved);
+  const stored = ledger.tasks.get(queued.ledgerTaskId);
+  stored.status = 'cancelled';
+  stored.owner = null;
+  stored.events = [{ type: 'task.cancelled', actor: 'operator:zdh' }];
+
+  const cancelled = await adapter.projectLedgerState(approved, { id: queued.ledgerTaskId });
+  assert.equal(cancelled.canonicalRecord.status, 'review_required');
+  assert.equal(cancelled.canonicalRecord.approvalState, 'approved');
+  assert.equal(cancelled.canonicalRecord.evidence.at(-1).actor, 'operator:zdh');
+
+  const previousStatus = stored.status;
+  stored.status = 'unknown';
+  await assert.rejects(adapter.projectLedgerState(approved, {
+    id: queued.ledgerTaskId, status: 'succeeded'
+  }), /unsupported ledger lifecycle status/);
+  stored.status = previousStatus;
+  await assert.rejects(adapter.projectLedgerState(approved, {
+    id: 'shared:' + 'b'.repeat(64)
+  }), /does not match canonical task identity/);
+  await assert.rejects(adapter.projectLedgerState({
+    ...approved, goal: approved.goal + ' tampered'
+  }, queued.ledgerTaskId), /content changed after enqueue/);
 });
