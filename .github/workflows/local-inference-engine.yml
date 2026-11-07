@@ -1,0 +1,55 @@
+name: Local Inference Engine
+
+on:
+  push:
+    branches:
+      - feat/local-gpt-inference-engine-v0.1
+  pull_request:
+    paths:
+      - 'MicroFederation/local-inference-engine.cjs'
+      - 'MicroFederation/test-local-inference-engine.cjs'
+      - 'MicroFederation/Start-LocalInferenceEngine.ps1'
+      - 'MicroFederation/Start-LocalInferenceEngine-Termux.sh'
+      - 'MicroFederation/LOCAL-GPT-INFERENCE-ENGINE.md'
+      - '.github/workflows/local-inference-engine.yml'
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check MicroFederation/local-inference-engine.cjs
+      - name: Contract tests
+        run: node --test MicroFederation/test-local-inference-engine.cjs
+      - name: Termux launcher syntax
+        run: bash -n MicroFederation/Start-LocalInferenceEngine-Termux.sh
+
+  windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: PowerShell 5.1 launcher parse
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'MicroFederation/Start-LocalInferenceEngine.ps1'),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+          Write-Output 'WINDOWS_POWERSHELL_PARSE=PASS'
+      - name: Windows Node syntax and contract tests
+        shell: powershell
+        run: |
+          node --check MicroFederation/local-inference-engine.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test MicroFederation/test-local-inference-engine.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
