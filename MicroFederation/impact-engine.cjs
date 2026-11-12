@@ -5,6 +5,11 @@
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const CATEGORIES = new Set(['life_safety', 'financial', 'resource']);
 const EVIDENCE_LEVELS = new Set(['unverified', 'source_supported', 'independently_reproduced']);
+const EVIDENCE_QUALITY_CAPS = Object.freeze({
+  unverified: 0,
+  source_supported: 0.5,
+  independently_reproduced: 1
+});
 const WEIGHTS = Object.freeze({ life_safety: 0.5, financial: 0.3, resource: 0.2 });
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const isRecord = value => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -17,6 +22,9 @@ function scoreBand(score) {
   if (score >= 75) return 'priority_review';
   if (score >= 50) return 'standard_review';
   return 'backlog';
+}
+function evidenceQualityCap(evidence) {
+  return Math.min(...evidence.map(item => EVIDENCE_QUALITY_CAPS[item.level]));
 }
 function validateOpportunity(input) {
   if (!isRecord(input)) throw Error('opportunity must be an object');
@@ -41,6 +49,10 @@ function validateOpportunity(input) {
     if (!EVIDENCE_LEVELS.has(item.level)) throw Error('evidence level is invalid');
     if (item.sha256 !== undefined && (typeof item.sha256 !== 'string' || !/^[a-fA-F0-9]{64}$/.test(item.sha256))) throw Error('evidence sha256 must be a 64-character hex digest');
     if (item.retrievedAt !== undefined && (typeof item.retrievedAt !== 'string' || !Number.isFinite(Date.parse(item.retrievedAt)))) throw Error('evidence retrievedAt must be a date-time string');
+  }
+  const maxEvidenceQuality = evidenceQualityCap(input.evidence);
+  if (input.evidenceQuality > maxEvidenceQuality) {
+    throw Error('evidenceQuality exceeds evidence bundle cap of ' + maxEvidenceQuality);
   }
   for (const key of ['estimatedCost', 'estimatedBenefit']) {
     const value = input[key];
@@ -67,6 +79,8 @@ function evaluateOpportunity(input) {
   const strongestEvidence = item.evidence.some(x => x.level === 'independently_reproduced')
     ? 'independently_reproduced'
     : item.evidence.some(x => x.level === 'source_supported') ? 'source_supported' : 'unverified';
+  const maxEvidenceQuality = evidenceQualityCap(item.evidence);
+  const weakestEvidence = item.evidence.find(x => EVIDENCE_QUALITY_CAPS[x.level] === maxEvidenceQuality).level;
   const lifeSafety = item.impact.life_safety > 0;
   return Object.freeze({
     id: item.id,
@@ -78,6 +92,8 @@ function evaluateOpportunity(input) {
     feasibilityMultiplier: Math.round(feasibilityMultiplier * 10000) / 10000,
     urgencyMultiplier: Math.round(urgencyMultiplier * 10000) / 10000,
     strongestEvidence,
+    weakestEvidence,
+    evidenceQualityCap: maxEvidenceQuality,
     evidenceCount: item.evidence.length,
     estimatedCost: item.estimatedCost || null,
     estimatedBenefit: item.estimatedBenefit || null,
