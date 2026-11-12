@@ -20,7 +20,12 @@
         "resource": { "type": "number", "minimum": 0, "maximum": 5 }
       }
     },
-    "evidenceQuality": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidenceQuality": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Human assessment capped by the weakest evidence level in the bundle: unverified=0, source_supported=0.5, independently_reproduced=1. These are ordinal ceilings, not probabilities; the runtime enforces the cross-field cap."
+    },
     "feasibility": { "type": "number", "minimum": 0, "maximum": 1 },
     "urgency": { "type": "number", "minimum": 0, "maximum": 1 },
     "evidence": {
