@@ -30,11 +30,19 @@ function publicOffsets() {
   ]));
 }
 
+function isUint8ArrayInput(value) {
+  return Buffer.isBuffer(value) || Object.prototype.toString.call(value) === '[object Uint8Array]';
+}
+
+function isSharedArrayBuffer(value) {
+  return value && Object.prototype.toString.call(value) === '[object SharedArrayBuffer]';
+}
+
 function asBytes(value, name) {
-  if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
+  if (!isUint8ArrayInput(value)) {
     throw new TypeError(name + ' must be a Buffer or Uint8Array');
   }
-  if (typeof SharedArrayBuffer !== 'undefined' && value.buffer instanceof SharedArrayBuffer) {
+  if (isSharedArrayBuffer(value.buffer)) {
     throw new TypeError(name + ' must not use SharedArrayBuffer backing');
   }
   // Copy to a private snapshot so later writes through the caller's view
@@ -79,8 +87,8 @@ function crc32Ieee(input) {
  * integer byte order, so callers must supply those explicitly.
  */
 function parseWireV31(input, options) {
-  if ((!Buffer.isBuffer(input) && !(input instanceof Uint8Array)) || input.byteLength !== WIRE_BYTES) {
-    if (!Buffer.isBuffer(input) && !(input instanceof Uint8Array)) {
+  if ((!isUint8ArrayInput(input)) || input.byteLength !== WIRE_BYTES) {
+    if (!isUint8ArrayInput(input)) {
       throw new TypeError('input must be a Buffer or Uint8Array');
     }
     throw new Error('wire length must be exactly ' + WIRE_BYTES + ' bytes');
