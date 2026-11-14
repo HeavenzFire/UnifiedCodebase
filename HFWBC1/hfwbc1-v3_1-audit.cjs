@@ -1,17 +1,17 @@
 'use strict';
 
-const OFFSETS = Object.freeze({
-  MAGIC: [0, 6],
+const INTERNAL_OFFSETS = Object.freeze({
+  MAGIC: Object.freeze([0, 6]),
   VERSION: 6,
   TYPE: 7,
-  WB_ID_TRUNC: [8, 24],
-  FREQ_LEN: [24, 26],
-  FREQ_C: [26, 32],
-  RANS_LEN: [32, 36],
-  RANS: [36, 46],
-  BATCH_CRC: [46, 50],
-  ACT_LEN: [50, 54],
-  ACTIONS: [54, 304]
+  WB_ID_TRUNC: Object.freeze([8, 24]),
+  FREQ_LEN: Object.freeze([24, 26]),
+  FREQ_C: Object.freeze([26, 32]),
+  RANS_LEN: Object.freeze([32, 36]),
+  RANS: Object.freeze([36, 46]),
+  BATCH_CRC: Object.freeze([46, 50]),
+  ACT_LEN: Object.freeze([50, 54]),
+  ACTIONS: Object.freeze([54, 304])
 });
 
 const WIRE_BYTES = 304;
@@ -22,6 +22,13 @@ const EXPECTED_LENGTHS = Object.freeze({ freq: 6, rans: 10, actions: 250 });
 // The WeakMap proves parser provenance and keeps verification bytes private
 // from callers who may mutate the public Buffer copies returned by the parser.
 const PARSED_WIRE_DATA = new WeakMap();
+
+function publicOffsets() {
+  return Object.fromEntries(Object.entries(INTERNAL_OFFSETS).map(([name, value]) => [
+    name,
+    Array.isArray(value) ? [...value] : value
+  ]));
+}
 
 function asBytes(value, name) {
   if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
@@ -72,6 +79,12 @@ function crc32Ieee(input) {
  * integer byte order, so callers must supply those explicitly.
  */
 function parseWireV31(input, options) {
+  if ((!Buffer.isBuffer(input) && !(input instanceof Uint8Array)) || input.byteLength !== WIRE_BYTES) {
+    if (!Buffer.isBuffer(input) && !(input instanceof Uint8Array)) {
+      throw new TypeError('input must be a Buffer or Uint8Array');
+    }
+    throw new Error('wire length must be exactly ' + WIRE_BYTES + ' bytes');
+  }
   const bytes = asBytes(input, 'input');
   const opts = options || {};
   const expectedMagic = asBytes(opts.magic, 'options.magic');
@@ -79,29 +92,28 @@ function parseWireV31(input, options) {
   requireByteOrder(opts.crcByteOrder, 'options.crcByteOrder');
 
   if (expectedMagic.length !== 6) throw new RangeError('options.magic must contain exactly 6 bytes');
-  if (bytes.length !== WIRE_BYTES) throw new Error('wire length must be exactly ' + WIRE_BYTES + ' bytes');
-  if (!bytes.subarray(0, 6).equals(expectedMagic)) throw new Error('magic mismatch');
-  if (bytes[OFFSETS.VERSION] !== VERSION_V31) throw new Error('unsupported HFWBC version: expected 0x23');
-  if (bytes[OFFSETS.TYPE] !== TYPE_BATCH) throw new Error('unsupported HFWBC record type: expected 0x01');
+  if (!bytes.subarray(...INTERNAL_OFFSETS.MAGIC).equals(expectedMagic)) throw new Error('magic mismatch');
+  if (bytes[INTERNAL_OFFSETS.VERSION] !== VERSION_V31) throw new Error('unsupported HFWBC version: expected 0x23');
+  if (bytes[INTERNAL_OFFSETS.TYPE] !== TYPE_BATCH) throw new Error('unsupported HFWBC record type: expected 0x01');
 
-  const freqLength = readUnsigned(bytes, ...OFFSETS.FREQ_LEN, opts.integerByteOrder);
-  const ransLength = readUnsigned(bytes, ...OFFSETS.RANS_LEN, opts.integerByteOrder);
-  const actionsLength = readUnsigned(bytes, ...OFFSETS.ACT_LEN, opts.integerByteOrder);
+  const freqLength = readUnsigned(bytes, ...INTERNAL_OFFSETS.FREQ_LEN, opts.integerByteOrder);
+  const ransLength = readUnsigned(bytes, ...INTERNAL_OFFSETS.RANS_LEN, opts.integerByteOrder);
+  const actionsLength = readUnsigned(bytes, ...INTERNAL_OFFSETS.ACT_LEN, opts.integerByteOrder);
 
   if (freqLength !== EXPECTED_LENGTHS.freq) throw new Error('FREQ_LEN must equal 6');
   if (ransLength !== EXPECTED_LENGTHS.rans) throw new Error('RANS_LEN must equal 10');
   if (actionsLength !== EXPECTED_LENGTHS.actions) throw new Error('ACT_LEN must equal 250');
 
-  const batchCrc = readUnsigned(bytes, ...OFFSETS.BATCH_CRC, opts.crcByteOrder) >>> 0;
-  const actions = Buffer.from(bytes.subarray(...OFFSETS.ACTIONS));
+  const batchCrc = readUnsigned(bytes, ...INTERNAL_OFFSETS.BATCH_CRC, opts.crcByteOrder) >>> 0;
+  const actions = Buffer.from(bytes.subarray(...INTERNAL_OFFSETS.ACTIONS));
   const result = Object.freeze({
-    version: bytes[OFFSETS.VERSION],
-    type: bytes[OFFSETS.TYPE],
-    wbIdTrunc: Buffer.from(bytes.subarray(...OFFSETS.WB_ID_TRUNC)),
+    version: bytes[INTERNAL_OFFSETS.VERSION],
+    type: bytes[INTERNAL_OFFSETS.TYPE],
+    wbIdTrunc: Buffer.from(bytes.subarray(...INTERNAL_OFFSETS.WB_ID_TRUNC)),
     freqLength,
-    freqC: Buffer.from(bytes.subarray(...OFFSETS.FREQ_C)),
+    freqC: Buffer.from(bytes.subarray(...INTERNAL_OFFSETS.FREQ_C)),
     ransLength,
-    rans: Buffer.from(bytes.subarray(...OFFSETS.RANS)),
+    rans: Buffer.from(bytes.subarray(...INTERNAL_OFFSETS.RANS)),
     batchCrc,
     actionsLength,
     actions: Buffer.from(actions),
@@ -138,7 +150,9 @@ function verifyBatchCrc(parsedWire, canonicalStatesBytes) {
 }
 
 module.exports = {
-  OFFSETS,
+  get OFFSETS() {
+    return publicOffsets();
+  },
   WIRE_BYTES,
   VERSION_V31,
   TYPE_BATCH,
