@@ -62,3 +62,12 @@ The reported CRC value `0xccec3394` and reported 500/500 hard-fail fuzz result a
 ## v3.2 security work — not implemented here
 
 CRC-32 detects accidental corruption; it is not authentication. A v3.2 outer AES-256-GCM envelope needs a normative format, 96-bit nonce uniqueness strategy, 128-bit tag, authenticated header/AAD definition, key provisioning/rotation, and fail-closed handling. RAW fallback must be explicitly typed and authenticated under the same envelope. Do not deploy an ad-hoc wrapper or reuse a GCM nonce.
+
+## Related legacy code reviewed
+
+The connected HeavenzFire GitHub repositories contain an older `HighRadixCodec` in `EntangledMultimodalSystem-2`:
+
+- [TypeScript implementation](https://github.com/HeavenzFire/EntangledMultimodalSystem-2/blob/main/src/utils/HighRadixCodec.ts)
+- [JavaScript implementation](https://github.com/HeavenzFire/EntangledMultimodalSystem-2/blob/main/neural-mesh-registry/src/utils/HighRadixCodec.js)
+
+That code is a Base85/Base94 text representation layer with optional DEFLATE in the JavaScript version; it is not the reported HFWBC1 state-prediction/rANS format. Its own JavaScript source explicitly describes the radix transform as encoding rather than compression. It also uses a bigint conversion without an unambiguous original byte-length contract in the TypeScript path, so it must not be treated as a lossless reference decoder for arbitrary binary fixtures. It was reviewed but not imported or modified.
