@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const vm = require('node:vm');
 const audit = require('./hfwbc1-v3_1-audit.cjs');
 const envelopeApi = require('./hfwbc1-v3_2-envelope.cjs');
 const {
@@ -126,7 +127,9 @@ test('RAW fallback selects HFWBC1 only when encoded bytes are strictly smaller',
   const result = await sealWithRawFallback(raw, compressed, opts);
   assert.equal(result.mode, 'hfwbc1');
   assert.equal(result.selectedBytes, 44);
-  assert.deepEqual((await openEnvelope(result.envelope, opts)).payload, compressed);
+  const opened = await openEnvelope(result.envelope, opts);
+  assert.equal(opened.mode, result.mode);
+  assert.deepEqual(opened.payload, compressed);
 });
 
 test('RAW fallback chooses RAW on equal or larger encoded payloads', async () => {
@@ -134,11 +137,32 @@ test('RAW fallback chooses RAW on equal or larger encoded payloads', async () =>
   const raw = Buffer.alloc(64, 0x41);
   const equal = await sealWithRawFallback(raw, Buffer.alloc(64, 0x42), opts);
   assert.equal(equal.mode, 'raw');
-  assert.deepEqual((await openEnvelope(equal.envelope, opts)).payload, raw);
+  const openedEqual = await openEnvelope(equal.envelope, opts);
+  assert.equal(openedEqual.mode, equal.mode);
+  assert.deepEqual(openedEqual.payload, raw);
 
   const larger = await sealWithRawFallback(raw, Buffer.alloc(65, 0x42), withFreshNonce(opts));
   assert.equal(larger.mode, 'raw');
-  assert.deepEqual((await openEnvelope(larger.envelope, opts)).payload, raw);
+  const openedLarger = await openEnvelope(larger.envelope, opts);
+  assert.equal(openedLarger.mode, larger.mode);
+  assert.deepEqual(openedLarger.payload, raw);
+});
+
+test('RAW fallback checks candidate sizes before copying and chooses a fitting compressed candidate', async () => {
+  const opts = options();
+  const raw = Buffer.alloc(64, 0x41);
+  const compressed = Buffer.alloc(20, 0x42);
+  const result = await sealWithRawFallback(raw, compressed, { ...opts, maxCiphertextBytes: 32 });
+  assert.equal(result.mode, 'hfwbc1');
+  assert.equal(result.selectedBytes, 20);
+  const opened = await openEnvelope(result.envelope, opts);
+  assert.equal(opened.mode, 'hfwbc1');
+  assert.deepEqual(opened.payload, compressed);
+
+  await assert.rejects(
+    sealWithRawFallback(raw, Buffer.alloc(40, 0x43), { ...withFreshNonce(opts), maxCiphertextBytes: 32 }),
+    /no RAW or HFWBC1 candidate fits configured maximum/
+  );
 });
 
 test('RAW fallback handles missing compressed candidate', async () => {
@@ -146,7 +170,9 @@ test('RAW fallback handles missing compressed candidate', async () => {
   const raw = Buffer.from('raw only');
   const result = await sealWithRawFallback(raw, null, opts);
   assert.equal(result.mode, 'raw');
-  assert.deepEqual((await openEnvelope(result.envelope, opts)).payload, raw);
+  const opened = await openEnvelope(result.envelope, opts);
+  assert.equal(opened.mode, result.mode);
+  assert.deepEqual(opened.payload, raw);
 });
 
 test('tampering with mode header, ciphertext, or tag is rejected', async () => {
@@ -246,12 +272,32 @@ test('rejects oversized envelope input before copying it', () => {
   assert.throws(() => parseEnvelope(oversized, { maxCiphertextBytes: 1 }), /envelope exceeds configured maximum/);
 });
 
-test('rejects SharedArrayBuffer-backed inputs and snapshots ordinary byte arrays', async () => {
+test('rejects same-realm and cross-realm SharedArrayBuffer-backed inputs', async () => {
   if (typeof SharedArrayBuffer === 'undefined') return;
   const opts = options();
   const shared = new Uint8Array(new SharedArrayBuffer(4));
   await assert.rejects(sealEnvelope(shared, { ...opts, mode: 'raw' }), /SharedArrayBuffer/);
   assert.throws(() => parseEnvelope(shared), /SharedArrayBuffer/);
+
+  const foreignShared = vm.runInNewContext('new Uint8Array(new SharedArrayBuffer(4))');
+  assert.equal(Object.prototype.toString.call(foreignShared), '[object Uint8Array]');
+  await assert.rejects(sealEnvelope(foreignShared, { ...withFreshNonce(opts), mode: 'raw' }), /SharedArrayBuffer/);
+  assert.throws(() => parseEnvelope(foreignShared), /SharedArrayBuffer/);
+
+  const foreignWire = vm.runInNewContext('new Uint8Array(new SharedArrayBuffer(304))');
+  assert.throws(() => parseWireV31(foreignWire, {
+    magic: Buffer.from('TEST01', 'ascii'),
+    integerByteOrder: 'little',
+    crcByteOrder: 'big'
+  }), /SharedArrayBuffer/);
+});
+
+test('accepts ordinary cross-realm Uint8Array payloads by snapshotting them', async () => {
+  const opts = options();
+  const foreignPayload = vm.runInNewContext('new Uint8Array([72, 70, 87, 66])');
+  const sealed = await sealEnvelope(foreignPayload, { ...opts, mode: 'raw' });
+  const opened = await openEnvelope(sealed, opts);
+  assert.deepEqual(opened.payload, Buffer.from([72, 70, 87, 66]));
 });
 
 test('exported protocol constants are defensive copies', async () => {
