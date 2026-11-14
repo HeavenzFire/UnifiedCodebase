@@ -61,7 +61,9 @@ test('parses the fixed 304-byte v3.1 envelope without claiming state decode', ()
   assert.equal(parsed.type, 0x01);
   assert.equal(parsed.wbIdTrunc.length, 16);
   assert.equal(parsed.freqC.length, 6);
+  assert.deepEqual(parsed.freqC, wire.subarray(26, 32));
   assert.equal(parsed.rans.length, 10);
+  assert.deepEqual(parsed.rans, wire.subarray(36, 46));
   assert.equal(parsed.actions.length, 250);
   assert.equal(OFFSETS.ACTIONS[0], 54);
   assert.equal(OFFSETS.ACTIONS[1], 304);
@@ -70,11 +72,13 @@ test('parses the fixed 304-byte v3.1 envelope without claiming state decode', ()
 test('v3.1 CRC verifies states followed by exact ACTIONS bytes', () => {
   const states = Buffer.from('canonical-state-fixture', 'utf8');
   const wire = fixture(states);
-  assert.deepEqual(verifyBatchCrc(parse(wire), states), {
+  const result = verifyBatchCrc(parse(wire), states);
+  assert.deepEqual({ ok: result.ok, expected: result.expected, actual: result.actual }, {
     ok: true,
     expected: crc32Ieee(Buffer.concat([states, wire.subarray(54, 304)])),
     actual: crc32Ieee(Buffer.concat([states, wire.subarray(54, 304)]))
   });
+  assert.deepEqual(Buffer.from(result.actionsBase64, 'base64'), wire.subarray(54, 304));
 });
 
 test('changing one ACTIONS byte invalidates the v3.1 batch CRC', () => {
@@ -139,8 +143,13 @@ test('rejects parser lookalikes instead of trusting caller-built verification ob
 test('verification uses private ACTIONS snapshot even if caller mutates public parsed fields', () => {
   const states = Buffer.from('canonical-state-fixture', 'utf8');
   const parsed = parse(fixture(states));
-  parsed.actions.fill(0);
-  assert.equal(verifyBatchCrc(parsed, states).ok, true);
+  const originalActions = Buffer.from(parsed.actions);
+  const callerCopy = parsed.actions;
+  callerCopy.fill(0);
+  const verified = verifyBatchCrc(parsed, states);
+  assert.equal(verified.ok, true);
+  assert.deepEqual(parsed.actions, originalActions);
+  assert.deepEqual(Buffer.from(verified.actionsBase64, 'base64'), originalActions);
 });
 
 test('rejects SharedArrayBuffer-backed wire and canonical state inputs', () => {
