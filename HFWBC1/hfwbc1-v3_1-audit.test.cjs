@@ -55,7 +55,8 @@ test('CRC-32/ISO-HDLC matches the published check value', () => {
 
 test('parses the fixed 304-byte v3.1 envelope without claiming state decode', () => {
   const states = Buffer.from('canonical-state-fixture', 'utf8');
-  const parsed = parse(fixture(states));
+  const wire = fixture(states);
+  const parsed = parse(wire);
   assert.equal(parsed.wireBytes, 304);
   assert.equal(parsed.version, 0x23);
   assert.equal(parsed.type, 0x01);
