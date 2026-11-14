@@ -20,6 +20,16 @@ function options(context = Buffer.from('heavenzfire:test:unit', 'utf8')) {
   };
 }
 
+function xorshift32(initial) {
+  let state = initial >>> 0;
+  return function next() {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  };
+}
+
 test('Node AES-256-GCM backend matches the NIST empty-message known-answer tag', () => {
   const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.alloc(32), Buffer.alloc(12), { authTagLength: 16 });
   assert.deepEqual(cipher.update(Buffer.alloc(0)), Buffer.alloc(0));
@@ -103,6 +113,24 @@ test('tampering with mode header, ciphertext, or tag is rejected', () => {
   const tagTamper = Buffer.from(envelope);
   tagTamper[tagTamper.length - 1] ^= 0x01;
   assert.throws(() => openEnvelope(tagTamper, opts), /authentication failed/);
+});
+
+test('500 seeded single-byte mutations across the entire envelope are rejected', () => {
+  const opts = options();
+  const original = sealEnvelope(Buffer.from('whole-envelope mutation fixture'), { ...opts, mode: 'raw' });
+  assert.deepEqual(openEnvelope(original, opts).payload, Buffer.from('whole-envelope mutation fixture'));
+  const next = xorshift32(3202);
+
+  let rejected = 0;
+  for (let i = 0; i < 500; i += 1) {
+    const mutated = Buffer.from(original);
+    const offset = next() % mutated.length;
+    const delta = 1 + (next() % 255);
+    mutated[offset] ^= delta;
+    assert.throws(() => openEnvelope(mutated, opts));
+    rejected += 1;
+  }
+  assert.equal(rejected, 500);
 });
 
 test('wrong key and wrong external context fail authentication', () => {
