@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const MAGIC = Buffer.from('HFWG', 'ascii');
+const ENVELOPE_MAGIC = Buffer.from('HFWG', 'ascii');
 const FORMAT_VERSION = 0x01;
 const MODE_RAW = 0x00;
 const MODE_HFWBC1 = 0x01;
@@ -54,6 +54,22 @@ function validateContext(value) {
   return bytes(value, 'context');
 }
 
+function validateClaimProvider(value, name) {
+  if (!value || typeof value.claim !== 'function') {
+    throw new TypeError(name + ' must provide an atomic claim(keyFingerprint, ...recordIds) function');
+  }
+  return value;
+}
+
+function fingerprint(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+async function requireNewClaim(provider, name, ...claimArgs) {
+  const claimed = await provider.claim(...claimArgs);
+  if (claimed !== true) throw new Error(name + ' rejected a duplicate or unavailable claim');
+}
+
 function modeToByte(mode) {
   if (mode === 'raw') return MODE_RAW;
   if (mode === 'hfwbc1') return MODE_HFWBC1;
@@ -68,7 +84,7 @@ function byteToMode(value) {
 
 function makeHeader(mode, nonce, ciphertextLength) {
   const header = Buffer.alloc(HEADER_BYTES);
-  MAGIC.copy(header, 0);
+  ENVELOPE_MAGIC.copy(header, 0);
   header[4] = FORMAT_VERSION;
   header[5] = modeToByte(mode);
   nonce.copy(header, 6);
@@ -88,7 +104,7 @@ function parseEnvelope(input, options) {
   if (envelope.length < HEADER_BYTES + TAG_BYTES) {
     throw new Error('envelope is truncated');
   }
-  if (!envelope.subarray(0, 4).equals(MAGIC)) throw new Error('envelope magic mismatch');
+  if (!envelope.subarray(0, ENVELOPE_MAGIC.length).equals(ENVELOPE_MAGIC)) throw new Error('envelope magic mismatch');
   if (envelope[4] !== FORMAT_VERSION) throw new Error('unsupported envelope format version');
 
   const mode = byteToMode(envelope[5]);
@@ -113,29 +129,38 @@ function parseEnvelope(input, options) {
 /**
  * Seal bytes using AES-256-GCM.
  *
- * Nonces MUST be unique for every encryption under a given key. This API
- * requires the caller to supply a nonce deliberately; it does not pretend
- * that an in-memory counter or uncoordinated random generator is a durable
- * nonce-allocation strategy. The exact header is authenticated as AAD,
- * followed by caller-supplied context bytes.
+ * A durable, atomic nonceAllocator is mandatory. Its claim(keyFingerprint,
+ * nonceHex) operation must reserve the nonce across all processes/devices
+ * sharing the key and must never release a reservation, even if encryption
+ * fails after the claim. The allocator must return true only for a new
+ * reservation. This module intentionally provides no unsafe in-memory default.
  */
-function sealEnvelope(payloadInput, options) {
+async function sealEnvelope(payloadInput, options) {
   const opts = options || {};
   const maxCiphertextBytes = validateMaxCiphertextBytes(opts.maxCiphertextBytes);
   const payloadLength = assertByteInput(payloadInput, 'payload');
   if (payloadLength > maxCiphertextBytes) throw new RangeError('payload exceeds configured maximum');
+
   const payload = bytes(payloadInput, 'payload');
   const key = validateKey(opts.key);
   const nonce = validateNonce(opts.nonce);
   const context = validateContext(opts.context);
   const mode = opts.mode;
-  const header = makeHeader(mode, nonce, payload.length);
+  const modeByte = modeToByte(mode);
+  const nonceAllocator = validateClaimProvider(opts.nonceAllocator, 'nonceAllocator');
+  const keyFingerprint = fingerprint(key);
+  const nonceHex = nonce.toString('hex');
 
+  await requireNewClaim(nonceAllocator, 'nonceAllocator', keyFingerprint, nonceHex);
+
+  const header = makeHeader(mode, nonce, payload.length);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce, { authTagLength: TAG_BYTES });
   cipher.setAAD(Buffer.concat([header, context]));
   const ciphertext = Buffer.concat([cipher.update(payload), cipher.final()]);
   const tag = cipher.getAuthTag();
 
+  // Guard against accidental divergence between the selected mode and header.
+  if (header[5] !== modeByte) throw new Error('internal envelope mode mismatch');
   return Buffer.concat([header, ciphertext, tag]);
 }
 
@@ -144,7 +169,7 @@ function sealEnvelope(payloadInput, options) {
  * The selected bytes are authenticated and encrypted by the same envelope.
  * This layer does not encode or decode HFWBC1 itself.
  */
-function sealWithRawFallback(rawInput, compressedInput, options) {
+async function sealWithRawFallback(rawInput, compressedInput, options) {
   const raw = bytes(rawInput, 'raw');
   const compressed = compressedInput === undefined || compressedInput === null
     ? null
@@ -152,7 +177,7 @@ function sealWithRawFallback(rawInput, compressedInput, options) {
   const useCompressed = compressed !== null && compressed.length < raw.length;
   const mode = useCompressed ? 'hfwbc1' : 'raw';
   const payload = useCompressed ? compressed : raw;
-  const envelope = sealEnvelope(payload, { ...options, mode });
+  const envelope = await sealEnvelope(payload, { ...options, mode });
   return Object.freeze({
     mode,
     rawBytes: raw.length,
@@ -163,29 +188,44 @@ function sealWithRawFallback(rawInput, compressedInput, options) {
 }
 
 /**
- * Authenticate before returning plaintext. Any GCM authentication failure is
- * collapsed to a single error so callers cannot distinguish key, tag, or AAD
- * failures through this API.
+ * Authenticate before returning plaintext, then atomically claim the
+ * (key fingerprint, context fingerprint, nonce) tuple in a durable replay
+ * guard. The replay guard must be shared by all consumers that process the
+ * same key/context namespace. A duplicate claim is rejected before plaintext
+ * is returned to the caller.
  */
-function openEnvelope(input, options) {
+async function openEnvelope(input, options) {
   const opts = options || {};
   const key = validateKey(opts.key);
   const context = validateContext(opts.context);
+  const replayGuard = validateClaimProvider(opts.replayGuard, 'replayGuard');
   const parsed = parseEnvelope(input, opts);
 
+  let plaintext;
   try {
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, parsed.nonce, { authTagLength: TAG_BYTES });
     decipher.setAAD(Buffer.concat([parsed.header, context]));
     decipher.setAuthTag(parsed.tag);
-    const plaintext = Buffer.concat([decipher.update(parsed.ciphertext), decipher.final()]);
-    return Object.freeze({ mode: parsed.mode, payload: plaintext });
+    plaintext = Buffer.concat([decipher.update(parsed.ciphertext), decipher.final()]);
   } catch {
     throw new Error('AES-256-GCM authentication failed');
   }
+
+  await requireNewClaim(
+    replayGuard,
+    'replayGuard',
+    fingerprint(key),
+    fingerprint(context),
+    parsed.nonce.toString('hex')
+  );
+
+  return Object.freeze({ mode: parsed.mode, payload: plaintext });
 }
 
 module.exports = {
-  MAGIC,
+  get MAGIC() {
+    return Buffer.from(ENVELOPE_MAGIC);
+  },
   FORMAT_VERSION,
   MODE_RAW,
   MODE_HFWBC1,
