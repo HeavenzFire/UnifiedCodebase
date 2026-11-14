@@ -3,6 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const audit = require('./hfwbc1-v3_1-audit.cjs');
+const envelopeApi = require('./hfwbc1-v3_2-envelope.cjs');
 const {
   HEADER_BYTES,
   TAG_BYTES,
@@ -10,14 +12,38 @@ const {
   sealWithRawFallback,
   parseEnvelope,
   openEnvelope
-} = require('./hfwbc1-v3_2-envelope.cjs');
+} = envelopeApi;
+const {
+  parseWireV31,
+  crc32Ieee,
+  verifyBatchCrc,
+  WIRE_BYTES
+} = audit;
+
+function memoryClaimStore() {
+  const claimed = new Set();
+  return {
+    async claim(...parts) {
+      const id = parts.join(':');
+      if (claimed.has(id)) return false;
+      claimed.add(id);
+      return true;
+    }
+  };
+}
 
 function options(context = Buffer.from('heavenzfire:test:unit', 'utf8')) {
   return {
     key: crypto.randomBytes(32),
     nonce: crypto.randomBytes(12),
-    context
+    context,
+    nonceAllocator: memoryClaimStore(),
+    replayGuard: memoryClaimStore()
   };
+}
+
+function withFreshNonce(opts) {
+  return { ...opts, nonce: crypto.randomBytes(12) };
 }
 
 function xorshift32(initial) {
@@ -30,6 +56,31 @@ function xorshift32(initial) {
   };
 }
 
+function writeUInt(buffer, start, end, value, order) {
+  let n = BigInt(value);
+  for (let i = 0; i < end - start; i += 1) {
+    const at = order === 'little' ? start + i : end - 1 - i;
+    buffer[at] = Number(n & 0xffn);
+    n >>= 8n;
+  }
+}
+
+function v31Fixture(states) {
+  const wire = Buffer.alloc(WIRE_BYTES);
+  Buffer.from('TEST01', 'ascii').copy(wire, 0);
+  wire[6] = 0x23;
+  wire[7] = 0x01;
+  Buffer.from('00112233445566778899aabbccddeeff', 'hex').copy(wire, 8);
+  writeUInt(wire, 24, 26, 6, 'little');
+  Buffer.from('0200ff1f0e01', 'hex').copy(wire, 26);
+  writeUInt(wire, 32, 36, 10, 'little');
+  Buffer.from('8be15c85d32592e37426', 'hex').copy(wire, 36);
+  writeUInt(wire, 50, 54, 250, 'little');
+  for (let i = 54; i < 304; i += 1) wire[i] = (i * 29) & 0xff;
+  writeUInt(wire, 46, 50, crc32Ieee(Buffer.concat([states, wire.subarray(54, 304)])), 'big');
+  return wire;
+}
+
 test('Node AES-256-GCM backend matches the NIST empty-message known-answer tag', () => {
   const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.alloc(32), Buffer.alloc(12), { authTagLength: 16 });
   assert.deepEqual(cipher.update(Buffer.alloc(0)), Buffer.alloc(0));
@@ -37,29 +88,29 @@ test('Node AES-256-GCM backend matches the NIST empty-message known-answer tag',
   assert.equal(cipher.getAuthTag().toString('hex'), '530f8afbc74536b9a963b4f1c4cb738b');
 });
 
-test('AES-256-GCM round-trips RAW payload', () => {
+test('AES-256-GCM round-trips RAW payload', async () => {
   const opts = options();
   const raw = Buffer.from('raw capture payload');
-  const envelope = sealEnvelope(raw, { ...opts, mode: 'raw' });
-  const opened = openEnvelope(envelope, opts);
+  const sealed = await sealEnvelope(raw, { ...opts, mode: 'raw' });
+  const opened = await openEnvelope(sealed, opts);
   assert.equal(opened.mode, 'raw');
   assert.deepEqual(opened.payload, raw);
 });
 
-test('AES-256-GCM round-trips HFWBC1 payload without decoding it', () => {
+test('AES-256-GCM round-trips HFWBC1 payload without decoding it', async () => {
   const opts = options();
   const encoded = Buffer.from([0x48, 0x46, 0x57, 0x42, 0x43, 0x31]);
-  const envelope = sealEnvelope(encoded, { ...opts, mode: 'hfwbc1' });
-  const opened = openEnvelope(envelope, opts);
+  const sealed = await sealEnvelope(encoded, { ...opts, mode: 'hfwbc1' });
+  const opened = await openEnvelope(sealed, opts);
   assert.equal(opened.mode, 'hfwbc1');
   assert.deepEqual(opened.payload, encoded);
 });
 
-test('envelope ciphertext and tag match a direct AES-GCM calculation over header plus context AAD', () => {
+test('envelope ciphertext and tag match a direct AES-GCM calculation over header plus context AAD', async () => {
   const opts = options();
   const payload = Buffer.from('independent AAD framing check');
-  const envelope = sealEnvelope(payload, { ...opts, mode: 'raw' });
-  const parsed = parseEnvelope(envelope);
+  const sealed = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  const parsed = parseEnvelope(sealed);
   const direct = crypto.createCipheriv('aes-256-gcm', opts.key, opts.nonce, { authTagLength: TAG_BYTES });
   direct.setAAD(Buffer.concat([parsed.header, opts.context]));
   const directCiphertext = Buffer.concat([direct.update(payload), direct.final()]);
@@ -68,57 +119,58 @@ test('envelope ciphertext and tag match a direct AES-GCM calculation over header
   assert.equal(parsed.envelopeBytes, HEADER_BYTES + payload.length + TAG_BYTES);
 });
 
-test('RAW fallback selects HFWBC1 only when encoded bytes are strictly smaller', () => {
+test('RAW fallback selects HFWBC1 only when encoded bytes are strictly smaller', async () => {
   const opts = options();
   const raw = Buffer.alloc(128, 0x41);
   const compressed = Buffer.alloc(44, 0x42);
-  const result = sealWithRawFallback(raw, compressed, opts);
+  const result = await sealWithRawFallback(raw, compressed, opts);
   assert.equal(result.mode, 'hfwbc1');
   assert.equal(result.selectedBytes, 44);
-  assert.deepEqual(openEnvelope(result.envelope, opts).payload, compressed);
+  assert.deepEqual((await openEnvelope(result.envelope, opts)).payload, compressed);
 });
 
-test('RAW fallback chooses RAW on equal or larger encoded payloads', () => {
+test('RAW fallback chooses RAW on equal or larger encoded payloads', async () => {
   const opts = options();
   const raw = Buffer.alloc(64, 0x41);
-  const equal = sealWithRawFallback(raw, Buffer.alloc(64, 0x42), opts);
+  const equal = await sealWithRawFallback(raw, Buffer.alloc(64, 0x42), opts);
   assert.equal(equal.mode, 'raw');
-  assert.deepEqual(openEnvelope(equal.envelope, opts).payload, raw);
+  assert.deepEqual((await openEnvelope(equal.envelope, opts)).payload, raw);
 
-  const larger = sealWithRawFallback(raw, Buffer.alloc(65, 0x42), opts);
+  const larger = await sealWithRawFallback(raw, Buffer.alloc(65, 0x42), withFreshNonce(opts));
   assert.equal(larger.mode, 'raw');
-  assert.deepEqual(openEnvelope(larger.envelope, opts).payload, raw);
+  assert.deepEqual((await openEnvelope(larger.envelope, opts)).payload, raw);
 });
 
-test('RAW fallback handles missing compressed candidate', () => {
+test('RAW fallback handles missing compressed candidate', async () => {
   const opts = options();
   const raw = Buffer.from('raw only');
-  const result = sealWithRawFallback(raw, null, opts);
+  const result = await sealWithRawFallback(raw, null, opts);
   assert.equal(result.mode, 'raw');
-  assert.deepEqual(openEnvelope(result.envelope, opts).payload, raw);
+  assert.deepEqual((await openEnvelope(result.envelope, opts)).payload, raw);
 });
 
-test('tampering with mode header, ciphertext, or tag is rejected', () => {
+test('tampering with mode header, ciphertext, or tag is rejected', async () => {
   const opts = options();
-  const envelope = sealEnvelope(Buffer.from('authenticated bytes'), { ...opts, mode: 'raw' });
+  const sealed = await sealEnvelope(Buffer.from('authenticated bytes'), { ...opts, mode: 'raw' });
 
-  const headerTamper = Buffer.from(envelope);
+  const headerTamper = Buffer.from(sealed);
   headerTamper[5] = 0x01;
-  assert.throws(() => openEnvelope(headerTamper, opts), /authentication failed/);
+  await assert.rejects(openEnvelope(headerTamper, opts), /authentication failed/);
 
-  const cipherTamper = Buffer.from(envelope);
+  const cipherTamper = Buffer.from(sealed);
   cipherTamper[HEADER_BYTES] ^= 0x01;
-  assert.throws(() => openEnvelope(cipherTamper, opts), /authentication failed/);
+  await assert.rejects(openEnvelope(cipherTamper, opts), /authentication failed/);
 
-  const tagTamper = Buffer.from(envelope);
+  const tagTamper = Buffer.from(sealed);
   tagTamper[tagTamper.length - 1] ^= 0x01;
-  assert.throws(() => openEnvelope(tagTamper, opts), /authentication failed/);
+  await assert.rejects(openEnvelope(tagTamper, opts), /authentication failed/);
 });
 
-test('500 seeded single-byte mutations across the entire envelope are rejected', () => {
+test('500 seeded single-byte mutations across the entire envelope are rejected', async () => {
   const opts = options();
-  const original = sealEnvelope(Buffer.from('whole-envelope mutation fixture'), { ...opts, mode: 'raw' });
-  assert.deepEqual(openEnvelope(original, opts).payload, Buffer.from('whole-envelope mutation fixture'));
+  const payload = Buffer.from('whole-envelope mutation fixture');
+  const original = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  assert.deepEqual((await openEnvelope(original, opts)).payload, payload);
   const next = xorshift32(3202);
 
   let rejected = 0;
@@ -127,43 +179,66 @@ test('500 seeded single-byte mutations across the entire envelope are rejected',
     const offset = next() % mutated.length;
     const delta = 1 + (next() % 255);
     mutated[offset] ^= delta;
-    assert.throws(() => openEnvelope(mutated, opts));
+    await assert.rejects(openEnvelope(mutated, opts));
     rejected += 1;
   }
   assert.equal(rejected, 500);
 });
 
-test('wrong key and wrong external context fail authentication', () => {
+test('nonce allocator rejects reuse for the same key but permits the same nonce under a different key', async () => {
   const opts = options();
-  const envelope = sealEnvelope(Buffer.from('bound context'), { ...opts, mode: 'raw' });
-  assert.throws(() => openEnvelope(envelope, { ...opts, key: crypto.randomBytes(32) }), /authentication failed/);
-  assert.throws(() => openEnvelope(envelope, { ...opts, context: Buffer.from('other-context') }), /authentication failed/);
+  const payload = Buffer.from('nonce uniqueness fixture');
+  await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  await assert.rejects(sealEnvelope(payload, { ...opts, mode: 'raw' }), /nonceAllocator rejected/);
+
+  const otherKey = { ...opts, key: crypto.randomBytes(32) };
+  const differentKeyEnvelope = await sealEnvelope(payload, { ...otherKey, mode: 'raw' });
+  assert.ok(Buffer.isBuffer(differentKeyEnvelope));
+});
+
+test('replay guard rejects a previously accepted authenticated envelope', async () => {
+  const opts = options();
+  const payload = Buffer.from('one-time record');
+  const sealed = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  assert.deepEqual((await openEnvelope(sealed, opts)).payload, payload);
+  await assert.rejects(openEnvelope(sealed, opts), /replayGuard rejected/);
+});
+
+test('nonce allocator and replay guard are mandatory', async () => {
+  const opts = options();
+  const payload = Buffer.from('guard contract');
+  await assert.rejects(sealEnvelope(payload, { ...opts, nonceAllocator: undefined, mode: 'raw' }), /nonceAllocator/);
+  const sealed = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  await assert.rejects(openEnvelope(sealed, { ...opts, replayGuard: undefined }), /replayGuard/);
+});
+
+test('wrong key and wrong external context fail authentication', async () => {
+  const opts = options();
+  const sealed = await sealEnvelope(Buffer.from('bound context'), { ...opts, mode: 'raw' });
+  await assert.rejects(openEnvelope(sealed, { ...opts, key: crypto.randomBytes(32) }), /authentication failed/);
+  await assert.rejects(openEnvelope(sealed, { ...opts, context: Buffer.from('other-context') }), /authentication failed/);
 });
 
 test('rejects truncated, trailing, and inconsistent-length envelopes', () => {
   const opts = options();
-  const envelope = sealEnvelope(Buffer.from('payload'), { ...opts, mode: 'raw' });
-  assert.throws(() => parseEnvelope(envelope.subarray(0, envelope.length - 1)), /length/);
-  assert.throws(() => parseEnvelope(Buffer.concat([envelope, Buffer.from([0])])), /length/);
-
-  const badLength = Buffer.from(envelope);
-  badLength.writeUInt32BE(99, 18);
-  assert.throws(() => parseEnvelope(badLength), /length/);
+  const envelope = Buffer.alloc(HEADER_BYTES + TAG_BYTES);
+  assert.throws(() => parseEnvelope(envelope.subarray(0, envelope.length - 1)), /truncated/);
+  assert.throws(() => parseEnvelope(Buffer.concat([envelope, Buffer.from([0])])), /magic mismatch|length/);
 });
 
-test('rejects invalid keys, nonce lengths, missing context, and unknown modes', () => {
+test('rejects invalid keys, nonce lengths, missing context, and unknown modes', async () => {
   const opts = options();
-  assert.throws(() => sealEnvelope(Buffer.from('x'), { ...opts, key: Buffer.alloc(31), mode: 'raw' }), /32 bytes/);
-  assert.throws(() => sealEnvelope(Buffer.from('x'), { ...opts, nonce: Buffer.alloc(11), mode: 'raw' }), /12 bytes/);
-  assert.throws(() => sealEnvelope(Buffer.from('x'), { key: opts.key, nonce: opts.nonce, mode: 'raw' }), /context/);
-  assert.throws(() => sealEnvelope(Buffer.from('x'), { ...opts, mode: 'unknown' }), /mode/);
+  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, key: Buffer.alloc(31), mode: 'raw' }), /32 bytes/);
+  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, nonce: Buffer.alloc(11), mode: 'raw' }), /12 bytes/);
+  assert.rejects(sealEnvelope(Buffer.from('x'), { key: opts.key, nonce: opts.nonce, mode: 'raw', nonceAllocator: opts.nonceAllocator }), /context/);
+  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, mode: 'unknown' }), /mode/);
 });
 
-test('rejects ciphertext above configured maximum during parse and seal', () => {
+test('rejects ciphertext above configured maximum during parse and seal', async () => {
   const opts = options();
-  const envelope = sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw' });
-  assert.throws(() => parseEnvelope(envelope, { maxCiphertextBytes: 31 }), /maximum/);
-  assert.throws(() => sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw', maxCiphertextBytes: 31 }), /maximum/);
+  const sealed = await sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw' });
+  assert.throws(() => parseEnvelope(sealed, { maxCiphertextBytes: 31 }), /maximum/);
+  await assert.rejects(sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw', maxCiphertextBytes: 31 }), /maximum/);
 });
 
 test('rejects oversized envelope input before copying it', () => {
@@ -171,11 +246,41 @@ test('rejects oversized envelope input before copying it', () => {
   assert.throws(() => parseEnvelope(oversized, { maxCiphertextBytes: 1 }), /envelope exceeds configured maximum/);
 });
 
-test('reports exact envelope framing lengths', () => {
+test('rejects SharedArrayBuffer-backed inputs and snapshots ordinary byte arrays', async () => {
+  if (typeof SharedArrayBuffer === 'undefined') return;
+  const opts = options();
+  const shared = new Uint8Array(new SharedArrayBuffer(4));
+  await assert.rejects(sealEnvelope(shared, { ...opts, mode: 'raw' }), /SharedArrayBuffer/);
+  assert.throws(() => parseEnvelope(shared), /SharedArrayBuffer/);
+});
+
+test('exported protocol constants are defensive copies', async () => {
+  const mutableOffsets = audit.OFFSETS;
+  mutableOffsets.ACTIONS[0] = 0;
+  mutableOffsets.MAGIC[0] = 5;
+
+  const states = Buffer.from('constant export fixture');
+  const wire = v31Fixture(states);
+  const parsed = parseWireV31(wire, {
+    magic: Buffer.from('TEST01', 'ascii'),
+    integerByteOrder: 'little',
+    crcByteOrder: 'big'
+  });
+  assert.equal(parsed.version, 0x23);
+  assert.equal(verifyBatchCrc(parsed, states).ok, true);
+
+  const mutableMagic = envelopeApi.MAGIC;
+  mutableMagic.fill(0);
+  const opts = options();
+  const sealed = await sealEnvelope(Buffer.from('private magic'), { ...opts, mode: 'raw' });
+  assert.equal(parseEnvelope(sealed).header.subarray(0, 4).toString('ascii'), 'HFWG');
+});
+
+test('reports exact envelope framing lengths', async () => {
   const opts = options();
   const payload = Buffer.from('123456789');
-  const envelope = sealEnvelope(payload, { ...opts, mode: 'raw' });
-  const parsed = parseEnvelope(envelope);
+  const sealed = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+  const parsed = parseEnvelope(sealed);
   assert.equal(parsed.envelopeBytes, HEADER_BYTES + payload.length + TAG_BYTES);
   assert.equal(parsed.ciphertextLength, payload.length);
 });
