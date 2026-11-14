@@ -12,10 +12,27 @@ const NONCE_BYTES = 12;
 const KEY_BYTES = 32;
 const DEFAULT_MAX_CIPHERTEXT_BYTES = 64 * 1024 * 1024;
 
+function assertByteInput(value, name) {
+  if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
+    throw new TypeError(name + ' must be a Buffer or Uint8Array');
+  }
+  if (typeof SharedArrayBuffer !== 'undefined' && value.buffer instanceof SharedArrayBuffer) {
+    throw new TypeError(name + ' must not use SharedArrayBuffer backing');
+  }
+  return value.byteLength;
+}
+
 function bytes(value, name) {
-  if (Buffer.isBuffer(value)) return value;
-  if (value instanceof Uint8Array) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  throw new TypeError(name + ' must be a Buffer or Uint8Array');
+  assertByteInput(value, name);
+  return Buffer.from(value);
+}
+
+function validateMaxCiphertextBytes(value) {
+  const max = value === undefined ? DEFAULT_MAX_CIPHERTEXT_BYTES : value;
+  if (!Number.isSafeInteger(max) || max < 0 || max > 0xffffffff) {
+    throw new RangeError('maxCiphertextBytes must be an integer from 0 through 2^32-1');
+  }
+  return max;
 }
 
 function validateKey(value) {
@@ -60,15 +77,14 @@ function makeHeader(mode, nonce, ciphertextLength) {
 }
 
 function parseEnvelope(input, options) {
-  const envelope = bytes(input, 'envelope');
   const opts = options || {};
-  const maxCiphertextBytes = opts.maxCiphertextBytes === undefined
-    ? DEFAULT_MAX_CIPHERTEXT_BYTES
-    : opts.maxCiphertextBytes;
-
-  if (!Number.isSafeInteger(maxCiphertextBytes) || maxCiphertextBytes < 0) {
-    throw new RangeError('maxCiphertextBytes must be a non-negative safe integer');
+  const maxCiphertextBytes = validateMaxCiphertextBytes(opts.maxCiphertextBytes);
+  const inputLength = assertByteInput(input, 'envelope');
+  if (inputLength > HEADER_BYTES + maxCiphertextBytes + TAG_BYTES) {
+    throw new RangeError('envelope exceeds configured maximum');
   }
+  const envelope = bytes(input, 'envelope');
+
   if (envelope.length < HEADER_BYTES + TAG_BYTES) {
     throw new Error('envelope is truncated');
   }
@@ -104,8 +120,11 @@ function parseEnvelope(input, options) {
  * followed by caller-supplied context bytes.
  */
 function sealEnvelope(payloadInput, options) {
-  const payload = bytes(payloadInput, 'payload');
   const opts = options || {};
+  const maxCiphertextBytes = validateMaxCiphertextBytes(opts.maxCiphertextBytes);
+  const payloadLength = assertByteInput(payloadInput, 'payload');
+  if (payloadLength > maxCiphertextBytes) throw new RangeError('payload exceeds configured maximum');
+  const payload = bytes(payloadInput, 'payload');
   const key = validateKey(opts.key);
   const nonce = validateNonce(opts.nonce);
   const context = validateContext(opts.context);
