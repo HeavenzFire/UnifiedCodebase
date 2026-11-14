@@ -124,3 +124,35 @@ test('requires explicit magic and integer byte-order declarations', () => {
   assert.throws(() => parseWireV31(wire, { magic: MAGIC, crcByteOrder: CRC_ORDER }), /integerByteOrder/);
   assert.throws(() => parseWireV31(wire, { integerByteOrder: BYTE_ORDER, crcByteOrder: CRC_ORDER }), /options.magic/);
 });
+
+test('rejects parser lookalikes instead of trusting caller-built verification objects', () => {
+  const states = Buffer.from('canonical-state-fixture', 'utf8');
+  const wire = fixture(states);
+  const parsed = parse(wire);
+  const forged = {
+    actions: Buffer.from(parsed.actions),
+    batchCrc: parsed.batchCrc
+  };
+  assert.throws(() => verifyBatchCrc(forged, states), /parser-issued/);
+});
+
+test('verification uses private ACTIONS snapshot even if caller mutates public parsed fields', () => {
+  const states = Buffer.from('canonical-state-fixture', 'utf8');
+  const parsed = parse(fixture(states));
+  parsed.actions.fill(0);
+  assert.equal(verifyBatchCrc(parsed, states).ok, true);
+});
+
+test('rejects SharedArrayBuffer-backed wire and canonical state inputs', () => {
+  if (typeof SharedArrayBuffer === 'undefined') return;
+  const sharedWire = new Uint8Array(new SharedArrayBuffer(WIRE_BYTES));
+  assert.throws(() => parseWireV31(sharedWire, {
+    magic: MAGIC,
+    integerByteOrder: BYTE_ORDER,
+    crcByteOrder: CRC_ORDER
+  }), /SharedArrayBuffer/);
+
+  const parsed = parse(fixture(Buffer.from('canonical-state-fixture', 'utf8')));
+  const sharedStates = new Uint8Array(new SharedArrayBuffer(4));
+  assert.throws(() => verifyBatchCrc(parsed, sharedStates), /SharedArrayBuffer/);
+});
