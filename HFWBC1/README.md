@@ -71,3 +71,24 @@ The connected HeavenzFire GitHub repositories contain an older `HighRadixCodec` 
 - [JavaScript implementation](https://github.com/HeavenzFire/EntangledMultimodalSystem-2/blob/main/neural-mesh-registry/src/utils/HighRadixCodec.js)
 
 That code is a Base85/Base94 text representation layer with optional DEFLATE in the JavaScript version; it is not the reported HFWBC1 state-prediction/rANS format. Its own JavaScript source explicitly describes the radix transform as encoding rather than compression. It also uses a bigint conversion without an unambiguous original byte-length contract in the TypeScript path, so it must not be treated as a lossless reference decoder for arbitrary binary fixtures. It was reviewed but not imported or modified.
+## v3.2 authenticated outer envelope — draft implementation
+
+The separate `hfwbc1-v3_2-envelope.cjs` module implements a provisional authenticated wrapper using Node's built-in AES-256-GCM:
+
+| Field | Width |
+|---|---:|
+| Magic (`HFWG`) | 4 bytes |
+| Envelope format version | 1 byte |
+| Payload mode (`RAW=0`, `HFWBC1=1`) | 1 byte |
+| GCM nonce | 12 bytes |
+| Ciphertext length (big-endian) | 4 bytes |
+| Ciphertext | declared length |
+| GCM tag | 16 bytes |
+
+The exact 22-byte header plus caller-supplied context bytes are authenticated as GCM AAD. The parser rejects truncated records, trailing bytes, unknown modes, and over-limit ciphertexts. Decryption returns no plaintext unless GCM authentication succeeds.
+
+RAW fallback selects HFWBC1 payload bytes only when they are strictly smaller than the raw bytes; equal or larger candidates use RAW. The wrapper does not implement the HFWBC1 codec and does not claim compatibility with a production v3.2 wire standard.
+
+**Nonce rule:** the caller must supply a unique 96-bit nonce for every encryption under a given key. This module intentionally does not invent an in-memory nonce counter or claim durable nonce allocation. Production integration must bind key selection, key rotation, and a durable per-key nonce-allocation strategy to the caller's key-management layer. The context bytes must bind the ciphertext to its intended protocol/channel/record context.
+
+The v3.2 wrapper is draft code pending protocol review, durable nonce allocation, key-management integration, independent implementation review, and end-to-end tests with the recovered production v3.1 payload.
