@@ -4,12 +4,18 @@
 
 ## Results
 
-- Structural/CRC audit tests: **10 passed, 0 failed**.
+- Structural/CRC audit tests: **13 passed, 0 failed**.
 - Deterministic ACTIONS-only mutation test: **500/500 mutations rejected** by the CRC verifier.
 - Mutation PRNG: xorshift32, seed 999.
 - Mutation scope: one independently mutated byte per trial, selected only from wire offsets 54–303.
 - Each mutation starts from the same synthetic 304-byte fixture; the original fixture CRC verifies before mutation.
 - Independent Python standard-library `zlib.crc32` cross-check: **500/500 mutations rejected**; standard CRC check value `0xcbf43926` reproduced.
+- Parser now snapshots non-shared input bytes, rejects SharedArrayBuffer-backed input, and stores private ACTIONS/CRC verification data in a WeakMap.
+- Verification rejects caller-constructed lookalike objects and ignores later mutation of public Buffer copies.
+
+## Review findings addressed
+
+Sourcery identified two issues: caller-built objects could be passed to the CRC verifier, and SharedArrayBuffer-backed input could change during parsing. The verifier now requires parser-issued object identity and uses private snapshots; shared-memory-backed wire/state inputs are rejected. Dedicated regression tests cover both cases.
 
 ## Scope limits
 
