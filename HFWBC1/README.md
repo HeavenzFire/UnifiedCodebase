@@ -92,3 +92,7 @@ RAW fallback selects HFWBC1 payload bytes only when they are strictly smaller th
 **Nonce rule:** the caller must supply a unique 96-bit nonce for every encryption under a given key. This module intentionally does not invent an in-memory nonce counter or claim durable nonce allocation. Production integration must bind key selection, key rotation, and a durable per-key nonce-allocation strategy to the caller's key-management layer. The context bytes must bind the ciphertext to its intended protocol/channel/record context.
 
 The v3.2 wrapper is draft code pending protocol review, durable nonce allocation, key-management integration, independent implementation review, and end-to-end tests with the recovered production v3.1 payload.
+
+## Capture-source audit
+
+See [CAPTURE-SOURCE-STATUS.md](./CAPTURE-SOURCE-STATUS.md) for the Scarlet search result and the existing Digital Brain browser-camera capture path. No Scarlet adapter is claimed or implemented; the camera JPEG stream is not interchangeable with HFWBC1 predictor-state batches.
