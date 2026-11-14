@@ -5,7 +5,7 @@
 ## Results
 
 - v3.2 envelope tests: **13 passed, 0 failed**.
-- Combined v3.1 + v3.2 suite: **23 passed, 0 failed**.
+- Combined v3.1 + v3.2 suite after v3.1 hardening: **26 passed, 0 failed**.
 - AES-256-GCM backend known-answer test: NIST empty-message tag `530f8afbc74536b9a963b4f1c4cb738b` reproduced for a 256-bit all-zero key and 96-bit all-zero nonce.
 - A direct `crypto.createCipheriv` calculation independently reproduced the envelope module's ciphertext and authentication tag over the exact header plus external context AAD.
 - Tampered mode/header, ciphertext, tag, wrong key, and wrong context all failed authentication.
