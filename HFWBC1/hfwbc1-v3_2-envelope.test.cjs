@@ -228,10 +228,10 @@ test('rejects truncated, trailing, and inconsistent-length envelopes', () => {
 
 test('rejects invalid keys, nonce lengths, missing context, and unknown modes', async () => {
   const opts = options();
-  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, key: Buffer.alloc(31), mode: 'raw' }), /32 bytes/);
-  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, nonce: Buffer.alloc(11), mode: 'raw' }), /12 bytes/);
-  assert.rejects(sealEnvelope(Buffer.from('x'), { key: opts.key, nonce: opts.nonce, mode: 'raw', nonceAllocator: opts.nonceAllocator }), /context/);
-  assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, mode: 'unknown' }), /mode/);
+  await assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, key: Buffer.alloc(31), mode: 'raw' }), /32 bytes/);
+  await assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, nonce: Buffer.alloc(11), mode: 'raw' }), /12 bytes/);
+  await assert.rejects(sealEnvelope(Buffer.from('x'), { key: opts.key, nonce: opts.nonce, mode: 'raw', nonceAllocator: opts.nonceAllocator }), /context/);
+  await assert.rejects(sealEnvelope(Buffer.from('x'), { ...opts, mode: 'unknown' }), /mode/);
 });
 
 test('rejects ciphertext above configured maximum during parse and seal', async () => {
