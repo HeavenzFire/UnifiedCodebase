@@ -131,10 +131,16 @@ test('rejects invalid keys, nonce lengths, missing context, and unknown modes', 
   assert.throws(() => sealEnvelope(Buffer.from('x'), { ...opts, mode: 'unknown' }), /mode/);
 });
 
-test('rejects ciphertext above configured maximum', () => {
+test('rejects ciphertext above configured maximum during parse and seal', () => {
   const opts = options();
   const envelope = sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw' });
   assert.throws(() => parseEnvelope(envelope, { maxCiphertextBytes: 31 }), /maximum/);
+  assert.throws(() => sealEnvelope(Buffer.alloc(32), { ...opts, mode: 'raw', maxCiphertextBytes: 31 }), /maximum/);
+});
+
+test('rejects oversized envelope input before copying it', () => {
+  const oversized = Buffer.alloc(1024);
+  assert.throws(() => parseEnvelope(oversized, { maxCiphertextBytes: 1 }), /envelope exceeds configured maximum/);
 });
 
 test('reports exact envelope framing lengths', () => {
