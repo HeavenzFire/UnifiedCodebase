@@ -1,0 +1,26 @@
+# HFWBC1 v3.1 audit — local test result
+
+**Run:** Connected Windows desktop ZDH, Node.js `node --test`, 2026-11-14 UTC.
+
+## Results
+
+- Structural/CRC audit tests: **13 passed, 0 failed**.
+- Deterministic ACTIONS-only mutation test: **500/500 mutations rejected** by the CRC verifier.
+- Mutation PRNG: xorshift32, seed 999.
+- Mutation scope: one independently mutated byte per trial, selected only from wire offsets 54–303.
+- Each mutation starts from the same synthetic 304-byte fixture; the original fixture CRC verifies before mutation.
+- Independent Python standard-library `zlib.crc32` cross-check: **500/500 mutations rejected**; standard CRC check value `0xcbf43926` reproduced.
+- Parser now snapshots non-shared input bytes, rejects same- and cross-realm SharedArrayBuffer-backed input, and stores private ACTIONS/CRC verification data in a WeakMap.
+- `parsedWire.actions` returns a fresh defensive copy; successful CRC verification also returns immutable `actionsBase64` for the exact ACTIONS bytes that were checked.
+- Parser tests compare FREQ_C and RANS against the exact fixture byte ranges, not just their lengths.
+- Verification rejects caller-constructed lookalike objects and ignores later mutation of public Buffer copies.
+
+## Review findings addressed
+
+Sourcery identified two issues: caller-built objects could be passed to the CRC verifier, and SharedArrayBuffer-backed input could change during parsing. The verifier now requires parser-issued object identity and uses private snapshots; shared-memory-backed wire/state inputs are rejected. Dedicated regression tests cover both cases.
+
+## Scope limits
+
+This is not the reported full-wire v3.1 fuzz test. It does not test mutations to the baseline, reconstructed state sequence, magic bytes, frequency table semantics, rANS decoding, canonical ACTIONS parsing, or any production 304-byte sample. The fixture magic `TEST01`, baseline-independent state bytes, and byte-order choices are test scaffolding only.
+
+**Interpretation:** the implemented CRC-32 routine and its exact ACTIONS-byte coverage behave as specified for these synthetic fixtures. The production v3.1 claim `0xccec3394` and 500/500 full-wire HARD_FAIL result remain unverified until the original binary, baseline, encoder/decoder, canonical serialization rules, and fuzz corpus are recovered.
