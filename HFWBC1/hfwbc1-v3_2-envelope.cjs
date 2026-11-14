@@ -12,11 +12,19 @@ const NONCE_BYTES = 12;
 const KEY_BYTES = 32;
 const DEFAULT_MAX_CIPHERTEXT_BYTES = 64 * 1024 * 1024;
 
+function isUint8ArrayInput(value) {
+  return Buffer.isBuffer(value) || Object.prototype.toString.call(value) === '[object Uint8Array]';
+}
+
+function isSharedArrayBuffer(value) {
+  return value && Object.prototype.toString.call(value) === '[object SharedArrayBuffer]';
+}
+
 function assertByteInput(value, name) {
-  if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
+  if (!isUint8ArrayInput(value)) {
     throw new TypeError(name + ' must be a Buffer or Uint8Array');
   }
-  if (typeof SharedArrayBuffer !== 'undefined' && value.buffer instanceof SharedArrayBuffer) {
+  if (isSharedArrayBuffer(value.buffer)) {
     throw new TypeError(name + ' must not use SharedArrayBuffer backing');
   }
   return value.byteLength;
@@ -170,18 +178,25 @@ async function sealEnvelope(payloadInput, options) {
  * This layer does not encode or decode HFWBC1 itself.
  */
 async function sealWithRawFallback(rawInput, compressedInput, options) {
-  const raw = bytes(rawInput, 'raw');
-  const compressed = compressedInput === undefined || compressedInput === null
+  const opts = options || {};
+  const maxCiphertextBytes = validateMaxCiphertextBytes(opts.maxCiphertextBytes);
+  const rawLength = assertByteInput(rawInput, 'raw');
+  const compressedLength = compressedInput === undefined || compressedInput === null
     ? null
-    : bytes(compressedInput, 'compressed');
-  const useCompressed = compressed !== null && compressed.length < raw.length;
+    : assertByteInput(compressedInput, 'compressed');
+  const useCompressed = compressedLength !== null
+    && compressedLength < rawLength
+    && compressedLength <= maxCiphertextBytes;
+  if (!useCompressed && rawLength > maxCiphertextBytes) {
+    throw new RangeError('no RAW or HFWBC1 candidate fits configured maximum');
+  }
   const mode = useCompressed ? 'hfwbc1' : 'raw';
-  const payload = useCompressed ? compressed : raw;
-  const envelope = await sealEnvelope(payload, { ...options, mode });
+  const payload = bytes(useCompressed ? compressedInput : rawInput, useCompressed ? 'compressed' : 'raw');
+  const envelope = await sealEnvelope(payload, { ...opts, mode });
   return Object.freeze({
     mode,
-    rawBytes: raw.length,
-    compressedBytes: compressed === null ? null : compressed.length,
+    rawBytes: rawLength,
+    compressedBytes: compressedLength,
     selectedBytes: payload.length,
     envelope
   });
