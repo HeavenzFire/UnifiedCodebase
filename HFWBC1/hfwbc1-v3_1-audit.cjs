@@ -19,10 +19,20 @@ const VERSION_V31 = 0x23;
 const TYPE_BATCH = 0x01;
 const EXPECTED_LENGTHS = Object.freeze({ freq: 6, rans: 10, actions: 250 });
 
+// The WeakMap proves parser provenance and keeps verification bytes private
+// from callers who may mutate the public Buffer copies returned by the parser.
+const PARSED_WIRE_DATA = new WeakMap();
+
 function asBytes(value, name) {
-  if (Buffer.isBuffer(value)) return value;
-  if (value instanceof Uint8Array) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  throw new TypeError(name + ' must be a Buffer or Uint8Array');
+  if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
+    throw new TypeError(name + ' must be a Buffer or Uint8Array');
+  }
+  if (typeof SharedArrayBuffer !== 'undefined' && value.buffer instanceof SharedArrayBuffer) {
+    throw new TypeError(name + ' must not use SharedArrayBuffer backing');
+  }
+  // Copy to a private snapshot so later writes through the caller's view
+  // cannot change bytes after validation.
+  return Buffer.from(value);
 }
 
 function requireByteOrder(value, name) {
@@ -82,7 +92,9 @@ function parseWireV31(input, options) {
   if (ransLength !== EXPECTED_LENGTHS.rans) throw new Error('RANS_LEN must equal 10');
   if (actionsLength !== EXPECTED_LENGTHS.actions) throw new Error('ACT_LEN must equal 250');
 
-  return Object.freeze({
+  const batchCrc = readUnsigned(bytes, ...OFFSETS.BATCH_CRC, opts.crcByteOrder) >>> 0;
+  const actions = Buffer.from(bytes.subarray(...OFFSETS.ACTIONS));
+  const result = Object.freeze({
     version: bytes[OFFSETS.VERSION],
     type: bytes[OFFSETS.TYPE],
     wbIdTrunc: Buffer.from(bytes.subarray(...OFFSETS.WB_ID_TRUNC)),
@@ -90,11 +102,17 @@ function parseWireV31(input, options) {
     freqC: Buffer.from(bytes.subarray(...OFFSETS.FREQ_C)),
     ransLength,
     rans: Buffer.from(bytes.subarray(...OFFSETS.RANS)),
-    batchCrc: readUnsigned(bytes, ...OFFSETS.BATCH_CRC, opts.crcByteOrder) >>> 0,
+    batchCrc,
     actionsLength,
-    actions: Buffer.from(bytes.subarray(...OFFSETS.ACTIONS)),
+    actions: Buffer.from(actions),
     wireBytes: bytes.length
   });
+
+  PARSED_WIRE_DATA.set(result, Object.freeze({
+    actions,
+    batchCrc
+  }));
+  return result;
 }
 
 /**
@@ -102,16 +120,19 @@ function parseWireV31(input, options) {
  * CRC32( canonical reconstructed state bytes || exact ACTIONS wire bytes ).
  * canonicalStatesBytes must already be produced by an independently
  * specified canonical state serializer; this function does not invent one.
+ * Only an object returned by parseWireV31 is accepted. Verification uses
+ * private parser snapshots, not mutable public Buffer fields.
  */
 function verifyBatchCrc(parsedWire, canonicalStatesBytes) {
-  if (!parsedWire || !Buffer.isBuffer(parsedWire.actions) || !Number.isInteger(parsedWire.batchCrc)) {
-    throw new TypeError('parsedWire must be the result of parseWireV31');
+  const trusted = parsedWire && PARSED_WIRE_DATA.get(parsedWire);
+  if (!trusted) {
+    throw new TypeError('parsedWire must be an unmodified parser-issued result from parseWireV31');
   }
   const states = asBytes(canonicalStatesBytes, 'canonicalStatesBytes');
-  const actual = crc32Ieee(Buffer.concat([states, parsedWire.actions]));
+  const actual = crc32Ieee(Buffer.concat([states, trusted.actions]));
   return Object.freeze({
-    ok: actual === (parsedWire.batchCrc >>> 0),
-    expected: parsedWire.batchCrc >>> 0,
+    ok: actual === (trusted.batchCrc >>> 0),
+    expected: trusted.batchCrc >>> 0,
     actual
   });
 }
