@@ -2,7 +2,7 @@ name: HFWBC1 audit
 
 on:
   push:
-    branches: ["feat/hfwbc1-v3-1-audit"]
+    branches: ["main", "feat/hfwbc1-v3-1-audit"]
     paths:
       - "HFWBC1/**"
       - ".github/workflows/hfwbc1-audit.yml"
