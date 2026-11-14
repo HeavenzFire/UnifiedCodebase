@@ -96,3 +96,6 @@ The v3.2 wrapper is draft code pending protocol review, durable nonce allocation
 ## Capture-source audit
 
 See [CAPTURE-SOURCE-STATUS.md](./CAPTURE-SOURCE-STATUS.md) for the Scarlet search result and the existing Digital Brain browser-camera capture path. No Scarlet adapter is claimed or implemented; the camera JPEG stream is not interchangeable with HFWBC1 predictor-state batches.
+
+
+Protocol constants are private internally. The exported v3.1 `OFFSETS` object and v3.2 `MAGIC` buffer are defensive copies; mutating exported values does not change parser or encoder behavior. SharedArrayBuffer-backed input is rejected; ordinary byte inputs are copied before use.
