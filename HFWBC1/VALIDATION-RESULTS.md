@@ -1,14 +1,15 @@
 # HFWBC1 v3.1 audit — local test result
 
-**Run:** Windows desktop ZDH, Node.js `node --test`, 2026-11-14 UTC.
+**Run:** Connected Windows desktop ZDH, Node.js `node --test`, 2026-11-14 UTC.
 
 ## Results
 
-- Structural/CRC audit unit tests: 9 passed, 0 failed.
-- Deterministic ACTIONS-only mutation test: 500/500 mutations rejected by the CRC verifier.
+- Structural/CRC audit tests: **10 passed, 0 failed**.
+- Deterministic ACTIONS-only mutation test: **500/500 mutations rejected** by the CRC verifier.
 - Mutation PRNG: xorshift32, seed 999.
 - Mutation scope: one independently mutated byte per trial, selected only from wire offsets 54–303.
 - Each mutation starts from the same synthetic 304-byte fixture; the original fixture CRC verifies before mutation.
+- Independent Python standard-library `zlib.crc32` cross-check: **500/500 mutations rejected**; standard CRC check value `0xcbf43926` reproduced.
 
 ## Scope limits
 
