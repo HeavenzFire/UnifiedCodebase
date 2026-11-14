@@ -10,7 +10,9 @@
 - Mutation scope: one independently mutated byte per trial, selected only from wire offsets 54–303.
 - Each mutation starts from the same synthetic 304-byte fixture; the original fixture CRC verifies before mutation.
 - Independent Python standard-library `zlib.crc32` cross-check: **500/500 mutations rejected**; standard CRC check value `0xcbf43926` reproduced.
-- Parser now snapshots non-shared input bytes, rejects SharedArrayBuffer-backed input, and stores private ACTIONS/CRC verification data in a WeakMap.
+- Parser now snapshots non-shared input bytes, rejects same- and cross-realm SharedArrayBuffer-backed input, and stores private ACTIONS/CRC verification data in a WeakMap.
+- `parsedWire.actions` returns a fresh defensive copy; successful CRC verification also returns immutable `actionsBase64` for the exact ACTIONS bytes that were checked.
+- Parser tests compare FREQ_C and RANS against the exact fixture byte ranges, not just their lengths.
 - Verification rejects caller-constructed lookalike objects and ignores later mutation of public Buffer copies.
 
 ## Review findings addressed
