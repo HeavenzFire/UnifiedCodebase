@@ -85,9 +85,9 @@ The separate `hfwbc1-v3_2-envelope.cjs` module implements a provisional authenti
 | Ciphertext | declared length |
 | GCM tag | 16 bytes |
 
-The exact 22-byte header plus caller-supplied context bytes are authenticated as GCM AAD. The parser rejects truncated records, trailing bytes, unknown modes, and over-limit ciphertexts. Decryption returns no plaintext unless GCM authentication succeeds.
+The exact 22-byte header plus caller-supplied context bytes are authenticated as GCM AAD. The parser rejects truncated records, trailing bytes, unknown modes, shared-memory inputs, and over-limit ciphertexts before copying. Sealing and parsing copy ordinary byte inputs into private snapshots. Decryption returns no plaintext unless GCM authentication and the replay guard both succeed.
 
-RAW fallback selects HFWBC1 payload bytes only when they are strictly smaller than the raw bytes; equal or larger candidates use RAW. The wrapper does not implement the HFWBC1 codec and does not claim compatibility with a production v3.2 wire standard.
+RAW fallback checks candidate lengths before copying and selects HFWBC1 payload bytes only when they are strictly smaller than the raw bytes and within the configured limit; equal or larger candidates use RAW. The wrapper does not implement the HFWBC1 codec and does not claim compatibility with a production v3.2 wire standard.
 
 **Nonce/replay rule:** sealing and opening are asynchronous and fail closed unless the caller supplies two durable, atomic stores. `nonceAllocator.claim(keyFingerprint, nonceHex)` must reserve each nonce exactly once across every process/device sharing a key; `replayGuard.claim(keyFingerprint, contextFingerprint, nonceHex)` must accept each authenticated record only once across all consumers in that namespace. The key/context fingerprints are SHA-256 digests; raw key material is not passed to the stores. A reservation is never released after a seal attempt. The included test stores are in-memory fixtures only and are not production allocators. The context bytes must bind the ciphertext to its intended protocol/channel/record context. Without shared durable implementations, the envelope cannot safely be used.
 
@@ -98,4 +98,4 @@ The v3.2 wrapper is draft code pending protocol review, durable nonce allocation
 See [CAPTURE-SOURCE-STATUS.md](./CAPTURE-SOURCE-STATUS.md) for the Scarlet search result and the existing Digital Brain browser-camera capture path. No Scarlet adapter is claimed or implemented; the camera JPEG stream is not interchangeable with HFWBC1 predictor-state batches.
 
 
-Protocol constants are private internally. The exported v3.1 `OFFSETS` object and v3.2 `MAGIC` buffer are defensive copies; mutating exported values does not change parser or encoder behavior. SharedArrayBuffer-backed input is rejected; ordinary byte inputs are copied before use.
+Protocol constants are private internally. The exported v3.1 `OFFSETS` object and v3.2 `MAGIC` buffer are defensive copies; mutating exported values does not change parser or encoder behavior. SharedArrayBuffer-backed input, including cross-realm views, is rejected; ordinary byte inputs are copied before use. The CI checkout disables credential persistence so test code cannot read the workflow token from the repository's Git configuration.
