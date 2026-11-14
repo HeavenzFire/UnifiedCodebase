@@ -31,5 +31,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Syntax check
         run: node --check HFWBC1/hfwbc1-v3_1-audit.cjs
+      - name: Syntax check v3.2 envelope
+        run: node --check HFWBC1/hfwbc1-v3_2-envelope.cjs
       - name: Run deterministic tests
-        run: node --test HFWBC1/hfwbc1-v3_1-audit.test.cjs HFWBC1/hfwbc1-v3_1-actions-fuzz.test.cjs
+        run: node --test HFWBC1/hfwbc1-v3_1-audit.test.cjs HFWBC1/hfwbc1-v3_1-actions-fuzz.test.cjs HFWBC1/hfwbc1-v3_2-envelope.test.cjs
