@@ -124,7 +124,9 @@ function parseWireV31(input, options) {
     rans: Buffer.from(bytes.subarray(...INTERNAL_OFFSETS.RANS)),
     batchCrc,
     actionsLength,
-    actions: Buffer.from(actions),
+    get actions() {
+      return Buffer.from(actions);
+    },
     wireBytes: bytes.length
   });
 
@@ -150,10 +152,13 @@ function verifyBatchCrc(parsedWire, canonicalStatesBytes) {
   }
   const states = asBytes(canonicalStatesBytes, 'canonicalStatesBytes');
   const actual = crc32Ieee(Buffer.concat([states, trusted.actions]));
+  const ok = actual === (trusted.batchCrc >>> 0);
   return Object.freeze({
-    ok: actual === (trusted.batchCrc >>> 0),
+    ok,
     expected: trusted.batchCrc >>> 0,
-    actual
+    actual,
+    // Base64 is immutable and represents the exact ACTIONS bytes verified.
+    actionsBase64: ok ? trusted.actions.toString('base64') : null
   });
 }
 
