@@ -4,18 +4,21 @@
 
 ## Results
 
-- v3.2 envelope tests: **20 passed, 0 failed**.
-- Combined v3.1 + v3.2 suite: **33 passed, 0 failed** (13 v3.1 + 20 v3.2).
+- v3.2 envelope tests: **22 passed, 0 failed**.
+- Combined v3.1 + v3.2 suite: **35 passed, 0 failed** (13 v3.1 + 22 v3.2).
 - AES-256-GCM backend known-answer test: NIST empty-message tag `530f8afbc74536b9a963b4f1c4cb738b` reproduced for a 256-bit all-zero key and 96-bit all-zero nonce.
 - A direct `crypto.createCipheriv` calculation independently reproduced the envelope module's ciphertext and authentication tag over the exact header plus external context AAD.
 - Tampered mode/header, ciphertext, tag, wrong key, and wrong context all failed authentication.
 - A deterministic 500-case single-byte mutation sweep across every envelope region rejected all 500 mutations.
-- RAW fallback selected HFWBC1 only when the candidate was strictly smaller; equal, larger, or absent compressed candidates selected RAW.
+- RAW fallback selected HFWBC1 only when the candidate was strictly smaller and within the configured limit; tests verify the opened envelope mode matches the selected fallback mode.
+- Fallback candidate lengths are checked before copying; oversized raw candidates can still use a smaller in-limit encoded candidate without copying the oversized raw bytes.
 - A mandatory nonce allocator rejected reuse of the same nonce under the same key; a different key has a separate nonce namespace.
 - A mandatory replay guard rejected a second acceptance of the same authenticated key/context/nonce tuple.
 - Missing nonce allocator or replay guard fails closed.
-- Exported MAGIC/OFFSETS mutation does not change internal protocol constants; SharedArrayBuffer-backed inputs are rejected.
+- Exported MAGIC/OFFSETS mutation does not change internal protocol constants.
+- Same-realm and cross-realm SharedArrayBuffer-backed inputs are rejected; ordinary cross-realm Uint8Array inputs are accepted and copied.
 - Both sealing and parsing enforce the configured ciphertext limit; oversized input is rejected before the parser copies the envelope.
+- CI checkout sets `persist-credentials: false`; test code cannot read the workflow token from the Git checkout configuration.
 
 ## Required production interfaces
 
