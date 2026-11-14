@@ -16,6 +16,8 @@
 - A mandatory replay guard rejected a second acceptance of the same authenticated key/context/nonce tuple.
 - Missing nonce allocator or replay guard fails closed.
 - Exported MAGIC/OFFSETS mutation does not change internal protocol constants.
+- FREQ_C and RANS parser output are compared byte-for-byte with their expected wire slices.
+- Successful v3.1 CRC verification returns an immutable Base64 representation of the exact verified ACTIONS bytes, while parsed ACTIONS properties are defensive copies.
 - Same-realm and cross-realm SharedArrayBuffer-backed inputs are rejected; ordinary cross-realm Uint8Array inputs are accepted and copied.
 - Both sealing and parsing enforce the configured ciphertext limit; oversized input is rejected before the parser copies the envelope.
 - CI checkout sets `persist-credentials: false`; test code cannot read the workflow token from the Git checkout configuration.
