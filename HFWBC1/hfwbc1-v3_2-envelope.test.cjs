@@ -20,6 +20,13 @@ function options(context = Buffer.from('heavenzfire:test:unit', 'utf8')) {
   };
 }
 
+test('Node AES-256-GCM backend matches the NIST empty-message known-answer tag', () => {
+  const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.alloc(32), Buffer.alloc(12), { authTagLength: 16 });
+  assert.deepEqual(cipher.update(Buffer.alloc(0)), Buffer.alloc(0));
+  assert.deepEqual(cipher.final(), Buffer.alloc(0));
+  assert.equal(cipher.getAuthTag().toString('hex'), '530f8afbc74536b9a963b4f1c4cb738b');
+});
+
 test('AES-256-GCM round-trips RAW payload', () => {
   const opts = options();
   const raw = Buffer.from('raw capture payload');
@@ -36,6 +43,19 @@ test('AES-256-GCM round-trips HFWBC1 payload without decoding it', () => {
   const opened = openEnvelope(envelope, opts);
   assert.equal(opened.mode, 'hfwbc1');
   assert.deepEqual(opened.payload, encoded);
+});
+
+test('envelope ciphertext and tag match a direct AES-GCM calculation over header plus context AAD', () => {
+  const opts = options();
+  const payload = Buffer.from('independent AAD framing check');
+  const envelope = sealEnvelope(payload, { ...opts, mode: 'raw' });
+  const parsed = parseEnvelope(envelope);
+  const direct = crypto.createCipheriv('aes-256-gcm', opts.key, opts.nonce, { authTagLength: TAG_BYTES });
+  direct.setAAD(Buffer.concat([parsed.header, opts.context]));
+  const directCiphertext = Buffer.concat([direct.update(payload), direct.final()]);
+  assert.deepEqual(parsed.ciphertext, directCiphertext);
+  assert.deepEqual(parsed.tag, direct.getAuthTag());
+  assert.equal(parsed.envelopeBytes, HEADER_BYTES + payload.length + TAG_BYTES);
 });
 
 test('RAW fallback selects HFWBC1 only when encoded bytes are strictly smaller', () => {
