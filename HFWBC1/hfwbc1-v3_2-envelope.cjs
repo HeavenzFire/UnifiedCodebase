@@ -12,27 +12,54 @@ const NONCE_BYTES = 12;
 const KEY_BYTES = 32;
 const DEFAULT_MAX_CIPHERTEXT_BYTES = 64 * 1024 * 1024;
 
+// Capture typed-array intrinsics once. Object.prototype.toString and instance
+// properties such as .buffer/.byteLength are caller-spoofable and must not be
+// used as byte-input brand or bounds checks.
+const typedArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const typedArrayTagGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, Symbol.toStringTag).get;
+const typedArrayBufferGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'buffer').get;
+const typedArrayByteLengthGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'byteLength').get;
+const typedArrayByteOffsetGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'byteOffset').get;
+const sharedArrayBufferByteLengthGetter = typeof SharedArrayBuffer === 'undefined'
+  ? null
+  : Object.getOwnPropertyDescriptor(SharedArrayBuffer.prototype, 'byteLength').get;
+
 function isUint8ArrayInput(value) {
-  return Buffer.isBuffer(value) || Object.prototype.toString.call(value) === '[object Uint8Array]';
+  if (Buffer.isBuffer(value)) return true;
+  if (!ArrayBuffer.isView(value)) return false;
+  try {
+    return typedArrayTagGetter.call(value) === 'Uint8Array';
+  } catch {
+    return false;
+  }
 }
 
 function isSharedArrayBuffer(value) {
-  return value && Object.prototype.toString.call(value) === '[object SharedArrayBuffer]';
+  if (!sharedArrayBufferByteLengthGetter || value === null || value === undefined) return false;
+  try {
+    sharedArrayBufferByteLengthGetter.call(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assertByteInput(value, name) {
   if (!isUint8ArrayInput(value)) {
     throw new TypeError(name + ' must be a Buffer or Uint8Array');
   }
-  if (isSharedArrayBuffer(value.buffer)) {
+  const backing = typedArrayBufferGetter.call(value);
+  if (isSharedArrayBuffer(backing)) {
     throw new TypeError(name + ' must not use SharedArrayBuffer backing');
   }
-  return value.byteLength;
+  return typedArrayByteLengthGetter.call(value);
 }
 
 function bytes(value, name) {
-  assertByteInput(value, name);
-  return Buffer.from(value);
+  const byteLength = assertByteInput(value, name);
+  const backing = typedArrayBufferGetter.call(value);
+  const byteOffset = typedArrayByteOffsetGetter.call(value);
+  return Buffer.from(new Uint8Array(backing, byteOffset, byteLength));
 }
 
 function validateMaxCiphertextBytes(value) {
