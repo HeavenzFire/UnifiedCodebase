@@ -166,3 +166,27 @@ test('rejects SharedArrayBuffer-backed wire and canonical state inputs', () => {
   const sharedStates = new Uint8Array(new SharedArrayBuffer(4));
   assert.throws(() => verifyBatchCrc(parsed, sharedStates), /SharedArrayBuffer/);
 });
+
+
+test('rejects spoofed Uint8Array objects and shadowed wire byteLength values', () => {
+  const spoofed = {
+    [Symbol.toStringTag]: 'Uint8Array',
+    byteLength: WIRE_BYTES,
+    length: WIRE_BYTES
+  };
+  assert.throws(() => parse(spoofed), /must be a Buffer or Uint8Array/);
+
+  const oversized = new Uint8Array(WIRE_BYTES + 1);
+  Object.defineProperty(oversized, 'byteLength', { value: WIRE_BYTES });
+  assert.throws(() => parse(oversized), /wire length must be exactly 304 bytes/);
+});
+
+test('rejects spoofed SharedArrayBuffer tags and shadowed view buffer properties', () => {
+  if (typeof SharedArrayBuffer === 'undefined') return;
+  const backing = new SharedArrayBuffer(WIRE_BYTES);
+  Object.defineProperty(backing, Symbol.toStringTag, { value: 'ArrayBuffer' });
+  const view = new Uint8Array(backing);
+  Object.defineProperty(view, 'buffer', { value: new ArrayBuffer(WIRE_BYTES) });
+  assert.throws(() => parse(view), /must not use SharedArrayBuffer backing/);
+});
+
