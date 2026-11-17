@@ -330,3 +330,43 @@ test('reports exact envelope framing lengths', async () => {
   assert.equal(parsed.envelopeBytes, HEADER_BYTES + payload.length + TAG_BYTES);
   assert.equal(parsed.ciphertextLength, payload.length);
 });
+
+test('rejects spoofed Uint8Array objects and uses intrinsic view bounds', async () => {
+  const opts = options();
+  const spoofed = {
+    [Symbol.toStringTag]: 'Uint8Array',
+    byteLength: 1,
+    length: 4096
+  };
+  await assert.rejects(
+    sealEnvelope(spoofed, { ...opts, mode: 'raw' }),
+    /must be a Buffer or Uint8Array/
+  );
+  assert.throws(() => parseEnvelope(spoofed), /must be a Buffer or Uint8Array/);
+
+  const oversized = new Uint8Array(64);
+  Object.defineProperty(oversized, 'byteLength', { value: 1 });
+  await assert.rejects(
+    sealEnvelope(oversized, { ...withFreshNonce(opts), mode: 'raw', maxCiphertextBytes: 32 }),
+    /payload exceeds configured maximum/
+  );
+});
+
+test('rejects spoofed SharedArrayBuffer tags and shadowed view buffer properties', async () => {
+  if (typeof SharedArrayBuffer === 'undefined') return;
+  const backing = new SharedArrayBuffer(8);
+  Object.defineProperty(backing, Symbol.toStringTag, { value: 'ArrayBuffer' });
+  const view = new Uint8Array(backing);
+  Object.defineProperty(view, 'buffer', { value: new ArrayBuffer(8) });
+
+  const opts = options();
+  await assert.rejects(
+    sealEnvelope(view, { ...opts, mode: 'raw' }),
+    /must not use SharedArrayBuffer backing/
+  );
+  assert.throws(
+    () => parseEnvelope(view),
+    /must not use SharedArrayBuffer backing/
+  );
+});
+
