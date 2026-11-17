@@ -30,24 +30,55 @@ function publicOffsets() {
   ]));
 }
 
+// Capture typed-array intrinsics once. Object.prototype.toString and instance
+// properties such as .buffer/.byteLength are caller-spoofable and must not be
+// used as byte-input brand or bounds checks.
+const typedArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const typedArrayTagGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, Symbol.toStringTag).get;
+const typedArrayBufferGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'buffer').get;
+const typedArrayByteLengthGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'byteLength').get;
+const typedArrayByteOffsetGetter = Object.getOwnPropertyDescriptor(typedArrayPrototype, 'byteOffset').get;
+const sharedArrayBufferByteLengthGetter = typeof SharedArrayBuffer === 'undefined'
+  ? null
+  : Object.getOwnPropertyDescriptor(SharedArrayBuffer.prototype, 'byteLength').get;
+
 function isUint8ArrayInput(value) {
-  return Buffer.isBuffer(value) || Object.prototype.toString.call(value) === '[object Uint8Array]';
+  if (Buffer.isBuffer(value)) return true;
+  if (!ArrayBuffer.isView(value)) return false;
+  try {
+    return typedArrayTagGetter.call(value) === 'Uint8Array';
+  } catch {
+    return false;
+  }
 }
 
 function isSharedArrayBuffer(value) {
-  return value && Object.prototype.toString.call(value) === '[object SharedArrayBuffer]';
+  if (!sharedArrayBufferByteLengthGetter || value === null || value === undefined) return false;
+  try {
+    sharedArrayBufferByteLengthGetter.call(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function asBytes(value, name) {
+function assertByteInput(value, name) {
   if (!isUint8ArrayInput(value)) {
     throw new TypeError(name + ' must be a Buffer or Uint8Array');
   }
-  if (isSharedArrayBuffer(value.buffer)) {
+  const backing = typedArrayBufferGetter.call(value);
+  if (isSharedArrayBuffer(backing)) {
     throw new TypeError(name + ' must not use SharedArrayBuffer backing');
   }
-  // Copy to a private snapshot so later writes through the caller's view
-  // cannot change bytes after validation.
-  return Buffer.from(value);
+  return typedArrayByteLengthGetter.call(value);
+}
+
+function asBytes(value, name) {
+  const byteLength = assertByteInput(value, name);
+  const backing = typedArrayBufferGetter.call(value);
+  const byteOffset = typedArrayByteOffsetGetter.call(value);
+  // Copy exactly the intrinsic view range into a private snapshot.
+  return Buffer.from(new Uint8Array(backing, byteOffset, byteLength));
 }
 
 function requireByteOrder(value, name) {
@@ -87,10 +118,8 @@ function crc32Ieee(input) {
  * integer byte order, so callers must supply those explicitly.
  */
 function parseWireV31(input, options) {
-  if ((!isUint8ArrayInput(input)) || input.byteLength !== WIRE_BYTES) {
-    if (!isUint8ArrayInput(input)) {
-      throw new TypeError('input must be a Buffer or Uint8Array');
-    }
+  const inputLength = assertByteInput(input, 'input');
+  if (inputLength !== WIRE_BYTES) {
     throw new Error('wire length must be exactly ' + WIRE_BYTES + ' bytes');
   }
   const bytes = asBytes(input, 'input');
