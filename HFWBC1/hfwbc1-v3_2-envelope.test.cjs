@@ -245,11 +245,31 @@ test('wrong key and wrong external context fail authentication', async () => {
   await assert.rejects(openEnvelope(sealed, { ...opts, context: Buffer.from('other-context') }), /authentication failed/);
 });
 
-test('rejects truncated, trailing, and inconsistent-length envelopes', () => {
+test('rejects truncated, trailing, and inconsistent-length envelopes using a valid frame', async () => {
   const opts = options();
-  const envelope = Buffer.alloc(HEADER_BYTES + TAG_BYTES);
-  assert.throws(() => parseEnvelope(envelope.subarray(0, envelope.length - 1)), /truncated/);
-  assert.throws(() => parseEnvelope(Buffer.concat([envelope, Buffer.from([0])])), /magic mismatch|length/);
+  const payload = Buffer.from('valid framing fixture');
+  const valid = await sealEnvelope(payload, { ...opts, mode: 'raw' });
+
+  // Keep a short-input guard independent from magic/version validation.
+  const belowMinimum = Buffer.alloc(HEADER_BYTES + TAG_BYTES - 1);
+  assert.throws(() => parseEnvelope(belowMinimum), /truncated/);
+
+  // These cases must reach the declared-length check with a valid HFWG header.
+  assert.throws(
+    () => parseEnvelope(valid.subarray(0, valid.length - 1)),
+    /envelope length does not match declared ciphertext length/
+  );
+  assert.throws(
+    () => parseEnvelope(Buffer.concat([valid, Buffer.from([0])])),
+    /envelope length does not match declared ciphertext length/
+  );
+
+  const inconsistent = Buffer.from(valid);
+  inconsistent.writeUInt32BE(payload.length + 1, 18);
+  assert.throws(
+    () => parseEnvelope(inconsistent),
+    /envelope length does not match declared ciphertext length/
+  );
 });
 
 test('rejects invalid keys, nonce lengths, missing context, and unknown modes', async () => {
