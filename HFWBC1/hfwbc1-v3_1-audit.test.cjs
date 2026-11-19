@@ -99,6 +99,20 @@ test('changing reconstructed-state bytes invalidates the v3.1 batch CRC', () => 
   assert.equal(verifyBatchCrc(parse(wire), changedStates).ok, false);
 });
 
+test('verifies large canonical-state input without concatenating CRC segments', () => {
+  const states = Buffer.alloc(256 * 1024, 0x5a);
+  const parsed = parse(fixture(states));
+  const originalConcat = Buffer.concat;
+  try {
+    Buffer.concat = () => {
+      throw new Error('verifyBatchCrc must not concatenate CRC segments');
+    };
+    assert.equal(verifyBatchCrc(parsed, states).ok, true);
+  } finally {
+    Buffer.concat = originalConcat;
+  }
+});
+
 test('rejects truncated and trailing-byte records', () => {
   const wire = fixture(Buffer.from('state'));
   assert.throws(() => parse(wire.subarray(0, 303)), /exactly 304/);
