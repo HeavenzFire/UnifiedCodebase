@@ -99,16 +99,25 @@ function readUnsigned(bytes, start, end, order) {
   return Number(value);
 }
 
-function crc32Ieee(input) {
-  const bytes = asBytes(input, 'input');
+// Internal CRC walker for already-private byte snapshots. It deliberately
+// accepts separate segments so callers do not need to concatenate large
+// canonical-state and ACTIONS buffers into another full-size allocation.
+function crc32IeeeSegments(segments) {
   let crc = 0xffffffff;
-  for (let i = 0; i < bytes.length; i += 1) {
-    crc ^= bytes[i];
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  for (const bytes of segments) {
+    for (let i = 0; i < bytes.length; i += 1) {
+      crc ^= bytes[i];
+      for (let bit = 0; bit < 8; bit += 1) {
+        crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+      }
     }
   }
   return (crc ^ 0xffffffff) >>> 0;
+}
+
+function crc32Ieee(input) {
+  const bytes = asBytes(input, 'input');
+  return crc32IeeeSegments([bytes]);
 }
 
 /**
@@ -179,8 +188,11 @@ function verifyBatchCrc(parsedWire, canonicalStatesBytes) {
   if (!trusted) {
     throw new TypeError('parsedWire must be an unmodified parser-issued result from parseWireV31');
   }
+  // Keep one private snapshot of caller state bytes, then stream both
+  // trusted segments through the CRC walker without a second full-size
+  // concatenation or copy.
   const states = asBytes(canonicalStatesBytes, 'canonicalStatesBytes');
-  const actual = crc32Ieee(Buffer.concat([states, trusted.actions]));
+  const actual = crc32IeeeSegments([states, trusted.actions]);
   const ok = actual === (trusted.batchCrc >>> 0);
   return Object.freeze({
     ok,
