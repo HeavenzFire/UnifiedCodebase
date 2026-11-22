@@ -40,7 +40,7 @@ test('life-safety opportunities always require human approval and safe pilot des
   assert.equal(result.automatedExecutionAuthorized, false);
 });
 
-test('caps evidence quality at the weakest verification level in the evidence bundle', () => {
+test('caps evidence quality at the weakest declared evidence level in the bundle', () => {
   assert.throws(() => evaluateOpportunity(opportunity('unverified-overclaim', {
     evidenceQuality: 1,
     evidence: [{ ref: 'https://example.org/unverified', level: 'unverified' }]
