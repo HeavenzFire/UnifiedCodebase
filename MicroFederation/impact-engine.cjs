@@ -8,7 +8,15 @@ const EVIDENCE_LEVELS = new Set(['unverified', 'source_supported', 'independentl
 const EVIDENCE_QUALITY_CAPS = Object.freeze({
   unverified: 0,
   source_supported: 0.5,
-  independently_reproduced: 1
+  // No trusted attestation verifier is configured here. A caller-supplied
+  // independently_reproduced label is only a claim until trusted code verifies
+  // a trust-root-backed attestation, so it receives no higher cap than a source.
+  independently_reproduced: 0.5
+});
+const EVIDENCE_LEVEL_RANK = Object.freeze({
+  unverified: 0,
+  source_supported: 1,
+  independently_reproduced: 2
 });
 const WEIGHTS = Object.freeze({ life_safety: 0.5, financial: 0.3, resource: 0.2 });
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
@@ -80,7 +88,9 @@ function evaluateOpportunity(input) {
     ? 'independently_reproduced'
     : item.evidence.some(x => x.level === 'source_supported') ? 'source_supported' : 'unverified';
   const maxEvidenceQuality = evidenceQualityCap(item.evidence);
-  const weakestEvidence = item.evidence.find(x => EVIDENCE_QUALITY_CAPS[x.level] === maxEvidenceQuality).level;
+  const weakestEvidence = item.evidence.reduce((weakest, candidate) =>
+    EVIDENCE_LEVEL_RANK[candidate.level] < EVIDENCE_LEVEL_RANK[weakest.level] ? candidate : weakest
+  ).level;
   const lifeSafety = item.impact.life_safety > 0;
   return Object.freeze({
     id: item.id,
@@ -94,6 +104,7 @@ function evaluateOpportunity(input) {
     strongestEvidence,
     weakestEvidence,
     evidenceQualityCap: maxEvidenceQuality,
+    evidenceVerificationStatus: 'self_asserted_not_authenticated',
     evidenceCount: item.evidence.length,
     estimatedCost: item.estimatedCost || null,
     estimatedBenefit: item.estimatedBenefit || null,
