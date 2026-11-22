@@ -16,7 +16,9 @@ Rank candidate interventions across three dimensions: life safety, financial eff
 
 Each impact dimension is rated 0–5. The weighted impact score is life safety 50%, financial 30%, and resource 20%. It is adjusted by declared evidence quality and feasibility (each multiplier 0.5–1.0) and urgency (0.8–1.0). The resulting 0–100 score is a triage aid, not a prediction of lives saved, dollars saved, or physical resources conserved.
 
-Evidence quality, feasibility, and urgency are explicit human-supplied assessments. They must be supported in the evidence bundle; the engine does not infer their truth.
+Evidence levels are submitter-declared claims, not authenticated facts. This module has no trusted attestation verifier or configured trust root. Therefore `unverified = 0`, `source_supported = 0.5`, and caller-declared `independently_reproduced = 0.5`; an independent-reproduction label receives no scoring advantage over source-supported material until trusted code verifies an attestation bound to the claim, artifact hash, reproduction procedure, reviewer identity, and date. The runtime rejects an `evidenceQuality` assessment above the weakest declared level's ceiling and reports the claimed strongest/weakest levels, applied ceiling, and `evidenceVerificationStatus: self_asserted_not_authenticated`. These are ordinal policy ceilings, not probabilities or empirical confidence estimates. A bundle containing any unverified item cannot claim positive evidence quality.
+
+Urgency is also human supplied and must be supported by the evidence bundle; the engine does not infer its truth.
 
 ## Evidence and outcomes
 

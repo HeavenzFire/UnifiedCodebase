@@ -20,7 +20,12 @@
         "resource": { "type": "number", "minimum": 0, "maximum": 5 }
       }
     },
-    "evidenceQuality": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidenceQuality": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Human assessment capped by the weakest declared evidence level. Current ceilings: unverified=0, source_supported=0.5, and caller-declared independently_reproduced=0.5. This module has no trusted attestation verifier; an independent-reproduction label is a claim, not authenticated proof. Ceilings are ordinal policy limits, not probabilities."
+    },
     "feasibility": { "type": "number", "minimum": 0, "maximum": 1 },
     "urgency": { "type": "number", "minimum": 0, "maximum": 1 },
     "evidence": {
@@ -33,7 +38,10 @@
         "required": ["ref", "level"],
         "properties": {
           "ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
-          "level": { "enum": ["unverified", "source_supported", "independently_reproduced"] },
+          "level": {
+            "enum": ["unverified", "source_supported", "independently_reproduced"],
+            "description": "Submitter-declared level. independently_reproduced is not authenticated by this module and receives no higher evidence-quality cap than source_supported."
+          },
           "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
           "retrievedAt": { "type": "string", "format": "date-time" }
         }
