@@ -103,7 +103,7 @@ test('ranks highest score first and breaks ties by stable id', () => {
   const low = opportunity('z-low', { impact: { life_safety: 0, financial: 0, resource: 1 } });
   const high = opportunity('a-high', {
     impact: { life_safety: 5, financial: 5, resource: 5 },
-    evidenceQuality: 1,
+    evidenceQuality: 0.5,
     feasibility: 1,
     urgency: 1,
     evidence: [{ ref: 'https://example.org/reproduced', level: 'independently_reproduced' }]
