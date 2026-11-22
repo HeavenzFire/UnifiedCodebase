@@ -50,12 +50,18 @@ test('caps evidence quality at the weakest verification level in the evidence bu
     evidenceQuality: 0.51
   })), /evidence bundle cap of 0.5/);
 
-  const reproduced = evaluateOpportunity(opportunity('reproduced', {
-    evidenceQuality: 1,
+  const reproduced = evaluateOpportunity(opportunity('reproduced-claim', {
+    evidenceQuality: 0.5,
     evidence: [{ ref: 'https://example.org/reproduced', level: 'independently_reproduced' }]
   }));
-  assert.equal(reproduced.evidenceQualityCap, 1);
+  assert.equal(reproduced.evidenceQualityCap, 0.5);
   assert.equal(reproduced.weakestEvidence, 'independently_reproduced');
+  assert.equal(reproduced.strongestEvidence, 'independently_reproduced');
+  assert.equal(reproduced.evidenceVerificationStatus, 'self_asserted_not_authenticated');
+  assert.throws(() => evaluateOpportunity(opportunity('reproduced-overclaim', {
+    evidenceQuality: 0.51,
+    evidence: [{ ref: 'https://example.org/reproduced', level: 'independently_reproduced' }]
+  })), /evidence bundle cap of 0.5/);
 
   assert.throws(() => evaluateOpportunity(opportunity('mixed-evidence-overclaim', {
     evidenceQuality: 0.1,
@@ -64,6 +70,33 @@ test('caps evidence quality at the weakest verification level in the evidence bu
       { ref: 'https://example.org/unverified', level: 'unverified' }
     ]
   })), /evidence bundle cap of 0/);
+});
+
+
+test('does not reward a caller-asserted independent reproduction without trusted attestation', () => {
+  const sourceSupported = evaluateOpportunity(opportunity('source-supported', {
+    evidenceQuality: 0.5,
+    evidence: [{ ref: 'https://example.org/source', level: 'source_supported' }]
+  }));
+  const independentClaim = evaluateOpportunity(opportunity('independent-claim', {
+    evidenceQuality: 0.5,
+    evidence: [{ ref: 'https://example.org/reproduction-claim', level: 'independently_reproduced' }]
+  }));
+  assert.equal(independentClaim.score, sourceSupported.score);
+  assert.equal(independentClaim.evidenceQualityCap, sourceSupported.evidenceQualityCap);
+  assert.equal(independentClaim.evidenceVerificationStatus, 'self_asserted_not_authenticated');
+
+  const mixed = evaluateOpportunity(opportunity('mixed-claimed-levels', {
+    evidenceQuality: 0.5,
+    evidence: [
+      { ref: 'https://example.org/reproduction-claim', level: 'independently_reproduced' },
+      { ref: 'https://example.org/source', level: 'source_supported' }
+    ]
+  }));
+  assert.equal(mixed.strongestEvidence, 'independently_reproduced');
+  assert.equal(mixed.weakestEvidence, 'source_supported');
+  assert.equal(mixed.evidenceQualityCap, 0.5);
+  assert.equal(mixed.automatedExecutionAuthorized, false);
 });
 
 test('ranks highest score first and breaks ties by stable id', () => {
