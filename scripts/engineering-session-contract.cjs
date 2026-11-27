@@ -163,7 +163,8 @@ function validateEngineeringSessions(records) {
       if (seen.has(record.session_id)) errors.push({ index, code: 'duplicate_session_id' });
       seen.add(record.session_id);
     }
-    if (typeof record.change_ref === 'string' && typeof record.first_pass_gate_pass === 'boolean') {
+    if (typeof record.change_ref === 'string' &&
+        (record.first_pass_gate_pass === null || typeof record.first_pass_gate_pass === 'boolean')) {
       if (firstPassByChange.has(record.change_ref) && firstPassByChange.get(record.change_ref) !== record.first_pass_gate_pass) {
         errors.push({ index, code: 'conflicting_first_pass_status_for_change' });
       } else {
@@ -222,9 +223,11 @@ function summarizeEngineeringSessions(records) {
   const toolTotal = toolKnown.reduce((sum, record) => sum + record.ai_tool_elapsed_minutes, 0);
   const reworkTotal = reworkKnown.reduce((sum, record) => sum + record.rework_minutes, 0);
   const firstPassValues = Array.from(firstPassByChange.values());
-  const firstPassPassed = firstPassValues.filter(Boolean).length;
+  const firstPassPassed = firstPassValues.filter(value => value === true).length;
+  const firstPassFailed = firstPassValues.filter(value => value === false).length;
   const changeCount = new Set(records.map(record => record.change_ref)).size;
-  const firstPassComplete = changeCount > 0 && firstPassValues.length === changeCount;
+  const firstPassUnknown = changeCount - firstPassPassed - firstPassFailed;
+  const firstPassComplete = changeCount > 0 && firstPassUnknown === 0;
   const reworkComplete = count > 0 && reworkKnown.length === count && humanKnown.length === count;
 
   return {
@@ -252,8 +255,8 @@ function summarizeEngineeringSessions(records) {
     },
     firstPass: {
       passed: firstPassPassed,
-      failed: firstPassValues.length - firstPassPassed,
-      unknown: changeCount - firstPassValues.length,
+      failed: firstPassFailed,
+      unknown: firstPassUnknown,
       yield: firstPassComplete ? firstPassPassed / changeCount : null,
       complete: firstPassComplete,
       denominator: changeCount

@@ -217,7 +217,7 @@ test('aggregates only explicit times and withholds incomplete ratios', () => {
       human_active_minutes: 60,
       ai_tool_elapsed_minutes: 20,
       rework_minutes: 15,
-      first_pass_gate_pass: false
+      first_pass_gate_pass: null
     }),
     baseRecord({
       session_id: 'session-20261127-003',
