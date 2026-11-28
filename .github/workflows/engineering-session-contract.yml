@@ -1,0 +1,48 @@
+name: Engineering session contract
+
+on:
+  pull_request:
+    paths:
+      - "schemas/engineering-session.schema.json"
+      - "scripts/engineering-session-contract.cjs"
+      - "scripts/engineering-session-contract.test.cjs"
+      - "docs/ENGINEERING-THROUGHPUT-BENCHMARK.md"
+      - ".github/workflows/engineering-session-contract.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "schemas/engineering-session.schema.json"
+      - "scripts/engineering-session-contract.cjs"
+      - "scripts/engineering-session-contract.test.cjs"
+      - "docs/ENGINEERING-THROUGHPUT-BENCHMARK.md"
+      - ".github/workflows/engineering-session-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Parse strict JSON Schema
+        run: node -e "JSON.parse(require('node:fs').readFileSync('schemas/engineering-session.schema.json', 'utf8'))"
+      - name: Check validator and test syntax
+        run: |
+          node --check scripts/engineering-session-contract.cjs
+          node --check scripts/engineering-session-contract.test.cjs
+      - name: Run deterministic contract tests
+        run: node --test scripts/engineering-session-contract.test.cjs
