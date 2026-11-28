@@ -278,7 +278,7 @@ test('aggregates only explicit times and withholds incomplete ratios', () => {
       first_pass_gate_pass: null
     }),
     baseRecord({
-      session_id: scopedRef('session', 'g'),
+      session_id: scopedRef('session', '0'),
       human_active_minutes: null,
       ai_tool_elapsed_minutes: 10,
       rework_minutes: null,
@@ -298,7 +298,7 @@ test('aggregates only explicit times and withholds incomplete ratios', () => {
 
 test('computes first-pass yield per change, not per session', () => {
   const first = baseRecord({
-    session_id: scopedRef('session', 'h'),
+    session_id: scopedRef('session', '1'),
     change_ref: scopedRef('change', '6'),
     outcome: 'accepted',
     result_kind: 'documentation',
@@ -308,7 +308,7 @@ test('computes first-pass yield per change, not per session', () => {
     first_pass_gate_pass: true
   });
   const second = baseRecord({
-    session_id: scopedRef('session', 'i'),
+    session_id: scopedRef('session', '2'),
     change_ref: scopedRef('change', '6'),
     outcome: 'revised',
     result_kind: 'test',
@@ -318,7 +318,7 @@ test('computes first-pass yield per change, not per session', () => {
     first_pass_gate_pass: true
   });
   const third = baseRecord({
-    session_id: scopedRef('session', 'j'),
+    session_id: scopedRef('session', '3'),
     change_ref: scopedRef('change', '7'),
     outcome: 'revised',
     result_kind: 'test',
@@ -338,7 +338,7 @@ test('computes first-pass yield per change, not per session', () => {
 
 test('summary counts accepted capability claims as structural claims, not verified outcomes', () => {
   const first = acceptedCapability();
-  const second = acceptedCapability({ session_id: scopedRef('session', 'k'), outcome: 'revised' });
+  const second = acceptedCapability({ session_id: scopedRef('session', '4'), outcome: 'revised' });
   const summary = summarizeEngineeringSessions([first, second]);
   assert.equal(summary.structurallyEligibleAcceptedCapabilityClaims, 1);
   assert.equal(summary.independentlyVerifiedAcceptedCapabilities, null);
