@@ -354,7 +354,7 @@ test('JSON Schema is strict and requires explicit nullable time fields', () => {
   assert.ok(schema.required.includes('started_at_utc'));
   assert.ok(schema.required.includes('ended_at_utc'));
   assert.ok(schema.required.includes('change_ref'));
-  assert.ok(schema.allOf.some(rule => rule.then && rule.properties && rule.properties.acceptance));
+  assert.ok(schema.allOf.some(rule => rule.then && rule.then.properties && rule.then.properties.acceptance));
 });
 
 test('JSON Schema identifier and URL patterns stay aligned with runtime validation', () => {
