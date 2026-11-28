@@ -16,10 +16,33 @@ const OUTCOMES = new Set(['accepted','revised','blocked','abandoned']);
 const RESULT_KINDS = new Set(['capability','documentation','test','research','blocker']);
 const RISK_CLASSES = new Set(['routine','privacy_sensitive','security_sensitive','production_facing','research_only']);
 const SHA_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
-const ACTOR_PATTERN = /^actor_[a-f0-9]{16,64}$/;
-const SESSION_PATTERN = /^[a-z0-9][a-z0-9-]{2,79}$/;
-const REF_PATTERN = /^[a-z0-9][a-z0-9._-]{2,119}$/;
-const WORKSTREAM_PATTERN = /^[a-z0-9][a-z0-9._-]{2,79}$/;
+const PROJECT_SCOPE_PATTERN_SOURCE = '[a-f0-9]{32}';
+const RANDOM_TOKEN_PATTERN_SOURCE = '[a-f0-9]{32}';
+const SESSION_PATTERN_SOURCE = '^session_p(' + PROJECT_SCOPE_PATTERN_SOURCE + ')_(' + RANDOM_TOKEN_PATTERN_SOURCE + ')$';
+const TASK_PATTERN_SOURCE = '^task_p(' + PROJECT_SCOPE_PATTERN_SOURCE + ')_(' + RANDOM_TOKEN_PATTERN_SOURCE + ')$';
+const CHANGE_PATTERN_SOURCE = '^change_p(' + PROJECT_SCOPE_PATTERN_SOURCE + ')_(' + RANDOM_TOKEN_PATTERN_SOURCE + ')$';
+const WORKSTREAM_PATTERN_SOURCE = '^workstream_p(' + PROJECT_SCOPE_PATTERN_SOURCE + ')_(' + RANDOM_TOKEN_PATTERN_SOURCE + ')$';
+const ACTOR_PATTERN_SOURCE = '^actor_p(' + PROJECT_SCOPE_PATTERN_SOURCE + ')_(' + RANDOM_TOKEN_PATTERN_SOURCE + ')$';
+const CI_URL_PATTERN_SOURCE = '^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/[0-9]+$';
+const REVIEW_URL_PATTERN_SOURCE = '^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+#pullrequestreview-[0-9]+$';
+
+const SESSION_PATTERN = new RegExp(SESSION_PATTERN_SOURCE);
+const TASK_PATTERN = new RegExp(TASK_PATTERN_SOURCE);
+const CHANGE_PATTERN = new RegExp(CHANGE_PATTERN_SOURCE);
+const WORKSTREAM_PATTERN = new RegExp(WORKSTREAM_PATTERN_SOURCE);
+const ACTOR_PATTERN = new RegExp(ACTOR_PATTERN_SOURCE);
+const CI_URL_PATTERN = new RegExp(CI_URL_PATTERN_SOURCE);
+const REVIEW_URL_PATTERN = new RegExp(REVIEW_URL_PATTERN_SOURCE);
+
+const ENGINEERING_SESSION_PATTERNS = Object.freeze({
+  session_id: SESSION_PATTERN_SOURCE,
+  task_ref: TASK_PATTERN_SOURCE,
+  change_ref: CHANGE_PATTERN_SOURCE,
+  workstream: WORKSTREAM_PATTERN_SOURCE,
+  actor_ref: ACTOR_PATTERN_SOURCE,
+  ci_run_url: CI_URL_PATTERN_SOURCE,
+  review_url: REVIEW_URL_PATTERN_SOURCE
+});
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -43,9 +66,9 @@ function isGitHubActionsUrl(value) {
   if (typeof value !== 'string') return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'github.com' &&
-      url.search === '' && url.hash === '' &&
-      /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/.test(url.pathname);
+    return url.href === value && url.origin === 'https://github.com' &&
+      url.username === '' && url.password === '' && url.port === '' &&
+      url.search === '' && url.hash === '' && CI_URL_PATTERN.test(value);
   } catch {
     return false;
   }
@@ -55,10 +78,9 @@ function isGitHubReviewUrl(value) {
   if (typeof value !== 'string') return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'github.com' &&
-      url.search === '' &&
-      /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[0-9]+$/.test(url.pathname) &&
-      /^#pullrequestreview-[0-9]+$/.test(url.hash);
+    return url.href === value && url.origin === 'https://github.com' &&
+      url.username === '' && url.password === '' && url.port === '' &&
+      url.search === '' && REVIEW_URL_PATTERN.test(value);
   } catch {
     return false;
   }
@@ -96,6 +118,34 @@ function validateAcceptance(acceptance, record, errors) {
   }
 }
 
+
+function projectScopeFrom(value, pattern) {
+  if (typeof value !== 'string') return null;
+  const match = pattern.exec(value);
+  return match ? match[1] : null;
+}
+
+function validateProjectScope(record, errors) {
+  const references = [
+    [record.session_id, SESSION_PATTERN],
+    [record.task_ref, TASK_PATTERN],
+    [record.change_ref, CHANGE_PATTERN],
+    [record.workstream, WORKSTREAM_PATTERN],
+    [record.contributor_ref, ACTOR_PATTERN]
+  ];
+  if (isPlainObject(record.acceptance)) {
+    references.push([record.acceptance.reviewer_ref, ACTOR_PATTERN]);
+  }
+
+  let expectedScope = null;
+  for (const [value, pattern] of references) {
+    const scope = projectScopeFrom(value, pattern);
+    if (scope === null) continue;
+    if (expectedScope === null) expectedScope = scope;
+    else if (scope !== expectedScope) errors.push('project_scope_mismatch');
+  }
+}
+
 function validateEngineeringSession(record) {
   const errors = [];
   if (!isPlainObject(record)) return { valid: false, errors: ['record_not_object'] };
@@ -109,8 +159,8 @@ function validateEngineeringSession(record) {
 
   if (record.schema_version !== '1.0') errors.push('unsupported_schema_version');
   if (typeof record.session_id !== 'string' || !SESSION_PATTERN.test(record.session_id)) errors.push('invalid_session_id');
-  if (typeof record.task_ref !== 'string' || !REF_PATTERN.test(record.task_ref)) errors.push('invalid_task_ref');
-  if (typeof record.change_ref !== 'string' || !REF_PATTERN.test(record.change_ref)) errors.push('invalid_change_ref');
+  if (typeof record.task_ref !== 'string' || !TASK_PATTERN.test(record.task_ref)) errors.push('invalid_task_ref');
+  if (typeof record.change_ref !== 'string' || !CHANGE_PATTERN.test(record.change_ref)) errors.push('invalid_change_ref');
   if (typeof record.workstream !== 'string' || !WORKSTREAM_PATTERN.test(record.workstream)) errors.push('invalid_workstream');
   if (!isUtcTimestamp(record.recorded_at_utc)) errors.push('invalid_recorded_at_utc');
 
@@ -145,6 +195,7 @@ function validateEngineeringSession(record) {
     errors.push('accepted_capability_requires_acceptance');
   }
 
+  validateProjectScope(record, errors);
   return { valid: errors.length === 0, errors: Array.from(new Set(errors)) };
 }
 
@@ -177,7 +228,7 @@ function validateEngineeringSessions(records) {
 }
 
 function parseEngineeringSessionJsonl(source) {
-  if (typeof source !== 'string') return { valid: false, records: [], errors: [{ line: null, code: 'source_not_string' }] };
+  if (typeof source !== 'string') return { valid: false, summary: null, errors: [{ line: null, code: 'source_not_string' }] };
   const records = [];
   const lineNumbers = [];
   const errors = [];
@@ -194,7 +245,8 @@ function parseEngineeringSessionJsonl(source) {
   for (const item of validation.errors) {
     errors.push({ line: item.index === null ? null : lineNumbers[item.index], code: item.code });
   }
-  return { valid: errors.length === 0, records, errors };
+  const valid = errors.length === 0;
+  return { valid, summary: valid ? summarizeEngineeringSessions(records) : null, errors };
 }
 
 function summarizeEngineeringSessions(records) {
@@ -288,12 +340,13 @@ function runCli() {
     process.exitCode = 1;
     return;
   }
-  process.stdout.write(JSON.stringify(summarizeEngineeringSessions(parsed.records), null, 2) + '\n');
+  process.stdout.write(JSON.stringify(parsed.summary, null, 2) + '\n');
 }
 
 if (require.main === module) runCli();
 
 module.exports = {
+  ENGINEERING_SESSION_PATTERNS,
   validateEngineeringSession,
   validateEngineeringSessions,
   parseEngineeringSessionJsonl,
