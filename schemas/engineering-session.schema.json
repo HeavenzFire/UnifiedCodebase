@@ -2,16 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/HeavenzFire/UnifiedCodebase/blob/main/schemas/engineering-session.schema.json",
   "title": "HeavenzFire Engineering Session Record",
-  "description": "A privacy-minimized measurement record. Human time is explicit or null; timestamps are context and never proxies for labor.",
+  "description": "A privacy-minimized measurement record. Human time is explicit or null; timestamps are context and never proxies for labor. Runtime validation also requires all project-scoped references in a record to share one project scope.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version","session_id","task_ref","change_ref","workstream","recorded_at_utc","started_at_utc","ended_at_utc","outcome","result_kind","risk_class","human_active_minutes","ai_tool_elapsed_minutes","rework_minutes","first_pass_gate_pass","contributor_ref","commit_sha","acceptance"],
   "properties": {
     "schema_version": {"const":"1.0"},
-    "session_id": {"type":"string","pattern":"^[a-z0-9][a-z0-9-]{2,79}$"},
-    "task_ref": {"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,119}$"},
-    "change_ref": {"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,119}$","description":"Stable non-personal identifier grouping sessions for one change; first-pass status is consistent within this group."},
-    "workstream": {"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,79}$"},
+    "session_id": {"type":"string","pattern":"^session_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped reference; scope and token are independently generated 128-bit values."},
+    "task_ref": {"type":"string","pattern":"^task_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped reference; scope and token are independently generated 128-bit values."},
+    "change_ref": {"type":"string","pattern":"^change_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped identifier grouping sessions for one change; first-pass status is consistent within this group."},
+    "workstream": {"type":"string","pattern":"^workstream_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped workstream reference."},
     "recorded_at_utc": {"type":"string","format":"date-time","pattern":"Z$"},
     "started_at_utc": {"type":["string","null"],"format":"date-time","pattern":"Z$"},
     "ended_at_utc": {"type":["string","null"],"format":"date-time","pattern":"Z$"},
@@ -22,7 +22,7 @@
     "ai_tool_elapsed_minutes": {"type":["number","null"],"minimum":0,"maximum":10080},
     "rework_minutes": {"type":["number","null"],"minimum":0,"maximum":1440},
     "first_pass_gate_pass": {"type":["boolean","null"],"description":"Change-level observation repeated consistently across all sessions with the same change_ref."},
-    "contributor_ref": {"type":["string","null"],"pattern":"^actor_[a-f0-9]{16,64}$"},
+    "contributor_ref": {"type":["string","null"],"pattern":"^actor_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped actor reference; generated independently from personal identifiers."},
     "commit_sha": {"type":["string","null"],"pattern":"^[a-f0-9]{40}([a-f0-9]{24})?$"},
     "acceptance": {
       "type":["object","null"],
@@ -35,7 +35,7 @@
         "review_url":{"type":"string","format":"uri","pattern":"^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+#pullrequestreview-[0-9]+$"},
         "reviewed_sha":{"type":"string","pattern":"^[a-f0-9]{40}([a-f0-9]{24})?$"},
         "review_state":{"const":"APPROVED"},
-        "reviewer_ref":{"type":"string","pattern":"^actor_[a-f0-9]{16,64}$"}
+        "reviewer_ref":{"type":"string","pattern":"^actor_p([a-f0-9]{32})_([a-f0-9]{32})$","description":"Opaque project-scoped actor reference; scope must match the other references in the record."}
       }
     }
   },
